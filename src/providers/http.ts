@@ -1,6 +1,9 @@
-import { ProviderError } from "./types.js";
+import {ProviderError} from './types.js';
 
-export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
+export type FetchLike = (
+  input: string,
+  init?: RequestInit,
+) => Promise<Response>;
 
 export interface HttpResponse {
   status: number;
@@ -18,18 +21,27 @@ export class HttpClient {
   async request(
     method: string,
     path: string,
-    options: { query?: Record<string, string>; body?: unknown; allow?: number[] } = {},
+    options: {
+      query?: Record<string, string>;
+      body?: unknown;
+      allow?: number[];
+    } = {},
   ): Promise<HttpResponse> {
-    const url = new URL(this.baseUrl.replace(/\/+$/, "") + path);
-    for (const [key, value] of Object.entries(options.query ?? {})) url.searchParams.set(key, value);
+    const url = new URL(this.baseUrl.replace(/\/+$/, '') + path);
+    for (const [key, value] of Object.entries(options.query ?? {}))
+      url.searchParams.set(key, value);
 
     const response = await this.fetchImpl(url.toString(), {
       method,
       headers: {
         ...this.headers,
-        ...(options.body !== undefined ? { "Content-Type": "application/json" } : {}),
+        ...(options.body !== undefined
+          ? {'Content-Type': 'application/json'}
+          : {}),
       },
-      ...(options.body !== undefined ? { body: JSON.stringify(options.body) } : {}),
+      ...(options.body !== undefined
+        ? {body: JSON.stringify(options.body)}
+        : {}),
     });
 
     const text = await response.text();
@@ -43,12 +55,12 @@ export class HttpClient {
     }
 
     if (!response.ok && !(options.allow ?? []).includes(response.status)) {
-      const detail = typeof data === "string" ? data : JSON.stringify(data);
+      const detail = typeof data === 'string' ? data : JSON.stringify(data);
       throw new ProviderError(
         `${method} ${url.pathname} failed with ${response.status}: ${detail.slice(0, 500)}`,
         response.status,
       );
     }
-    return { status: response.status, data };
+    return {status: response.status, data};
   }
 }

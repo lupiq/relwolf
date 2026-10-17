@@ -20,7 +20,7 @@ used directly as the `image:` of a GitLab CI job.
    (it must be able to push the branch `relwolf/main`, create merge requests, tags and releases) and store it
    as a masked CI/CD variable, e.g. `RELWOLF_TOKEN`.
 2. Project settings: merge method **Fast-forward merge** with **Squash** enabled (merge commits are not
-   needed), and *Delete source branch* as default is recommended.
+   needed), and _Delete source branch_ as default is recommended.
 3. Add a job to `.gitlab-ci.yml`:
 
    ```yaml
@@ -90,7 +90,7 @@ prerelease: beta # optional, default for all packages
 bump-minor-pre-major: true # optional, default for all packages
 
 packages:
-  ".":
+  '.':
     component: app # optional for one package; required for every other package (used as tag prefix)
     changelog-path: CHANGELOG.md # relative to the package path
     initial-version: 1.0.0 # optional, first stable version if no tag exists
@@ -110,8 +110,8 @@ Paths of updaters and the changelog are relative to the package path. Unknown ke
 
 ```yaml
 packages:
-  ".":
-    updaters: [{ type: package-json }]
+  '.':
+    updaters: [{type: package-json}]
   services/api:
     component: api # tags: api-v1.2.3
     updaters:
@@ -123,11 +123,11 @@ ignores changes inside other configured packages.
 
 ### Updaters
 
-| Type           | What it changes                                                                                  |
-| -------------- | ------------------------------------------------------------------------------------------------ |
-| `package-json` | the top-level `"version"`                                                                        |
-| `pom-xml`      | the project's own `<version>` (not the parent's or any dependency's)                             |
-| `gradle`       | a top-level `version = '…'` / `version "…"` (Groovy/Kotlin DSL) or `version=…` in `.properties`  |
+| Type           | What it changes                                                                                 |
+| -------------- | ----------------------------------------------------------------------------------------------- |
+| `package-json` | the top-level `"version"`                                                                       |
+| `pom-xml`      | the project's own `<version>` (not the parent's or any dependency's)                            |
+| `gradle`       | a top-level `version = '…'` / `version "…"` (Groovy/Kotlin DSL) or `version=…` in `.properties` |
 | `generic`      | the first semantic version on every line containing the marker `x-relwolf-version`              |
 
 ```yaml
@@ -146,13 +146,13 @@ git-cliff configuration skips.
 
 ## Environment variables
 
-| Variable                              | Purpose                                                                   |
-| ------------------------------------- | ------------------------------------------------------------------------- |
-| `RELWOLF_TOKEN`                       | **Required.** Access token used for all API calls                         |
-| `RELWOLF_PROVIDER`                    | `gitlab` or `github`; auto-detected from `GITLAB_CI` / `GITHUB_ACTIONS`   |
-| `RELWOLF_GIT_CLIFF`                   | Path to a git-cliff executable instead of the bundled one                 |
-| `CI_API_V4_URL`, `CI_PROJECT_ID`, `CI_COMMIT_BRANCH`, `CI_DEFAULT_BRANCH` | GitLab CI (set by GitLab, works for gitlab.com and self-managed) |
-| `GITHUB_API_URL`, `GITHUB_REPOSITORY`, `GITHUB_REF_TYPE`, `GITHUB_REF_NAME` | GitHub Actions (set by GitHub)                          |
+| Variable                                                                    | Purpose                                                                 |
+| --------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `RELWOLF_TOKEN`                                                             | **Required.** Access token used for all API calls                       |
+| `RELWOLF_PROVIDER`                                                          | `gitlab` or `github`; auto-detected from `GITLAB_CI` / `GITHUB_ACTIONS` |
+| `RELWOLF_GIT_CLIFF`                                                         | Path to a git-cliff executable instead of the bundled one               |
+| `CI_API_V4_URL`, `CI_PROJECT_ID`, `CI_COMMIT_BRANCH`, `CI_DEFAULT_BRANCH`   | GitLab CI (set by GitLab, works for gitlab.com and self-managed)        |
+| `GITHUB_API_URL`, `GITHUB_REPOSITORY`, `GITHUB_REF_TYPE`, `GITHUB_REF_NAME` | GitHub Actions (set by GitHub)                                          |
 
 ## Providers
 
@@ -178,6 +178,6 @@ Design decisions, architecture and extension notes are documented in [AGENTS.md]
 
 ### Releasing relwolf itself
 
-Add a `RELWOLF_TOKEN` secret (a personal access token with *contents* and *pull requests* write access,
+Add a `RELWOLF_TOKEN` secret (a personal access token with _contents_ and _pull requests_ write access,
 not `GITHUB_TOKEN`, so that tag pushes trigger the image workflow) and enable
-*Automatically delete head branches* in the repository settings.
+_Automatically delete head branches_ in the repository settings.

@@ -37,21 +37,21 @@ Flow: Conventional Commits → next SemVer → release MR (changelog + version f
 
 ## Architecture (`src/`)
 
-| File | Responsibility |
-| --- | --- |
-| `cli.ts` | Entry point: load config, build provider from env, call `run` |
-| `config.ts` | `relwolf.yaml` schema (zod, strict), path normalisation/validation, `Config`/`PackageConfig` |
-| `release.ts` | Orchestration: `run()` → skip guards, shallow check, `tagMergedReleases`, `prepareReleaseRequest` |
-| `plan.ts` | Per-package plan: last tags, commits since, next version, changelog range |
-| `version.ts` | SemVer parse/compare/bump, `nextVersion` incl. pre-release logic |
-| `commits.ts` | Conventional commit parsing and bump level |
-| `tags.ts` | Tag naming, discovery, tag regex for git-cliff, validation of untrusted tags |
-| `changelog.ts` | git-cliff invocation (`generateNotes`, `prependToChangelog` via temp file) |
-| `body.ts` | MR title/body rendering and parsing (hidden `relwolf:notes` markers, sanitised) |
-| `git.ts` | Thin git wrapper (`execFile`), `run()` helper for subprocesses |
-| `updaters/*` | Pure `(content, version, file) => content` functions + registry in `index.ts` |
-| `providers/types.ts` | `Provider` interface – the only place providers must satisfy |
-| `providers/gitlab.ts`, `github.ts` | REST implementations; `http.ts` shared fetch client; `index.ts` env detection |
+| File                               | Responsibility                                                                                    |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `cli.ts`                           | Entry point: load config, build provider from env, call `run`                                     |
+| `config.ts`                        | `relwolf.yaml` schema (zod, strict), path normalisation/validation, `Config`/`PackageConfig`      |
+| `release.ts`                       | Orchestration: `run()` → skip guards, shallow check, `tagMergedReleases`, `prepareReleaseRequest` |
+| `plan.ts`                          | Per-package plan: last tags, commits since, next version, changelog range                         |
+| `version.ts`                       | SemVer parse/compare/bump, `nextVersion` incl. pre-release logic                                  |
+| `commits.ts`                       | Conventional commit parsing and bump level                                                        |
+| `tags.ts`                          | Tag naming, discovery, tag regex for git-cliff, validation of untrusted tags                      |
+| `changelog.ts`                     | git-cliff invocation (`generateNotes`, `prependToChangelog` via temp file)                        |
+| `body.ts`                          | MR title/body rendering and parsing (hidden `relwolf:notes` markers, sanitised)                   |
+| `git.ts`                           | Thin git wrapper (`execFile`), `run()` helper for subprocesses                                    |
+| `updaters/*`                       | Pure `(content, version, file) => content` functions + registry in `index.ts`                     |
+| `providers/types.ts`               | `Provider` interface – the only place providers must satisfy                                      |
+| `providers/gitlab.ts`, `github.ts` | REST implementations; `http.ts` shared fetch client; `index.ts` env detection                     |
 
 Key mechanics worth knowing:
 

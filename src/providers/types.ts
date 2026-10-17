@@ -1,4 +1,4 @@
-export type ReleaseRequestState = "open" | "merged" | "closed";
+export type ReleaseRequestState = 'open' | 'merged' | 'closed';
 
 /** A merge request (GitLab) / pull request (GitHub). */
 export interface ReleaseRequest {
@@ -35,9 +35,17 @@ export interface Provider {
   ensureLabel(label: LabelDefinition): Promise<void>;
 
   /** Creates or force-updates `branch` as a single commit on top of `baseSha`. */
-  commitFiles(options: { branch: string; baseSha: string; message: string; files: FileChange[] }): Promise<void>;
+  commitFiles(options: {
+    branch: string;
+    baseSha: string;
+    message: string;
+    files: FileChange[];
+  }): Promise<void>;
 
-  findOpenReleaseRequest(options: { sourceBranch: string; targetBranch: string }): Promise<ReleaseRequest | null>;
+  findOpenReleaseRequest(options: {
+    sourceBranch: string;
+    targetBranch: string;
+  }): Promise<ReleaseRequest | null>;
 
   createReleaseRequest(options: {
     sourceBranch: string;
@@ -47,18 +55,32 @@ export interface Provider {
     labels: string[];
   }): Promise<ReleaseRequest>;
 
-  updateReleaseRequest(id: number, options: { title: string; body: string }): Promise<void>;
+  updateReleaseRequest(
+    id: number,
+    options: {title: string; body: string},
+  ): Promise<void>;
 
-  listMergedReleaseRequests(options: { targetBranch: string; label: string }): Promise<ReleaseRequest[]>;
+  listMergedReleaseRequests(options: {
+    targetBranch: string;
+    label: string;
+  }): Promise<ReleaseRequest[]>;
 
-  setLabels(id: number, options: { add: string[]; remove: string[] }): Promise<void>;
+  setLabels(
+    id: number,
+    options: {add: string[]; remove: string[]},
+  ): Promise<void>;
 
   /** Creates a lightweight tag; resolves to "exists" if it is already present. */
-  createTag(name: string, sha: string): Promise<"created" | "exists">;
+  createTag(name: string, sha: string): Promise<'created' | 'exists'>;
 
   releaseExists(tag: string): Promise<boolean>;
 
-  createRelease(options: { tag: string; name: string; body: string; prerelease: boolean }): Promise<void>;
+  createRelease(options: {
+    tag: string;
+    name: string;
+    body: string;
+    prerelease: boolean;
+  }): Promise<void>;
 }
 
 export class ProviderError extends Error {
@@ -67,6 +89,6 @@ export class ProviderError extends Error {
     readonly status?: number,
   ) {
     super(message);
-    this.name = "ProviderError";
+    this.name = 'ProviderError';
   }
 }

@@ -1,14 +1,19 @@
-import { bumpLevel, parseCommit, type ConventionalCommit } from "./commits.js";
-import type { PackageConfig } from "./config.js";
-import type { Git } from "./git.js";
+import {bumpLevel, parseCommit, type ConventionalCommit} from './commits.js';
+import type {PackageConfig} from './config.js';
+import type {Git} from './git.js';
 import {
   findReleaseTags,
   highest,
   highestStable,
   tagName,
   tagPattern,
-} from "./tags.js";
-import { formatVersion, isPrerelease, nextVersion, type Version } from "./version.js";
+} from './tags.js';
+import {
+  formatVersion,
+  isPrerelease,
+  nextVersion,
+  type Version,
+} from './version.js';
 
 export interface PackagePlan {
   pkg: PackageConfig;
@@ -22,14 +27,27 @@ export interface PackagePlan {
 }
 
 /** Other packages located inside `pkg`, whose changes must not count for `pkg`. */
-export function nestedPackagePaths(pkg: PackageConfig, all: readonly PackageConfig[]): string[] {
+export function nestedPackagePaths(
+  pkg: PackageConfig,
+  all: readonly PackageConfig[],
+): string[] {
   return all
-    .filter((other) => other.path !== pkg.path && (pkg.path === "." || other.path.startsWith(`${pkg.path}/`)))
-    .map((other) => other.path);
+    .filter(
+      other =>
+        other.path !== pkg.path &&
+        (pkg.path === '.' || other.path.startsWith(`${pkg.path}/`)),
+    )
+    .map(other => other.path);
 }
 
-export function pathspecsFor(pkg: PackageConfig, all: readonly PackageConfig[]): string[] {
-  return [pkg.path, ...nestedPackagePaths(pkg, all).map((nested) => `:(exclude)${nested}`)];
+export function pathspecsFor(
+  pkg: PackageConfig,
+  all: readonly PackageConfig[],
+): string[] {
+  return [
+    pkg.path,
+    ...nestedPackagePaths(pkg, all).map(nested => `:(exclude)${nested}`),
+  ];
 }
 
 async function conventionalCommits(
@@ -38,7 +56,7 @@ async function conventionalCommits(
   pathspecs: string[],
 ): Promise<ConventionalCommit[]> {
   const raw = await git.log(range, pathspecs);
-  return raw.flatMap((commit) => parseCommit(commit.sha, commit.message) ?? []);
+  return raw.flatMap(commit => parseCommit(commit.sha, commit.message) ?? []);
 }
 
 export async function planPackage(
@@ -46,18 +64,30 @@ export async function planPackage(
   pkg: PackageConfig,
   all: readonly PackageConfig[],
 ): Promise<PackagePlan | null> {
-  const releaseTags = findReleaseTags(await git.tagsMergedIntoHead(), pkg.component);
+  const releaseTags = findReleaseTags(
+    await git.tagsMergedIntoHead(),
+    pkg.component,
+  );
   const lastAny = highest(releaseTags);
   const lastStable = highestStable(releaseTags);
   const pathspecs = pathspecsFor(pkg, all);
 
-  const sinceStable = await conventionalCommits(git, lastStable && `${lastStable.tag}..HEAD`, pathspecs);
+  const sinceStable = await conventionalCommits(
+    git,
+    lastStable && `${lastStable.tag}..HEAD`,
+    pathspecs,
+  );
   const level = bumpLevel(sinceStable);
 
-  const lastIsPrerelease = lastAny !== undefined && isPrerelease(lastAny.version);
+  const lastIsPrerelease =
+    lastAny !== undefined && isPrerelease(lastAny.version);
   if (pkg.prerelease && lastIsPrerelease) {
     // Don't publish another pre-release unless something releasable happened since the last one.
-    const sinceLast = await conventionalCommits(git, `${lastAny.tag}..HEAD`, pathspecs);
+    const sinceLast = await conventionalCommits(
+      git,
+      `${lastAny.tag}..HEAD`,
+      pathspecs,
+    );
     if (bumpLevel(sinceLast) === null) return null;
   }
 

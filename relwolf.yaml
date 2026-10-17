@@ -1,6 +1,6 @@
 branch: main
 
 packages:
-  ".":
+  '.':
     updaters:
       - type: package-json
