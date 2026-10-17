@@ -79,6 +79,11 @@ REST JSON) and several rules for `test/`). typescript-eslint does not support TS
 `@typescript/typescript6` and TS 7 is installed as `@typescript/native` (provides `tsc`); drop the alias once
 typescript-eslint supports TS ≥ 7.1. ESLint loads the TS config via `--flag unstable_native_nodejs_ts_config`. Coverage: `pnpm test:coverage`.
 
+Git hooks (Husky, `.husky/`, set up by the `prepare` script): `pre-commit` = lint-staged (`.lintstagedrc.json`,
+Prettier on staged files) + `pnpm lint`; `commit-msg` = commitlint (`commitlint.config.ts`: config-conventional plus
+sentence-case subject, i.e. the text after `type:` starts with a capital letter). Note: `pnpm add` ignores
+`save-exact` here, so pin versions in `package.json` manually (no `^`/`~`).
+
 ## Packaging and CI
 
 - `Dockerfile`: multi-stage (build, prod deps, final `node:24-slim` + git, `safe.directory '*'`). The image could not

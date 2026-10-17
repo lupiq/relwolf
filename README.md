@@ -176,6 +176,9 @@ pnpm test            # unit + integration tests (real git repositories and git-c
 pnpm build
 ```
 
+Git hooks (Husky, installed by `pnpm install`): `pre-commit` runs lint-staged (Prettier on staged files) and
+`pnpm lint`; `commit-msg` runs commitlint (Conventional Commits, subject must start with a capital letter).
+
 Design decisions, architecture and extension notes are documented in [AGENTS.md](AGENTS.md).
 
 ### Releasing relwolf itself
