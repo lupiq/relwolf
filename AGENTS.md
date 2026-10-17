@@ -23,7 +23,7 @@ Flow: Conventional Commits → next SemVer → release MR (changelog + version f
   computed from `0.0.0` (feat→0.1.0, fix→0.0.1) unless `initial-version` is set. Configurable pre-releases
   (`prerelease: beta` → `1.3.0-beta.1`).
 - Changelog is produced by **git-cliff** (npm package, bundled); users control the format with their own `cliff.toml`.
-  Which commit types appear is purely git-cliff configuration.
+  Which commit types appear is purely git-cliff configuration. relwolf's own `cliff.toml` lists all types except `chore`.
 - Updaters: `package-json`, `pom-xml`, `gradle`, `generic` (line marker `x-relwolf-version`).
 - GitLab project settings assumed: squash + fast-forward-only, no merge commits. MRs are labelled
   `relwolf: pending` / `relwolf: tagged`; release branch `relwolf/<branch>`.

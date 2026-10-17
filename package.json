@@ -4,6 +4,7 @@
   "description": "Release bot for GitLab (and GitHub) driven by Conventional Commits, inspired by release-please",
   "type": "module",
   "packageManager": "pnpm@12.14.0",
+  "repository": "https://github.com/lupiq/relwolf",
   "bin": {
     "relwolf": "dist/cli.js"
   },
