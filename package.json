@@ -1,0 +1,34 @@
+{
+  "name": "relwolf",
+  "version": "0.0.0",
+  "description": "Release bot for GitLab (and GitHub) driven by Conventional Commits, inspired by release-please",
+  "type": "module",
+  "packageManager": "pnpm@12.14.0",
+  "bin": {
+    "relwolf": "dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "start": "node dist/cli.js"
+  },
+  "dependencies": {
+    "git-cliff": "^2.14.2",
+    "yaml": "^2.9.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "@vitest/coverage-v8": "^5.0.4",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.4"
+  }
+}
