@@ -1,7 +1,7 @@
 import {
-  parseVersion,
   compareVersions,
   isPrerelease,
+  parseVersion,
   type Version,
 } from './version.js';
 

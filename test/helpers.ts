@@ -62,17 +62,16 @@ interface CommitCall {
 /** In-memory provider recording every call; merge requests live in a simple array. */
 export class FakeProvider implements Provider {
   readonly name = 'fake';
-  requests: Array<
-    ReleaseRequest & {sourceBranch: string; targetBranch: string}
-  > = [];
+  requests: (ReleaseRequest & {sourceBranch: string; targetBranch: string})[] =
+    [];
   commits: CommitCall[] = [];
   tags = new Map<string, string>();
-  releases: Array<{
+  releases: {
     tag: string;
     name: string;
     body: string;
     prerelease: boolean;
-  }> = [];
+  }[] = [];
   labels: string[] = [];
   private nextId = 1;
 

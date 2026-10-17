@@ -298,7 +298,7 @@ describe('GitLabProvider', () => {
       status: 401,
       json: {message: '401 Unauthorized'},
     }));
-    const error = await provider.releaseExists('v1').catch((e: Error) => e);
+    const error = await provider.releaseExists('v1').catch((e: unknown) => e);
     expect(error).toBeInstanceOf(ProviderError);
     expect((error as ProviderError).status).toBe(401);
     expect((error as Error).message).toContain('401 Unauthorized');

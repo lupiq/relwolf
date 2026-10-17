@@ -170,6 +170,8 @@ GitLab releases have no pre-release flag, so the `prerelease` hint is only used 
 ```sh
 pnpm install
 pnpm typecheck
+pnpm lint           # ESLint + typescript-eslint (strict, type-checked)
+pnpm format:check   # Prettier (use `pnpm format` to fix)
 pnpm test            # unit + integration tests (real git repositories and git-cliff)
 pnpm build
 ```

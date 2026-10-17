@@ -23,7 +23,7 @@ interface GitHubPull {
   state: string;
   merged_at?: string | null;
   merge_commit_sha?: string | null;
-  labels: Array<{name: string}>;
+  labels: {name: string}[];
   base?: {ref: string};
 }
 
@@ -207,10 +207,10 @@ export class GitHubProvider implements Provider {
       },
     });
     const merged: ReleaseRequest[] = [];
-    for (const issue of data as Array<{
+    for (const issue of data as {
       number: number;
       pull_request?: unknown;
-    }>) {
+    }[]) {
       if (!issue.pull_request) continue;
       const {data: pull} = await this.http.request(
         'GET',

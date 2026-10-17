@@ -67,7 +67,7 @@ export function resolveBranch(config: Config, defaultBranch?: string): string {
 }
 
 export async function run(options: RunOptions): Promise<RunResult> {
-  const log = options.log ?? (() => {});
+  const log = options.log ?? (() => undefined);
   const branch = resolveBranch(options.config, options.defaultBranch);
 
   if (options.currentBranch !== branch) {
@@ -264,7 +264,7 @@ async function prepareReleaseRequest(
     sourceBranch,
     targetBranch: branch,
   });
-  if (existing && existing.title === title && existing.body === body) {
+  if (existing?.title === title && existing.body === body) {
     log(`Release request #${existing.id} is up to date: ${existing.url}`);
     return {id: existing.id, url: existing.url, action: 'unchanged'};
   }

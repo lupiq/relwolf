@@ -5,7 +5,9 @@ import {run} from './release.js';
 
 async function main(): Promise<void> {
   const cwd = process.cwd();
-  const log = (message: string): void => console.log(`[relwolf] ${message}`);
+  const log = (message: string): void => {
+    console.log(`[relwolf] ${message}`);
+  };
 
   const {config, found} = await loadConfig(cwd);
   if (!found)

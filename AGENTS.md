@@ -73,13 +73,17 @@ Key mechanics worth knowing:
 `pnpm test` (Vitest, ~20 s). Unit tests per module plus `test/release.test.ts`, an integration suite using real
 temporary git repos, the real git-cliff and the in-memory `FakeProvider` from `test/helpers.ts`
 (`mergeLastRelease` simulates merging the release MR). Provider tests mock `fetch`. When changing behaviour add a
-test in the matching file; `pnpm typecheck` and `pnpm build` must stay clean. Coverage: `pnpm test:coverage`.
+test in the matching file; `pnpm typecheck`, `pnpm lint`, `pnpm format:check` and `pnpm build` must stay clean. Lint: `eslint.config.ts`
+(typescript-eslint `strictTypeChecked` + `stylisticTypeChecked`; `no-unsafe-*` relaxed for `src/providers` (untyped
+REST JSON) and several rules for `test/`). typescript-eslint does not support TS 7 yet, so `typescript` is aliased to
+`@typescript/typescript6` and TS 7 is installed as `@typescript/native` (provides `tsc`); drop the alias once
+typescript-eslint supports TS ≥ 7.1. ESLint loads the TS config via `--flag unstable_native_nodejs_ts_config`. Coverage: `pnpm test:coverage`.
 
 ## Packaging and CI
 
 - `Dockerfile`: multi-stage (build, prod deps, final `node:24-slim` + git, `safe.directory '*'`). The image could not
   be built in the authoring session (registry unreachable) – verify with `docker build .` after changes.
-- `.github/workflows/ci.yml` (typecheck, tests, build, image smoke test), `release.yml` (relwolf releases itself from
+- `.github/workflows/ci.yml` (format check, lint, typecheck, tests, build, image smoke test), `release.yml` (relwolf releases itself from
   source on pushes to `main`, needs secret `RELWOLF_TOKEN` = PAT so the tag triggers the next workflow),
   `publish.yml` (tag `v*` → multi-arch image to `ghcr.io/lupiq/relwolf`).
 - `relwolf.yaml` in the repo root is relwolf's own config. Package version in `package.json` stays `0.0.0` until the
