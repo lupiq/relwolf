@@ -1,5 +1,12 @@
+# Project specific
 node_modules
 dist
 coverage
 *.log
+
+# MacOS
 .DS_Store
+
+# IntelliJ
+*.iml
+.idea
