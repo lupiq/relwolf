@@ -16,7 +16,7 @@ inputs:
 
 runs:
   using: docker
-  image: docker://ghcr.io/lupiq/relwolf:0.2.0 # x-relwolf-version
+  image: docker://ghcr.io/lupiq/relwolf:0.3.0 # x-relwolf-version
   entrypoint: relwolf
   env:
     RELWOLF_TOKEN: ${{ inputs.token }}
