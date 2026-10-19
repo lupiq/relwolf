@@ -20,6 +20,9 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "start": "node dist/cli.js",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint --flag unstable_native_nodejs_ts_config .",
@@ -45,6 +48,7 @@
     "prettier-plugin-organize-imports": "4.3.0",
     "typescript": "npm:@typescript/typescript6@6.0.2",
     "typescript-eslint": "8.71.2",
+    "vitepress": "1.6.4",
     "vitest": "5.0.5"
   }
 }

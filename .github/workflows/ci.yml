@@ -24,6 +24,7 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test:coverage
       - run: pnpm build
+      - run: pnpm docs:build
 
   docker:
     runs-on: ubuntu-latest

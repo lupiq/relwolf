@@ -1,7 +1,8 @@
 # relwolf – project context for contributors and AI agents
 
 Everything needed to extend relwolf in a new session: requirements, decisions, architecture, conventions.
-User-facing documentation lives in `README.md`; keep both in sync.
+User-facing documentation lives in the VitePress site in `docs/` (published at https://relwolf.lupiq.io); the
+`README.md` only holds repo-relevant info and the GitHub Action quick start. Keep docs and this file in sync.
 
 ## Goal
 
@@ -25,7 +26,7 @@ Flow: Conventional Commits → next SemVer → release MR (changelog + version f
 - Changelog is produced by **git-cliff** (npm package, bundled); users control the format with their own `cliff.toml`.
   Which commit types appear is purely git-cliff configuration. relwolf's own `cliff.toml` lists all types except `chore`.
 - Updaters: `package-json`, `pom-xml`, `gradle`, `generic` (line markers `x-relwolf-version`, `x-relwolf-minor`, `x-relwolf-major`; the partial ones leave
-  pre-releases unchanged). The README keeps its `@v1`/`:1` examples current this way (`relwolf.yaml`).
+  pre-releases unchanged). The README and the docs pages with `@v1`/`:1` examples are kept current this way (`generic` updaters in `relwolf.yaml`; each file with a marker must be listed there).
 - GitLab project settings assumed: squash + fast-forward-only, no merge commits. MRs are labelled
   `relwolf: pending` / `relwolf: tagged`; source branch of the release MR `relwolf/<branch>`.
 - The CI job provides a full git clone (`GIT_DEPTH: 0`); relwolf aborts with a clear error on shallow clones.
@@ -109,7 +110,16 @@ sentence-case subject, i.e. the text after `type:` starts with a capital letter)
   by relwolf's own `generic` updater (see `relwolf.yaml`), so a tag always references the image built from it.
   `publish.yml` (tags `v*.*.*`) moves the floating major tag (`v1`) after the image push, stable releases only.
   Renovate ignores `action.yml`. The action was not run end-to-end in the authoring session.
-- Manual setup still required: `RELWOLF_TOKEN` secret, GHCR package set to public, auto-delete head branches,
+- Documentation: VitePress (`docs/`, config `docs/.vitepress/config.mts`, theme tweaks in `docs/.vitepress/theme`).
+  Scripts `pnpm docs:dev|docs:build|docs:preview`; excluded from ESLint, formatted by Prettier, built in `ci.yml`.
+  `docs.yml` deploys to GitHub Pages on stable `v*.*.*` tags (and manually); custom domain via `docs/public/CNAME`
+  (`relwolf.lupiq.io`). Assets in `docs/public`: relwolf logo (`logo.svg`, ~2 KB hand-simplified vector trace of the
+  hand-made raster app icon; used for navbar, hero, README; `favicon.svg` is a simplified logo (head, eye, two facets) for small sizes, `favicon.png` and `apple-touch-icon.png` are PNGs rendered from it), bot avatar (`relwolf-avatar.png`, 512 px, 256 colours to stay below GitLab's 200 KB limit) and the lupiq logos (colour for light, white for
+  dark theme, switched via CSS classes `only-light`/`only-dark`). lupiq.com is not live yet.
+  Brand colours are teal `#2bb3a3` and violet `#3a2e5e`: the site defines them once as CSS variables
+  (`--lupiq-*` in `theme/custom.css`).
+- Manual setup still required: Pages source set to "GitHub Actions" + custom domain `relwolf.lupiq.io` (DNS CNAME to
+  `lupiq.github.io`), `RELWOLF_TOKEN` secret, GHCR package set to public, auto-delete head branches,
   install the Renovate GitHub App (https://github.com/apps/renovate) for the repository, allow squash merging.
 
 ## Ideas / not implemented

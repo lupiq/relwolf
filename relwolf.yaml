@@ -8,3 +8,13 @@ packages:
         path: action.yml
       - type: generic
         path: README.md
+      - type: generic
+        path: docs/guide/gitlab.md
+      - type: generic
+        path: docs/guide/github.md
+      - type: generic
+        path: docs/guide/release-as.md
+      - type: generic
+        path: docs/reference/github-vs-gitlab.md
+      - type: generic
+        path: docs/reference/docker-image.md
