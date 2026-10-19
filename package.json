@@ -5,6 +5,8 @@
   "type": "module",
   "packageManager": "pnpm@12.14.0",
   "repository": "https://github.com/lupiq/relwolf",
+  "license": "MIT",
+  "author": "lupiq",
   "bin": {
     "relwolf": "dist/cli.js"
   },

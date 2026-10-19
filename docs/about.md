@@ -16,7 +16,7 @@ relwolf was developed by **lupiq**.
 
 <b>lupiq</b> is a Swiss software company specialized in full-stack web projects and agile coaching. Learn more under [lupiq.com](https://lupiq.com).
 
-relwolf is open source and lives on [GitHub](https://github.com/lupiq/relwolf). It is inspired by Google's
+relwolf is open source under the [MIT License](https://github.com/lupiq/relwolf/blob/main/LICENSE) and lives on [GitHub](https://github.com/lupiq/relwolf). It is inspired by Google's
 [release-please](https://github.com/googleapis/release-please).
 
 ## Bot avatar

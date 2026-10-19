@@ -11,7 +11,7 @@ release merge request with the changelog and updated version files, and tags and
 
 📖 **Documentation: [relwolf.lupiq.io](https://relwolf.lupiq.io)**
 
-relwolf is developed by [lupiq](https://lupiq.com).
+relwolf is developed by [lupiq](https://lupiq.com) and released under the [MIT License](LICENSE).
 
 ## Quick start (GitHub Actions)
 

@@ -34,7 +34,7 @@ Flow: Conventional Commits → next SemVer → release MR (changelog + version f
 - Provider layer is replaceable (`src/providers/types.ts`); GitLab and GitHub are implemented.
 - Docker tags: `latest`, `X.Y.Z`, `X.Y`, `X`, `sha`; platforms amd64+arm64; public image. No `ENTRYPOINT`
   (GitLab overrides it), `relwolf` is on the `PATH`.
-- No license has been chosen yet (none was specified) – do not add one without asking.
+- License: MIT (`LICENSE`, `license` in `package.json`), copyright holder "lupiq".
 - Rule from the user: **do not make assumptions on open design questions – ask.**
 
 ## Architecture (`src/`)
