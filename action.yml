@@ -1,0 +1,18 @@
+name: relwolf
+description: Release bot based on Conventional Commits - opens a release pull request and tags merged releases
+author: lupiq
+branding:
+  icon: tag
+  color: gray-dark
+
+inputs:
+  token:
+    description: Access token used for all API calls (becomes RELWOLF_TOKEN)
+    required: true
+
+runs:
+  using: docker
+  image: docker://ghcr.io/lupiq/relwolf:0.0.0 # x-relwolf-version
+  entrypoint: relwolf
+  env:
+    RELWOLF_TOKEN: ${{ inputs.token }}

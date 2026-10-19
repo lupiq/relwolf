@@ -2,10 +2,10 @@ name: Publish image
 
 on:
   push:
-    tags: ['v*']
+    tags: ['v*.*.*']
 
 permissions:
-  contents: read
+  contents: write
   packages: write
 
 env:
@@ -41,3 +41,11 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      # Move the major tag (e.g. v1) so that `uses: lupiq/relwolf@v1` follows stable releases;
+      # only after the image exists, because action.yml points at it.
+      - name: Move major tag
+        if: ${{ !contains(github.ref_name, '-') }}
+        run: |
+          major="${GITHUB_REF_NAME%%.*}"
+          git tag --force "$major" "$GITHUB_SHA"
+          git push --force origin "refs/tags/$major"

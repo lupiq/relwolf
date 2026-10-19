@@ -131,7 +131,7 @@ describe('generic updater', () => {
     ].join('\n');
     // the pure comment line has no version and must fail, so test it separately
     expect(() => applyUpdater('generic', input, '1.1.0', 'f')).toThrow(
-      /contains no version/,
+      /contains no matching version/,
     );
     const ok = input
       .split('\n')
@@ -158,10 +158,63 @@ describe('generic updater', () => {
     ).toBe('v: 1.0.0 # x-relwolf-version');
   });
 
+  it('updates only the minor or major part for partial markers', () => {
+    const input = [
+      'a: lupiq/relwolf@v1 # x-relwolf-major',
+      'b: relwolf:1.2 # x-relwolf-minor',
+      'c: 1.2.3 # x-relwolf-version',
+      'd: other@v7',
+    ].join('\n');
+    expect(applyUpdater('generic', input, '2.0.0', 'f')).toBe(
+      [
+        'a: lupiq/relwolf@v2 # x-relwolf-major',
+        'b: relwolf:2.0 # x-relwolf-minor',
+        'c: 2.0.0 # x-relwolf-version',
+        'd: other@v7',
+      ].join('\n'),
+    );
+  });
+
+  it('leaves partial markers untouched for pre-releases', () => {
+    const input = [
+      'a: @v1 # x-relwolf-major',
+      'b: 1.2 # x-relwolf-minor',
+      'c: 1.2.3 # x-relwolf-version',
+    ].join('\n');
+    expect(applyUpdater('generic', input, '2.0.0-beta.1', 'f')).toBe(
+      [
+        'a: @v1 # x-relwolf-major',
+        'b: 1.2 # x-relwolf-minor',
+        'c: 2.0.0-beta.1 # x-relwolf-version',
+      ].join('\n'),
+    );
+  });
+
+  it('does not take a part of a longer version for a partial marker', () => {
+    expect(() =>
+      applyUpdater('generic', 'x: 1.2.3 # x-relwolf-minor', '2.0.0', 'f'),
+    ).toThrow(/contains no matching version/);
+  });
+
+  it('ignores lines that merely mention a marker', () => {
+    const input = [
+      'x: 1.0.0 # x-relwolf-version',
+      'Use `x-relwolf-version` for 1.0.0 like this',
+      '<div>1.0.0</div> <!-- x-relwolf-version -->',
+    ].join('\n');
+    expect(applyUpdater('generic', input, '2.0.0', 'f')).toBe(
+      [
+        'x: 2.0.0 # x-relwolf-version',
+        'Use `x-relwolf-version` for 1.0.0 like this',
+        '<div>2.0.0</div> <!-- x-relwolf-version -->',
+      ].join('\n'),
+    );
+  });
+
   it('fails when no marker exists', () => {
     expect(() =>
       applyUpdater('generic', 'version: 1.0.0', '1.1.0', 'f'),
-    ).toThrow(/no line contains the marker/);
+    ).toThrow(/no line contains one of the markers/);
   });
 
   it('preserves CRLF line endings', () => {

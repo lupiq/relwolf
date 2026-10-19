@@ -26,7 +26,7 @@ used directly as the `image:` of a GitLab CI job.
 
    ```yaml
    relwolf:
-     image: ghcr.io/lupiq/relwolf:latest # pin a version, e.g. :1
+     image: ghcr.io/lupiq/relwolf:1 # x-relwolf-major
      stage: release
      resource_group: relwolf
      variables:
@@ -40,6 +40,43 @@ used directly as the `image:` of a GitLab CI job.
 4. Optionally add a [`relwolf.yaml`](#configuration) to the repository root.
 
 The image has no `ENTRYPOINT`, so `relwolf` is simply a command on the `PATH`.
+
+## Quick start (GitHub Actions)
+
+1. Create a token and store it as the repository secret `RELWOLF_TOKEN`. Use a personal access token
+   (_contents_ and _pull requests_ write access) if CI should run on the release pull request and the tag push
+   should trigger other workflows; the built-in `GITHUB_TOKEN` works too (permissions `contents: write` and
+   `pull-requests: write`, plus _Allow GitHub Actions to create and approve pull requests_ in the repository
+   settings), but events created with it do not trigger other workflows.
+2. Repository settings: allow **squash merging** only and enable _Automatically delete head branches_.
+3. Add a workflow:
+
+   ```yaml
+   name: Release
+   on:
+     push:
+       branches: [main] # your default branch
+   concurrency:
+     group: release
+   permissions:
+     contents: write
+     pull-requests: write
+   jobs:
+     relwolf:
+       runs-on: ubuntu-latest # Linux runners only (Docker container action)
+       steps:
+         - uses: actions/checkout@v7
+           with:
+             fetch-depth: 0 # relwolf needs the full history and all tags
+         - uses: lupiq/relwolf@v1 # x-relwolf-major
+           with:
+             token: ${{ secrets.RELWOLF_TOKEN }}
+   ```
+
+4. Optionally add a [`relwolf.yaml`](#configuration) to the repository root.
+
+The action runs the Docker image of the same version. The major tag (`@v1` above) follows the latest stable
+release of that major version; use an exact tag such as `@v1.2.3` to pin.
 
 ## How it works
 
@@ -129,12 +166,24 @@ ignores changes inside other configured packages.
 | `package-json` | the top-level `"version"`                                                                       |
 | `pom-xml`      | the project's own `<version>` (not the parent's or any dependency's)                            |
 | `gradle`       | a top-level `version = '…'` / `version "…"` (Groovy/Kotlin DSL) or `version=…` in `.properties` |
-| `generic`      | the first semantic version on every line containing the marker `x-relwolf-version`              |
+| `generic`      | the first version on every line containing a marker (see below)                                 |
 
 ```yaml
 image:
   tag: 1.2.3 # x-relwolf-version
 ```
+
+The marker has to be the last thing on the line (usually in a comment, optionally before a closing `-->` or `*/`);
+its name selects the granularity of the first matching version on that line (a leading `v` is kept):
+
+| Marker              | Replaces                            | Example           |
+| ------------------- | ----------------------------------- | ----------------- |
+| `x-relwolf-version` | the full version                    | `1.2.3` → `2.0.0` |
+| `x-relwolf-minor`   | `MAJOR.MINOR`, not for pre-releases | `1.2` → `2.0`     |
+| `x-relwolf-major`   | `MAJOR`, not for pre-releases       | `v1` → `v2`       |
+
+Use the partial markers for references to floating tags, e.g. `uses: org/repo@v1 # x-relwolf-major` or
+`image: org/repo:1.2 # x-relwolf-minor`. Pre-releases leave them unchanged, because no floating tag exists for them.
 
 ### Changelog (git-cliff)
 

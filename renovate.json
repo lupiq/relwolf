@@ -27,6 +27,11 @@
   ],
   "packageRules": [
     {
+      "description": "action.yml points at the image of the same release and is bumped by relwolf",
+      "matchFileNames": ["action.yml"],
+      "enabled": false
+    },
+    {
       "description": "Runtime dependencies end up in the image, so they trigger a patch release",
       "matchDepTypes": ["dependencies"],
       "semanticCommitType": "fix"

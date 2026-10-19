@@ -24,7 +24,8 @@ Flow: Conventional Commits → next SemVer → release MR (changelog + version f
   (`prerelease: beta` → `1.3.0-beta.1`).
 - Changelog is produced by **git-cliff** (npm package, bundled); users control the format with their own `cliff.toml`.
   Which commit types appear is purely git-cliff configuration. relwolf's own `cliff.toml` lists all types except `chore`.
-- Updaters: `package-json`, `pom-xml`, `gradle`, `generic` (line marker `x-relwolf-version`).
+- Updaters: `package-json`, `pom-xml`, `gradle`, `generic` (line markers `x-relwolf-version`, `x-relwolf-minor`, `x-relwolf-major`; the partial ones leave
+  pre-releases unchanged). The README keeps its `@v1`/`:1` examples current this way (`relwolf.yaml`).
 - GitLab project settings assumed: squash + fast-forward-only, no merge commits. MRs are labelled
   `relwolf: pending` / `relwolf: tagged`; source branch of the release MR `relwolf/<branch>`.
 - The CI job provides a full git clone (`GIT_DEPTH: 0`); relwolf aborts with a clear error on shallow clones.
@@ -99,6 +100,11 @@ sentence-case subject, i.e. the text after `type:` starts with a capital letter)
   checks are green, majors need a manual merge. Related packages are grouped into one PR (typescript = TS 6 alias +
   `@typescript/native`, eslint, vitest, commitlint, prettier, pnpm incl. the Dockerfile version) so version conflicts
   between them cannot occur. Runs at any time.
+- GitHub Action: `action.yml` (Docker container action, `entrypoint: relwolf`, input `token` → `RELWOLF_TOKEN`) uses
+  `docker://ghcr.io/lupiq/relwolf:<version>`. The version line carries the `x-relwolf-version` marker and is bumped
+  by relwolf's own `generic` updater (see `relwolf.yaml`), so a tag always references the image built from it.
+  `publish.yml` (tags `v*.*.*`) moves the floating major tag (`v1`) after the image push, stable releases only.
+  Renovate ignores `action.yml`. The action was not run end-to-end in the authoring session.
 - Manual setup still required: `RELWOLF_TOKEN` secret, GHCR package set to public, auto-delete head branches,
   install the Renovate GitHub App (https://github.com/apps/renovate) for the repository, allow squash merging.
 

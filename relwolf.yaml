@@ -4,3 +4,7 @@ packages:
   '.':
     updaters:
       - type: package-json
+      - type: generic
+        path: action.yml
+      - type: generic
+        path: README.md
