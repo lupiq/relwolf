@@ -149,9 +149,20 @@ packages:
     ],
     ['invalid component', "packages:\n  a: { component: 'a b' }", /component/],
     ['no packages', 'packages: {}', /at least one package/],
+    [
+      'unknown title placeholder',
+      'pull-request-title: "Release ${versoin}"',
+      /only \$\{tags\}/,
+    ],
   ])('rejects %s', (_name, yaml, message) => {
     expect(() => parseConfig(yaml)).toThrow(ConfigError);
     expect(() => parseConfig(yaml)).toThrow(message);
+  });
+
+  it('parses a custom pull request title', () => {
+    expect(
+      parseConfig('pull-request-title: "Release ${version}"').pullRequestTitle,
+    ).toBe('Release ${version}');
   });
 
   it('treats an empty file as defaults', () => {

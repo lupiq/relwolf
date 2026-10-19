@@ -21,8 +21,19 @@ const OVERRIDE_PATTERN =
 const NOTES_PATTERN =
   /<!-- relwolf:notes tag="([^"\s]+)" prerelease="(true|false)" -->\r?\n([\s\S]*?)\r?\n<!-- \/relwolf:notes -->/g;
 
-export function renderTitle(tags: readonly string[]): string {
-  return `chore(release): prepare for ${tags.join(', ')}`;
+export const DEFAULT_TITLE_TEMPLATE = 'chore(release): Create release ${tags}';
+
+/** Placeholders: `${tags}` (all tags, comma separated) and `${version}` (the bare version for a single package, else the tags). */
+export function renderTitle(
+  tags: readonly string[],
+  template = DEFAULT_TITLE_TEMPLATE,
+  versions: readonly string[] = tags,
+): string {
+  const tagList = tags.join(', ');
+  const version = (versions.length === 1 ? versions[0] : undefined) ?? tagList;
+  return template
+    .replaceAll('${tags}', () => tagList)
+    .replaceAll('${version}', () => version);
 }
 
 /** Notes come from commit messages, so they must not be able to forge relwolf markers. */

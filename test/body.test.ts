@@ -50,9 +50,24 @@ describe('release request body', () => {
   });
 
   it('renders titles that the default git-cliff config skips', () => {
-    expect(renderTitle(['v1.0.0'])).toBe('chore(release): prepare for v1.0.0');
-    expect(renderTitle(['v1.0.0', 'app-v2.0.0'])).toBe(
-      'chore(release): prepare for v1.0.0, app-v2.0.0',
+    expect(renderTitle(['v1.0.0'])).toBe(
+      'chore(release): Create release v1.0.0',
     );
+    expect(renderTitle(['v1.0.0', 'app-v2.0.0'])).toBe(
+      'chore(release): Create release v1.0.0, app-v2.0.0',
+    );
+  });
+
+  it('renders custom title templates', () => {
+    const template = 'release: ${version} (${tags})';
+    expect(renderTitle(['v1.0.0'], template, ['1.0.0'])).toBe(
+      'release: 1.0.0 (v1.0.0)',
+    );
+    expect(
+      renderTitle(['v1.0.0', 'app-v2.0.0'], 'Release ${version}', [
+        '1.0.0',
+        '2.0.0',
+      ]),
+    ).toBe('Release v1.0.0, app-v2.0.0');
   });
 });

@@ -55,5 +55,5 @@ Run a pipeline manually (_Build → Pipelines → Run pipeline_) on the default 
 
 ## What you will see
 
-- A merge request `chore(release): prepare for v1.2.3` from `relwolf/main`, labelled `relwolf: pending`.
+- A merge request `chore(release): Create release v1.2.3` from `relwolf/main`, labelled `relwolf: pending`.
 - After the merge: the tag `v1.2.3`, a GitLab release with the changelog entry and the label `relwolf: tagged`.

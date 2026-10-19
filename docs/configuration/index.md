@@ -12,6 +12,7 @@ updaters. Everything is configured through this file; there are no CLI flags. Se
 ```yaml [relwolf.yaml]
 branch: main # branch to release from; defaults to the CI default branch, then "main"
 cliff-config: cliff.toml # git-cliff config; defaults to git-cliff's own discovery/default
+pull-request-title: 'chore(release): Create release ${tags}' # optional, title of the release MR/PR
 prerelease: beta # optional, default for all packages
 bump-minor-pre-major: true # optional, default for all packages
 
@@ -34,16 +35,34 @@ Paths of updaters and the changelog are relative to the package path. Unknown ke
 
 ## Options
 
-| Key                    | Level           | Default                        | Description                                           |
-| ---------------------- | --------------- | ------------------------------ | ----------------------------------------------------- |
-| `branch`               | global          | CI default branch, then `main` | Branch to release from                                |
-| `cliff-config`         | global          | git-cliff discovery            | Path to a git-cliff config                            |
-| `prerelease`           | global, package | none                           | [Pre-release](/guide/pre-releases) identifier         |
-| `bump-minor-pre-major` | global, package | `true`                         | Breaking changes only bump minor before `1.0.0`       |
-| `component`            | package         | none                           | Tag prefix, see [Monorepos](/configuration/monorepos) |
-| `changelog-path`       | package         | `CHANGELOG.md`                 | Changelog file, relative to the package               |
-| `initial-version`      | package         | computed from `0.0.0`          | First stable version if no tag exists                 |
-| `updaters`             | package         | none                           | [Files to update](/configuration/updaters)            |
+| Key                    | Level           | Default                                  | Description                                           |
+| ---------------------- | --------------- | ---------------------------------------- | ----------------------------------------------------- |
+| `branch`               | global          | CI default branch, then `main`           | Branch to release from                                |
+| `cliff-config`         | global          | git-cliff discovery                      | Path to a git-cliff config                            |
+| `pull-request-title`   | global          | `chore(release): Create release ${tags}` | Title template, see below                             |
+| `prerelease`           | global, package | none                                     | [Pre-release](/guide/pre-releases) identifier         |
+| `bump-minor-pre-major` | global, package | `true`                                   | Breaking changes only bump minor before `1.0.0`       |
+| `component`            | package         | none                                     | Tag prefix, see [Monorepos](/configuration/monorepos) |
+| `changelog-path`       | package         | `CHANGELOG.md`                           | Changelog file, relative to the package               |
+| `initial-version`      | package         | computed from `0.0.0`                    | First stable version if no tag exists                 |
+| `updaters`             | package         | none                                     | [Files to update](/configuration/updaters)            |
+
+## Release request title
+
+`pull-request-title` sets the title of the release merge (pull) request. The title is also used as the message of the
+release commit.
+
+| Placeholder  | Replaced with                                                                               |
+| ------------ | ------------------------------------------------------------------------------------------- |
+| `${tags}`    | All tags of the release, comma separated, e.g. `v1.2.3` or `v1.2.3, api-v0.4.0`             |
+| `${version}` | The bare version (`1.2.3`) if a single package is released, otherwise the same as `${tags}` |
+
+```yaml [relwolf.yaml]
+pull-request-title: 'chore: release ${version}'
+```
+
+Unknown placeholders fail the run. Keep a type that does not bump the version (`chore`, `docs`, …); a `feat` or `fix`
+title would count as a releasable commit once the release is squash-merged.
 
 ## Typical setups
 

@@ -16,7 +16,7 @@ purely git-cliff configuration.
 - Use `RELWOLF_GIT_CLIFF` to run your own git-cliff executable instead of the bundled one.
 
 ::: warning
-Release merge requests are titled `chore(release): prepare for …`. Make sure your `cliff.toml` does not list that commit
+Release merge requests are titled `chore(release): Create release …`. Make sure your `cliff.toml` does not list that commit
 in the changelog (relwolf's own `cliff.toml` skips all `chore` commits).
 :::
 

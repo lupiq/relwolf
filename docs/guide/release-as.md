@@ -52,6 +52,6 @@ Variable: RELWOLF_RELEASE_AS = 1.0.0
 
 1. Merge the commits you want to release into the default branch.
 2. Run the pipeline / workflow with `RELWOLF_RELEASE_AS=1.0.0`.
-3. relwolf opens `chore(release): prepare for v1.0.0`. The merge request description notes that the version was set
+3. relwolf opens `chore(release): Create release v1.0.0`. The merge request description notes that the version was set
    manually.
 4. Merge it. The tag `v1.0.0` and the release are created.

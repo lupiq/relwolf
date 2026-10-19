@@ -320,7 +320,11 @@ async function prepareReleaseRequest(
 
   const baseSha = await git.head();
   const {files, entries} = await buildFiles(options, plans);
-  const title = renderTitle(plans.map(plan => plan.tag));
+  const title = renderTitle(
+    plans.map(plan => plan.tag),
+    options.config.pullRequestTitle,
+    plans.map(plan => formatVersion(plan.version)),
+  );
   const overrides: BodyOverride[] = plans.flatMap(plan => {
     const version = versions.get(componentKey(plan.pkg));
     return version

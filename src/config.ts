@@ -35,9 +35,21 @@ const packageSchema = z.strictObject({
   'initial-version': z.string().optional(),
 });
 
+const isTitlePlaceholder = (placeholder: string) =>
+  placeholder === '${tags}' || placeholder === '${version}';
+
 const configSchema = z.strictObject({
   'branch': z.string().min(1).optional(),
   'cliff-config': z.string().min(1).optional(),
+  'pull-request-title': z
+    .string()
+    .min(1)
+    .regex(/^[^\r\n]+$/, 'must be a single line')
+    .refine(
+      title => (title.match(/\$\{[^}]*\}/g) ?? []).every(isTitlePlaceholder),
+      'only ${tags} and ${version} are supported',
+    )
+    .optional(),
   'prerelease': prereleaseId.optional(),
   'bump-minor-pre-major': z.boolean().default(true),
   'packages': z
@@ -65,6 +77,8 @@ export interface PackageConfig {
 export interface Config {
   branch?: string;
   cliffConfig?: string;
+  /** Template for the release request title, see `renderTitle`. */
+  pullRequestTitle?: string;
   packages: PackageConfig[];
 }
 
@@ -195,6 +209,9 @@ export function parseConfig(source: string | undefined): Config {
     ...(parsed.branch ? {branch: parsed.branch} : {}),
     ...(parsed['cliff-config']
       ? {cliffConfig: normalizeRepoPath(parsed['cliff-config'], 'cliff-config')}
+      : {}),
+    ...(parsed['pull-request-title']
+      ? {pullRequestTitle: parsed['pull-request-title']}
       : {}),
     packages,
   };

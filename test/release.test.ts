@@ -97,6 +97,12 @@ describe('release request', () => {
     expect(provider.commits).toHaveLength(0);
   });
 
+  it('uses the configured title template', async () => {
+    repo.commit('feat: a');
+    await exec('pull-request-title: "Release ${version}"\n');
+    expect(provider.requests[0]!.title).toBe('Release 0.1.0');
+  });
+
   it('closes the open request when its only commit is reverted', async () => {
     const sha = repo.commit('feat: a');
     await exec();
@@ -127,7 +133,7 @@ describe('release request', () => {
     repo.commit('Revert "feat: a"');
     await exec();
     expect(provider.requests[0]!.title).toBe(
-      'chore(release): prepare for v0.0.1',
+      'chore(release): Create release v0.0.1',
     );
   });
 
@@ -142,7 +148,7 @@ describe('release request', () => {
     expect(result.releaseRequest).toMatchObject({id: 1, action: 'created'});
     const [request] = provider.requests;
     expect(request).toMatchObject({
-      title: 'chore(release): prepare for v0.1.0',
+      title: 'chore(release): Create release v0.1.0',
       sourceBranch: 'relwolf/main',
       targetBranch: 'main',
       labels: ['relwolf: pending'],
@@ -190,7 +196,7 @@ describe('release request', () => {
     repo.commit('fix: first');
     await exec(NODE_CONFIG);
     expect(provider.requests[0]!.title).toBe(
-      'chore(release): prepare for v0.0.1',
+      'chore(release): Create release v0.0.1',
     );
 
     const again = await exec(NODE_CONFIG);
@@ -202,7 +208,7 @@ describe('release request', () => {
     expect(updated.releaseRequest).toMatchObject({id: 1, action: 'updated'});
     expect(provider.requests).toHaveLength(1);
     expect(provider.requests[0]!.title).toBe(
-      'chore(release): prepare for v0.1.0',
+      'chore(release): Create release v0.1.0',
     );
     expect(provider.commits).toHaveLength(2);
     expect(provider.commits[1]!.baseSha).toBe(repo.head());
@@ -310,7 +316,7 @@ describe('tagging merged release requests', () => {
     expect(result.releaseRequest).toMatchObject({action: 'created'});
     // 0.x: breaking change becomes a minor bump by default
     expect(provider.requests[1]!.title).toBe(
-      'chore(release): prepare for v0.2.0',
+      'chore(release): Create release v0.2.0',
     );
     const files = Object.fromEntries(
       provider.commits.at(-1)!.files.map(f => [f.path, f]),
@@ -319,7 +325,7 @@ describe('tagging merged release requests', () => {
     expect(changelog.exists).toBe(true);
     expect(changelog.content).toMatch(/0\.2\.0[\s\S]*0\.1\.0/);
     expect(changelog.content).toMatch(/later bug/i);
-    expect(changelog.content).not.toMatch(/prepare for/);
+    expect(changelog.content).not.toMatch(/Create release/);
     expect(JSON.parse(files['package.json']!.content).version).toBe('0.2.0');
     // the notes of the new release must not repeat the old release
     expect(parseBody(provider.requests[1]!.body)[0]!.notes).not.toMatch(
@@ -369,7 +375,7 @@ describe('pre-releases', () => {
     repo.commit('feat: one');
     await exec(config);
     expect(provider.requests[0]!.title).toBe(
-      'chore(release): prepare for v0.1.0-beta.1',
+      'chore(release): Create release v0.1.0-beta.1',
     );
     expect(parseBody(provider.requests[0]!.body)[0]).toMatchObject({
       prerelease: true,
@@ -387,7 +393,7 @@ describe('pre-releases', () => {
     repo.commit('fix: two');
     await exec(config);
     expect(provider.requests[1]!.title).toBe(
-      'chore(release): prepare for v0.1.0-beta.2',
+      'chore(release): Create release v0.1.0-beta.2',
     );
     const notes = parseBody(provider.requests[1]!.body)[0]!.notes;
     expect(notes).toMatch(/two/i);
@@ -400,7 +406,7 @@ describe('pre-releases', () => {
       'packages:\n  ".":\n    updaters: [{ type: package-json }]\n';
     await exec(stable);
     expect(provider.requests[2]!.title).toBe(
-      'chore(release): prepare for v0.1.0',
+      'chore(release): Create release v0.1.0',
     );
     const files = Object.fromEntries(
       provider.commits.at(-1)!.files.map(f => [f.path, f]),
@@ -439,7 +445,7 @@ packages:
     await exec(config);
 
     expect(provider.requests[0]!.title).toBe(
-      'chore(release): prepare for v0.1.0, api-v0.1.0',
+      'chore(release): Create release v0.1.0, api-v0.1.0',
     );
     const files = Object.fromEntries(
       provider.commits[0]!.files.map(f => [f.path, f]),
@@ -468,7 +474,7 @@ packages:
     const first = await exec(config);
     expect(first.releaseRequest?.action).toBe('created');
     expect(provider.requests[0]!.title).toBe(
-      'chore(release): prepare for api-v0.0.1',
+      'chore(release): Create release api-v0.0.1',
     );
     mergeLastRelease(repo, provider, 1);
 
@@ -479,7 +485,7 @@ packages:
     repo.commit('feat: root only', 'root.txt');
     await exec(config);
     expect(provider.requests[1]!.title).toBe(
-      'chore(release): prepare for v0.1.0',
+      'chore(release): Create release v0.1.0',
     );
   });
 });
@@ -490,12 +496,12 @@ describe('RELWOLF_RELEASE_AS', () => {
   it('forces the version and keeps it until the request is merged', async () => {
     repo.commit('feat: a');
     await exec(undefined, {releaseAs: '1.0.0'});
-    expect(title()).toBe('chore(release): prepare for v1.0.0');
+    expect(title()).toBe('chore(release): Create release v1.0.0');
     expect(provider.requests[0]!.body).toMatch(/RELWOLF_RELEASE_AS/);
 
     repo.commit('fix: b');
     await exec();
-    expect(title()).toBe('chore(release): prepare for v1.0.0');
+    expect(title()).toBe('chore(release): Create release v1.0.0');
 
     mergeLastRelease(repo, provider, 1);
     expect((await exec()).tagged).toEqual(['v1.0.0']);
@@ -505,7 +511,7 @@ describe('RELWOLF_RELEASE_AS', () => {
     repo.commit('feat: a');
     await exec(undefined, {releaseAs: 'v1.0.0'});
     await exec(undefined, {releaseAs: 'auto'});
-    expect(title()).toBe('chore(release): prepare for v0.1.0');
+    expect(title()).toBe('chore(release): Create release v0.1.0');
   });
 
   it('closes the open request when auto leaves nothing to release', async () => {
@@ -553,6 +559,6 @@ describe('RELWOLF_RELEASE_AS', () => {
     const config =
       'packages:\n  services/api:\n    component: api\n    updaters: []\n';
     await exec(config, {releaseAs: 'api=2.0.0'});
-    expect(title()).toBe('chore(release): prepare for api-v2.0.0');
+    expect(title()).toBe('chore(release): Create release api-v2.0.0');
   });
 });

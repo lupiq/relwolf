@@ -23,7 +23,7 @@ relwolf
 - generates the new changelog entry with [git-cliff](https://git-cliff.org/),
 - updates the version in the configured files,
 - force-pushes a single commit to `relwolf/<branch>` through the API (the working tree is never modified),
-- creates or updates the merge request `chore(release): prepare for v1.2.3` labelled `relwolf: pending`.
+- creates or updates the merge request `chore(release): Create release v1.2.3` labelled `relwolf: pending`.
 
 ## Skipped pipelines
 
@@ -44,8 +44,8 @@ releases) go through the provider API.
 ## Example timeline
 
 ```text
-feat: add search        → release MR "prepare for v0.1.0" opened
+feat: add search        → release MR "Create release v0.1.0" opened
 fix: typo               → release MR updated (still v0.1.0, changelog has both)
 (release MR merged)     → tag v0.1.0 + release created
-fix: crash on start     → release MR "prepare for v0.1.1" opened
+fix: crash on start     → release MR "Create release v0.1.1" opened
 ```
