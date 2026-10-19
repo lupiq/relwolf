@@ -105,20 +105,30 @@ export interface NextVersionInput {
   minorPreMajor: boolean;
   /** Used verbatim as the first stable version when no stable tag exists. */
   initialVersion?: Version | undefined;
+  /** Explicitly requested version; replaces the computed one (a pre-release is used verbatim). */
+  releaseAs?: Version | undefined;
 }
 
 export function nextVersion(input: NextVersionInput): Version | null {
-  if (input.level === null) return null;
+  const {level, releaseAs} = input;
+  if (releaseAs && isPrerelease(releaseAs)) return releaseAs;
 
-  const base = input.lastStable
-    ? bumpVersion(input.lastStable, input.level, input.minorPreMajor)
-    : input.initialVersion
-      ? {...input.initialVersion, prerelease: []}
-      : bumpVersion(
-          {major: 0, minor: 0, patch: 0, prerelease: []},
-          input.level,
-          input.minorPreMajor,
-        );
+  let base: Version;
+  if (releaseAs) {
+    base = releaseAs;
+  } else if (level === null) {
+    return null;
+  } else if (input.lastStable) {
+    base = bumpVersion(input.lastStable, level, input.minorPreMajor);
+  } else if (input.initialVersion) {
+    base = {...input.initialVersion, prerelease: []};
+  } else {
+    base = bumpVersion(
+      {major: 0, minor: 0, patch: 0, prerelease: []},
+      level,
+      input.minorPreMajor,
+    );
+  }
 
   const id = input.prerelease;
   if (!id) return base;

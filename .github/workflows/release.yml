@@ -10,6 +10,12 @@ name: Release
 on:
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      release-as:
+        description: 'Force the next version, e.g. 1.0.0 ("auto" removes a request)'
+        required: false
+        default: ''
 
 concurrency:
   group: release
@@ -35,3 +41,4 @@ jobs:
       - run: node dist/cli.js
         env:
           RELWOLF_TOKEN: ${{ secrets.RELWOLF_TOKEN }}
+          RELWOLF_RELEASE_AS: ${{ inputs.release-as }}

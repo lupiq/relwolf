@@ -111,6 +111,19 @@ other branches) are skipped without an error.
 - Tags are `v1.2.3`; packages with a `component` use `<component>-v1.2.3`.
 - Only commits touching a package's path count for that package.
 
+### Controlling the next version
+
+Set `RELWOLF_RELEASE_AS` to force the next version without an empty commit, e.g. to leave `0.x` with `1.0.0`:
+
+- **GitLab:** _Build → Pipelines → Run pipeline_ on the default branch with the variable `RELWOLF_RELEASE_AS=1.0.0`.
+- **GitHub Action:** input `release-as` (e.g. via a `workflow_dispatch` input: `with: {token: ..., release-as: ${{ inputs.release-as }}}`).
+
+Syntax: `[component=]version`, several entries separated by comma or whitespace (`api=2.0.0, web=auto`). A leading
+`v` is allowed; a bare version applies to the package without a component (or the only package). The request is
+stored in the release MR and kept on later runs until the MR is merged. `auto` removes it again. The version must be
+greater than the last tag and at least one commit must exist since it, otherwise relwolf fails or does nothing.
+With `prerelease` configured, a stable request such as `1.0.0` yields `1.0.0-beta.1`.
+
 ### Pre-releases
 
 Set `prerelease: beta` to publish `1.3.0-beta.1`, `1.3.0-beta.2`, ... A new pre-release is only proposed
@@ -196,13 +209,14 @@ the changelog file. Release merge requests are titled `chore(release): prepare f
 
 ## Environment variables
 
-| Variable                                                                    | Purpose                                                                 |
-| --------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| `RELWOLF_TOKEN`                                                             | **Required.** Access token used for all API calls                       |
-| `RELWOLF_PROVIDER`                                                          | `gitlab` or `github`; auto-detected from `GITLAB_CI` / `GITHUB_ACTIONS` |
-| `RELWOLF_GIT_CLIFF`                                                         | Path to a git-cliff executable instead of the bundled one               |
-| `CI_API_V4_URL`, `CI_PROJECT_ID`, `CI_COMMIT_BRANCH`, `CI_DEFAULT_BRANCH`   | GitLab CI (set by GitLab, works for gitlab.com and self-managed)        |
-| `GITHUB_API_URL`, `GITHUB_REPOSITORY`, `GITHUB_REF_TYPE`, `GITHUB_REF_NAME` | GitHub Actions (set by GitHub)                                          |
+| Variable                                                                    | Purpose                                                                                    |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `RELWOLF_TOKEN`                                                             | **Required.** Access token used for all API calls                                          |
+| `RELWOLF_PROVIDER`                                                          | `gitlab` or `github`; auto-detected from `GITLAB_CI` / `GITHUB_ACTIONS`                    |
+| `RELWOLF_RELEASE_AS`                                                        | Forces the next version, see [Controlling the next version](#controlling-the-next-version) |
+| `RELWOLF_GIT_CLIFF`                                                         | Path to a git-cliff executable instead of the bundled one                                  |
+| `CI_API_V4_URL`, `CI_PROJECT_ID`, `CI_COMMIT_BRANCH`, `CI_DEFAULT_BRANCH`   | GitLab CI (set by GitLab, works for gitlab.com and self-managed)                           |
+| `GITHUB_API_URL`, `GITHUB_REPOSITORY`, `GITHUB_REF_TYPE`, `GITHUB_REF_NAME` | GitHub Actions (set by GitHub)                                                             |
 
 ## Providers
 

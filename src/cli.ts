@@ -18,7 +18,15 @@ async function main(): Promise<void> {
   const {provider, currentBranch, defaultBranch} = createProviderFromEnv(
     process.env,
   );
-  await run({cwd, config, provider, currentBranch, defaultBranch, log});
+  await run({
+    cwd,
+    config,
+    provider,
+    currentBranch,
+    defaultBranch,
+    releaseAs: process.env.RELWOLF_RELEASE_AS,
+    log,
+  });
 }
 
 main().catch((error: unknown) => {

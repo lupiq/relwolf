@@ -4,9 +4,11 @@ import {
   LABEL_PENDING,
   LABEL_TAGGED,
   parseBody,
+  parseOverrides,
   renderBody,
   renderTitle,
   type BodyEntry,
+  type BodyOverride,
 } from './body.js';
 import {
   generateNotes,
@@ -17,8 +19,14 @@ import type {Config} from './config.js';
 import {Git} from './git.js';
 import {nestedPackagePaths, planPackage, type PackagePlan} from './plan.js';
 import type {FileChange, Provider} from './providers/types.js';
+import {
+  componentKey,
+  describeRequest,
+  parseReleaseAs,
+  type ReleaseAs,
+} from './release-as.js';
 import {applyUpdater} from './updaters/index.js';
-import {formatVersion} from './version.js';
+import {formatVersion, parseVersion, type Version} from './version.js';
 
 export interface RunOptions {
   /** Working directory of the checked-out repository. */
@@ -29,6 +37,8 @@ export interface RunOptions {
   currentBranch: string;
   defaultBranch?: string | undefined;
   env?: NodeJS.ProcessEnv;
+  /** Value of RELWOLF_RELEASE_AS: requests an explicit version for the next release. */
+  releaseAs?: string | undefined;
   log?: (message: string) => void;
 }
 
@@ -86,8 +96,16 @@ export async function run(options: RunOptions): Promise<RunResult> {
     );
   }
 
+  const requested = parseReleaseAs(options.releaseAs, options.config.packages);
+
   const tagged = await tagMergedReleases(options, git, branch, log);
-  const releaseRequest = await prepareReleaseRequest(options, git, branch, log);
+  const releaseRequest = await prepareReleaseRequest(
+    options,
+    git,
+    branch,
+    requested,
+    log,
+  );
   return {tagged, ...(releaseRequest ? {releaseRequest} : {})};
 }
 
@@ -237,17 +255,56 @@ async function buildFiles(
   return {files, entries};
 }
 
+/** Requests stored in the open release request, updated by the ones given for this run. */
+function effectiveRequests(
+  options: RunOptions,
+  existingBody: string | undefined,
+  requested: ReleaseAs,
+): Map<string, Version> {
+  const keys = new Set(options.config.packages.map(componentKey));
+  const versions = new Map<string, Version>();
+  for (const {component, version} of parseOverrides(existingBody ?? '')) {
+    const parsed = parseVersion(version);
+    if (parsed && keys.has(component)) versions.set(component, parsed);
+  }
+  for (const [key, version] of requested) {
+    if (version) versions.set(key, version);
+    else versions.delete(key);
+  }
+  return versions;
+}
+
 async function prepareReleaseRequest(
   options: RunOptions,
   git: Git,
   branch: string,
+  requested: ReleaseAs,
   log: (message: string) => void,
 ): Promise<RunResult['releaseRequest'] | undefined> {
   const {provider} = options;
+  const sourceBranch = `relwolf/${branch}`;
+  const existing = await provider.findOpenReleaseRequest({
+    sourceBranch,
+    targetBranch: branch,
+  });
+
+  const versions = effectiveRequests(options, existing?.body, requested);
   const plans: PackagePlan[] = [];
   for (const pkg of options.config.packages) {
-    const plan = await planPackage(git, pkg, options.config.packages);
-    if (plan) plans.push(plan);
+    const releaseAs = versions.get(componentKey(pkg));
+    const plan = await planPackage(
+      git,
+      pkg,
+      options.config.packages,
+      releaseAs,
+    );
+    if (plan) {
+      if (releaseAs)
+        log(
+          `Using the requested version ${describeRequest(componentKey(pkg), releaseAs)}.`,
+        );
+      plans.push(plan);
+    }
   }
   if (plans.length === 0) {
     log('No releasable changes (feat, fix or breaking commits) found.');
@@ -257,13 +314,13 @@ async function prepareReleaseRequest(
   const baseSha = await git.head();
   const {files, entries} = await buildFiles(options, plans);
   const title = renderTitle(plans.map(plan => plan.tag));
-  const body = renderBody(entries, baseSha);
-  const sourceBranch = `relwolf/${branch}`;
-
-  const existing = await provider.findOpenReleaseRequest({
-    sourceBranch,
-    targetBranch: branch,
+  const overrides: BodyOverride[] = plans.flatMap(plan => {
+    const version = versions.get(componentKey(plan.pkg));
+    return version
+      ? [{component: componentKey(plan.pkg), version: formatVersion(version)}]
+      : [];
   });
+  const body = renderBody(entries, baseSha, overrides);
   if (existing?.title === title && existing.body === body) {
     log(`Release request #${existing.id} is up to date: ${existing.url}`);
     return {id: existing.id, url: existing.url, action: 'unchanged'};

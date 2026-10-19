@@ -18,12 +18,16 @@ beforeEach(() => {
 
 afterEach(() => repo.cleanup());
 
-const exec = (yaml?: string, overrides: {currentBranch?: string} = {}) =>
+const exec = (
+  yaml?: string,
+  overrides: {currentBranch?: string; releaseAs?: string} = {},
+) =>
   run({
     cwd: repo.dir,
     config: parseConfig(yaml),
     provider,
     currentBranch: overrides.currentBranch ?? 'main',
+    releaseAs: overrides.releaseAs,
     env: {...process.env, NO_COLOR: '1'},
   });
 
@@ -443,5 +447,68 @@ packages:
     expect(provider.requests[1]!.title).toBe(
       'chore(release): prepare for v0.1.0',
     );
+  });
+});
+
+describe('RELWOLF_RELEASE_AS', () => {
+  const title = () => provider.requests.at(-1)!.title;
+
+  it('forces the version and keeps it until the request is merged', async () => {
+    repo.commit('feat: a');
+    await exec(undefined, {releaseAs: '1.0.0'});
+    expect(title()).toBe('chore(release): prepare for v1.0.0');
+    expect(provider.requests[0]!.body).toMatch(/RELWOLF_RELEASE_AS/);
+
+    repo.commit('fix: b');
+    await exec();
+    expect(title()).toBe('chore(release): prepare for v1.0.0');
+
+    mergeLastRelease(repo, provider, 1);
+    expect((await exec()).tagged).toEqual(['v1.0.0']);
+  });
+
+  it('can be reset with auto', async () => {
+    repo.commit('feat: a');
+    await exec(undefined, {releaseAs: 'v1.0.0'});
+    await exec(undefined, {releaseAs: 'auto'});
+    expect(title()).toBe('chore(release): prepare for v0.1.0');
+  });
+
+  it('rejects versions that are not greater than the last tag', async () => {
+    repo.commit('feat: a');
+    await exec();
+    mergeLastRelease(repo, provider, 1);
+    await exec();
+    repo.commit('fix: b');
+    await expect(exec(undefined, {releaseAs: '0.1.0'})).rejects.toThrow(/auto/);
+  });
+
+  it('rejects invalid input and unknown components', async () => {
+    repo.commit('feat: a');
+    await expect(exec(undefined, {releaseAs: 'nope'})).rejects.toThrow(
+      /semantic version/,
+    );
+    await expect(exec(undefined, {releaseAs: 'x=1.0.0'})).rejects.toThrow(
+      /unknown component/,
+    );
+  });
+
+  it('does nothing without new commits', async () => {
+    repo.commit('feat: a');
+    await exec();
+    mergeLastRelease(repo, provider, 1);
+    await exec();
+    const result = await exec(undefined, {releaseAs: '1.0.0'});
+    expect(result.releaseRequest).toBeUndefined();
+  });
+
+  it('applies to a single component in a monorepo', async () => {
+    repo.write('services/api/code.txt', 'x');
+    repo.write('root.txt', 'x');
+    repo.commit('feat: init', 'services/api/code.txt');
+    const config =
+      'packages:\n  services/api:\n    component: api\n    updaters: []\n';
+    await exec(config, {releaseAs: 'api=2.0.0'});
+    expect(title()).toBe('chore(release): prepare for api-v2.0.0');
   });
 });

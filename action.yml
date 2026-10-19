@@ -9,6 +9,10 @@ inputs:
   token:
     description: Access token used for all API calls (becomes RELWOLF_TOKEN)
     required: true
+  release-as:
+    description: Forces the version of the next release, e.g. 1.0.0 or component=1.0.0 (becomes RELWOLF_RELEASE_AS); auto removes a request
+    required: false
+    default: ''
 
 runs:
   using: docker
@@ -16,3 +20,4 @@ runs:
   entrypoint: relwolf
   env:
     RELWOLF_TOKEN: ${{ inputs.token }}
+    RELWOLF_RELEASE_AS: ${{ inputs.release-as }}

@@ -56,6 +56,10 @@ Flow: Conventional Commits → next SemVer → release MR (changelog + version f
 
 Key mechanics worth knowing:
 
+- `RELWOLF_RELEASE_AS` (`release-as.ts`): forces the next version per component. `prepareReleaseRequest` reads the
+  open MR first, merges stored `relwolf:release-as` markers with the env request (env wins, `auto` deletes) and
+  re-persists them in the body until merge. `planPackage` validates it is greater than the last tag.
+
 - The release MR body is the state store: it carries the release notes between `relwolf:notes` markers and the
   base commit sha. An identical title+body means "up to date" (no recommit). Merged MRs are found via the
   `relwolf: pending` label, the tag goes on `mergeSha` (merge → squash → head sha) if it is an ancestor of HEAD,

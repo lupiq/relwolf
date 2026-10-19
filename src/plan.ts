@@ -1,6 +1,7 @@
 import {bumpLevel, parseCommit, type ConventionalCommit} from './commits.js';
 import type {PackageConfig} from './config.js';
 import type {Git} from './git.js';
+import {ReleaseAsError} from './release-as.js';
 import {
   findReleaseTags,
   highest,
@@ -9,6 +10,7 @@ import {
   tagPattern,
 } from './tags.js';
 import {
+  compareVersions,
   formatVersion,
   isPrerelease,
   nextVersion,
@@ -63,6 +65,7 @@ export async function planPackage(
   git: Git,
   pkg: PackageConfig,
   all: readonly PackageConfig[],
+  releaseAs?: Version,
 ): Promise<PackagePlan | null> {
   const releaseTags = findReleaseTags(
     await git.tagsMergedIntoHead(),
@@ -81,7 +84,15 @@ export async function planPackage(
 
   const lastIsPrerelease =
     lastAny !== undefined && isPrerelease(lastAny.version);
-  if (pkg.prerelease && lastIsPrerelease) {
+  const rangeStart = pkg.prerelease ? lastAny : lastStable;
+  const range = rangeStart && `${rangeStart.tag}..HEAD`;
+
+  if (releaseAs && level === null) {
+    // A requested version needs at least one change to release, but not necessarily a releasable one.
+    if ((await git.log(range, pathspecs)).length === 0) return null;
+  }
+
+  if (!releaseAs && pkg.prerelease && lastIsPrerelease) {
     // Don't publish another pre-release unless something releasable happened since the last one.
     const sinceLast = await conventionalCommits(
       git,
@@ -98,16 +109,23 @@ export async function planPackage(
     prerelease: pkg.prerelease,
     minorPreMajor: pkg.minorPreMajor,
     initialVersion: pkg.initialVersion,
+    releaseAs,
   });
   if (!version) return null;
 
-  const rangeStart = pkg.prerelease ? lastAny : lastStable;
+  if (releaseAs && lastAny && compareVersions(version, lastAny.version) <= 0) {
+    throw new ReleaseAsError(
+      `Requested version ${formatVersion(version)} is not greater than the latest version ${formatVersion(lastAny.version)}` +
+        ' (run relwolf with RELWOLF_RELEASE_AS=auto to remove the request).',
+    );
+  }
+
   return {
     pkg,
     version,
     tag: tagName(pkg.component, formatVersion(version)),
     prerelease: isPrerelease(version),
-    range: rangeStart && `${rangeStart.tag}..HEAD`,
+    range,
     tagPattern: tagPattern(pkg.component, Boolean(pkg.prerelease)),
     commits: sinceStable,
   };
