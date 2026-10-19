@@ -93,7 +93,14 @@ sentence-case subject, i.e. the text after `type:` starts with a capital letter)
   `publish.yml` (tag `v*` → multi-arch image to `ghcr.io/lupiq/relwolf`).
 - `relwolf.yaml` in the repo root is relwolf's own config. Package version in `package.json` stays `0.0.0` until the
   first release; never bump it manually.
-- Manual setup still required: `RELWOLF_TOKEN` secret, GHCR package set to public, auto-delete head branches.
+- Dependency updates: Renovate (`renovate.json`). Commits are `fix(deps): Update …` for runtime `dependencies` (so they
+  trigger a patch release) and `build(deps): Update …` for everything else (devDependencies, actions, Docker, which
+  never bump); minor/patch/pin/digest are auto-merged by Renovate itself (squash) once the CI
+  checks are green, majors need a manual merge. Related packages are grouped into one PR (typescript = TS 6 alias +
+  `@typescript/native`, eslint, vitest, commitlint, prettier, pnpm incl. the Dockerfile version) so version conflicts
+  between them cannot occur. Runs at any time.
+- Manual setup still required: `RELWOLF_TOKEN` secret, GHCR package set to public, auto-delete head branches,
+  install the Renovate GitHub App (https://github.com/apps/renovate) for the repository, allow squash merging.
 
 ## Ideas / not implemented
 

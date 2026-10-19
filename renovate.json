@@ -1,0 +1,67 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "schedule": ["at any time"],
+  "prHourlyLimit": 0,
+  "rangeStrategy": "pin",
+  "semanticCommits": "enabled",
+  "semanticCommitType": "build",
+  "semanticCommitScope": "deps",
+  "commitMessageLowerCase": "never",
+  "commitMessageAction": "Update",
+  "automergeStrategy": "squash",
+  "platformAutomerge": false,
+  "lockFileMaintenance": {
+    "enabled": true,
+    "automerge": true
+  },
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "pnpm version installed in the Dockerfile (kept in sync with packageManager)",
+      "managerFilePatterns": ["/(^|/)Dockerfile$/"],
+      "matchStrings": ["npm install --global pnpm@(?<currentValue>[\\d.]+)"],
+      "depNameTemplate": "pnpm",
+      "datasourceTemplate": "npm"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Runtime dependencies end up in the image, so they trigger a patch release",
+      "matchDepTypes": ["dependencies"],
+      "semanticCommitType": "fix"
+    },
+    {
+      "description": "Automerge minor and patch updates once the checks are green",
+      "matchUpdateTypes": ["minor", "patch", "digest", "pin"],
+      "automerge": true
+    },
+    {
+      "description": "Keep pnpm in package.json and the Dockerfile in sync",
+      "matchDepNames": ["pnpm"],
+      "groupName": "pnpm"
+    },
+    {
+      "description": "TypeScript 6 (tooling API) and TypeScript 7 (tsc) are updated together",
+      "matchDepNames": ["typescript", "@typescript/native"],
+      "matchPackageNames": ["typescript", "@typescript/typescript6"],
+      "groupName": "typescript"
+    },
+    {
+      "matchPackageNames": ["eslint", "@eslint/js", "typescript-eslint"],
+      "groupName": "eslint"
+    },
+    {
+      "matchPackageNames": ["vitest", "@vitest/**"],
+      "groupName": "vitest"
+    },
+    {
+      "matchPackageNames": ["@commitlint/**"],
+      "groupName": "commitlint"
+    },
+    {
+      "matchPackageNames": ["prettier", "prettier-plugin-organize-imports"],
+      "groupName": "prettier"
+    }
+  ]
+}

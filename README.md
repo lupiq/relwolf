@@ -188,3 +188,10 @@ Design decisions, architecture and extension notes are documented in [AGENTS.md]
 Add a `RELWOLF_TOKEN` secret (a personal access token with _contents_ and _pull requests_ write access,
 not `GITHUB_TOKEN`, so that tag pushes trigger the image workflow) and enable
 _Automatically delete head branches_ in the repository settings.
+
+### Dependency updates
+
+[Renovate](https://docs.renovatebot.com/) (`renovate.json`) keeps dependencies, GitHub Actions and the Docker
+base image up to date. Install the [Renovate GitHub App](https://github.com/apps/renovate) for the repository and
+allow squash merging. Minor and patch updates are merged automatically once CI is green; major updates need a
+manual merge. Related packages (TypeScript, ESLint, Vitest, commitlint, Prettier, pnpm) are updated together.
