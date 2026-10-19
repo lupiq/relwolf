@@ -1,3 +1,8 @@
+---
+title: Docker image
+description: The public relwolf Docker image on ghcr.io - tags, platforms and usage as image of a GitLab CI job.
+---
+
 # Docker image
 
 `ghcr.io/lupiq/relwolf` (linux/amd64, linux/arm64), built by GitHub Actions on every release tag. The image is public and

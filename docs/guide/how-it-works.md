@@ -1,3 +1,8 @@
+---
+title: How relwolf works
+description: Understand the two phases of a relwolf run - tagging merged releases and preparing the release merge request - and how state is kept.
+---
+
 # How it works
 
 Each run executes two phases.

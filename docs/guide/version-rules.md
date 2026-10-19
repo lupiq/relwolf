@@ -1,3 +1,8 @@
+---
+title: Version rules (Conventional Commits to SemVer)
+description: How relwolf maps Conventional Commits to SemVer bumps - feat, fix and breaking changes - including 0.x handling and the initial version.
+---
+
 # Version rules
 
 | Commit                                   | Bump  |

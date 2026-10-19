@@ -1,3 +1,8 @@
+---
+title: Release automation for GitLab CI
+description: Set up relwolf as a GitLab CI job to open release merge requests from Conventional Commits, tag merged releases and create GitLab releases.
+---
+
 # GitLab
 
 Works with gitlab.com and self-managed instances.

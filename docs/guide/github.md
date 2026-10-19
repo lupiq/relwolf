@@ -1,3 +1,8 @@
+---
+title: Release automation for GitHub (Action)
+description: Use the relwolf GitHub Action to open release pull requests from Conventional Commits, tag merged releases and publish GitHub releases.
+---
+
 # GitHub
 
 relwolf is available as a Docker container action. It runs on **Linux runners** only.

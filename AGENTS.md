@@ -114,7 +114,7 @@ sentence-case subject, i.e. the text after `type:` starts with a capital letter)
   Scripts `pnpm docs:dev|docs:build|docs:preview`; excluded from ESLint, formatted by Prettier, built in `ci.yml`.
   `docs.yml` deploys to GitHub Pages on stable `v*.*.*` tags (and manually); custom domain via `docs/public/CNAME`
   (`relwolf.lupiq.io`). Assets in `docs/public`: relwolf logo (`logo.svg`, ~2 KB hand-simplified vector trace of the
-  hand-made raster app icon; used for navbar, hero, README; `favicon.svg` is a simplified logo (head, eye, two facets) for small sizes, `favicon.png` and `apple-touch-icon.png` are PNGs rendered from it), bot avatar (`relwolf-avatar.png`, 512 px, 256 colours to stay below GitLab's 200 KB limit) and the lupiq logos (colour for light, white for
+  hand-made raster app icon; used for navbar, hero, README; `favicon.svg` is a simplified logo (head, eye, two facets) for small sizes, `favicon.png` is rendered from it, `apple-touch-icon.png` from the full logo; `og-image.png` is the 1200x630 social preview). SEO: every page needs frontmatter `title` and `description`; canonical URL, Open Graph/Twitter tags and JSON-LD are generated in `config.mts`, plus `sitemap.xml` and `robots.txt`, bot avatar (`relwolf-avatar.png`, 512 px, 256 colours to stay below GitLab's 200 KB limit) and the lupiq logos (colour for light, white for
   dark theme, switched via CSS classes `only-light`/`only-dark`). lupiq.com is not live yet.
   Brand colours are teal `#2bb3a3` and violet `#3a2e5e`: the site defines them once as CSS variables
   (`--lupiq-*` in `theme/custom.css`).

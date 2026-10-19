@@ -1,3 +1,8 @@
+---
+title: Pre-releases (beta, rc)
+description: Publish SemVer pre-releases such as 1.3.0-beta.1 automatically with relwolf and promote them to stable releases.
+---
+
 # Pre-releases
 
 Set `prerelease: beta` to publish `1.3.0-beta.1`, `1.3.0-beta.2`, …

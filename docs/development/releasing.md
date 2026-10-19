@@ -1,3 +1,8 @@
+---
+title: Releasing relwolf
+description: How relwolf releases itself with the GitHub provider, publishes the Docker image and deploys this documentation.
+---
+
 # Releasing relwolf
 
 relwolf releases itself with the GitHub provider.

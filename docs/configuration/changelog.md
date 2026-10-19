@@ -1,3 +1,8 @@
+---
+title: Changelog with git-cliff
+description: Control the format of your release changelog with a cliff.toml. relwolf generates changelogs with git-cliff from Conventional Commits.
+---
+
 # Changelog (git-cliff)
 
 relwolf delegates all changelog formatting to [git-cliff](https://git-cliff.org/) (bundled via npm). Put a `cliff.toml`

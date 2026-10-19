@@ -1,3 +1,8 @@
+---
+title: Environment variables
+description: All environment variables supported by relwolf - token, provider, API URL, release-as and CI context for GitLab and GitHub.
+---
+
 # Environment variables
 
 | Variable                                                                    | Purpose                                                                        |

@@ -1,3 +1,8 @@
+---
+title: About lupiq
+description: relwolf is an open source release bot developed by lupiq. Learn who is behind it and how to use the relwolf bot avatar on GitLab.
+---
+
 # About
 
 relwolf was developed by **lupiq**.

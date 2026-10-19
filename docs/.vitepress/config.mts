@@ -1,17 +1,71 @@
 import {defineConfig} from 'vitepress';
 
+const hostname = 'https://relwolf.lupiq.io';
+const siteDescription =
+  'Release bot for GitLab and GitHub, driven by Conventional Commits.';
+
 export default defineConfig({
   title: 'relwolf',
-  description:
-    'Release bot for GitLab and GitHub, driven by Conventional Commits.',
+  titleTemplate: ':title | relwolf',
+  description: siteDescription,
   lang: 'en-US',
   cleanUrls: true,
+  lastUpdated: true,
+  sitemap: {hostname},
   head: [
     ['link', {rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg'}],
     ['link', {rel: 'icon', type: 'image/png', href: '/favicon.png'}],
     ['link', {rel: 'apple-touch-icon', href: '/apple-touch-icon.png'}],
     ['meta', {name: 'theme-color', content: '#3a2e5e'}],
+    ['meta', {property: 'og:type', content: 'website'}],
+    ['meta', {property: 'og:site_name', content: 'relwolf'}],
+    ['meta', {property: 'og:image', content: `${hostname}/og-image.png`}],
+    ['meta', {property: 'og:image:width', content: '1200'}],
+    ['meta', {property: 'og:image:height', content: '630'}],
+    ['meta', {name: 'twitter:card', content: 'summary_large_image'}],
+    ['meta', {name: 'twitter:image', content: `${hostname}/og-image.png`}],
   ],
+  transformPageData(pageData) {
+    const path = pageData.relativePath
+      .replace(/(^|\/)index\.md$/, '$1')
+      .replace(/\.md$/, '');
+    const url = `${hostname}/${path}`;
+    const title = pageData.frontmatter.title ?? pageData.title;
+    const description = pageData.frontmatter.description ?? siteDescription;
+    const head: [string, Record<string, string>, string?][] = [
+      ['link', {rel: 'canonical', href: url}],
+      ['meta', {property: 'og:url', content: url}],
+      ['meta', {property: 'og:title', content: title}],
+      ['meta', {property: 'og:description', content: description}],
+      ['meta', {name: 'twitter:title', content: title}],
+      ['meta', {name: 'twitter:description', content: description}],
+    ];
+    if (pageData.relativePath === 'index.md') {
+      head.push([
+        'script',
+        {type: 'application/ld+json'},
+        JSON.stringify({
+          '@context': 'https://schema.org',
+          '@type': 'SoftwareApplication',
+          'name': 'relwolf',
+          description,
+          url,
+          'image': `${hostname}/og-image.png`,
+          'applicationCategory': 'DeveloperApplication',
+          'operatingSystem': 'Linux',
+          'offers': {'@type': 'Offer', 'price': '0', 'priceCurrency': 'USD'},
+          'codeRepository': 'https://github.com/lupiq/relwolf',
+          'author': {
+            '@type': 'Organization',
+            'name': 'lupiq',
+            'url': 'https://lupiq.com',
+          },
+        }),
+      ]);
+    }
+    pageData.frontmatter.head ??= [];
+    (pageData.frontmatter.head as unknown[]).push(...head);
+  },
   themeConfig: {
     logo: '/logo.svg',
     nav: [

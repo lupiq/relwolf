@@ -1,3 +1,8 @@
+---
+title: Monorepo releases
+description: Release multiple packages independently from one repository with relwolf, each with its own version, tags, changelog and release merge request.
+---
+
 # Monorepos
 
 ```yaml [relwolf.yaml]

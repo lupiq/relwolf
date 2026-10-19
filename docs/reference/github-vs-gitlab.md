@@ -1,3 +1,8 @@
+---
+title: GitHub vs. GitLab
+description: Differences between relwolf on GitHub and GitLab - tokens, labels, merge strategies, releases and pre-release handling at a glance.
+---
+
 # GitHub vs. GitLab
 
 relwolf's hosting platform is an interface with two implementations. The provider is auto-detected from `GITLAB_CI` /

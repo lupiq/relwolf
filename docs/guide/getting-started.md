@@ -1,3 +1,8 @@
+---
+title: Getting started with relwolf
+description: Automate releases from Conventional Commits. relwolf opens a release merge request with changelog and version bump, then tags and publishes on merge.
+---
+
 # Getting started
 
 relwolf follows the workflow of Google's [release-please](https://github.com/googleapis/release-please):

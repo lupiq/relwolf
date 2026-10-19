@@ -1,3 +1,8 @@
+---
+title: Contributing
+description: How to set up the relwolf repository, run tests and linters, and contribute to the release bot for GitLab and GitHub.
+---
+
 # Contributing
 
 ```sh

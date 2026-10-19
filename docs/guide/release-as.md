@@ -1,3 +1,8 @@
+---
+title: Controlling the next version (release-as)
+description: Force the next release version, for example 1.0.0, with RELWOLF_RELEASE_AS - without empty commits or special commit message markers.
+---
+
 # Controlling the next version
 
 Set `RELWOLF_RELEASE_AS` to force the next version without an empty commit, for example to leave `0.x` with `1.0.0`.

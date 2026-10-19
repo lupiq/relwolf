@@ -1,3 +1,8 @@
+---
+title: relwolf.yaml configuration
+description: Complete reference of the relwolf.yaml configuration file - packages, updaters, pre-releases, initial version and more.
+---
+
 # relwolf.yaml
 
 `relwolf.yaml` in the repository root is optional. Without it, relwolf releases a single root package without file
