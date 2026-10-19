@@ -164,20 +164,14 @@ export class GitLabProvider implements Provider {
     targetBranch: string;
     label: string;
   }): Promise<ReleaseRequest[]> {
-    const {data} = await this.http.request(
-      'GET',
-      `${this.project}/merge_requests`,
-      {
-        query: {
-          state: 'merged',
-          target_branch: options.targetBranch,
-          labels: options.label,
-          order_by: 'updated_at',
-          sort: 'asc',
-          per_page: '100',
-        },
-      },
-    );
+    const data = await this.http.requestAll(`${this.project}/merge_requests`, {
+      state: 'merged',
+      target_branch: options.targetBranch,
+      labels: options.label,
+      order_by: 'updated_at',
+      sort: 'asc',
+      per_page: '100',
+    });
     return (data as GitLabMergeRequest[]).map(toReleaseRequest);
   }
 

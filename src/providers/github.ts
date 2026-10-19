@@ -203,14 +203,12 @@ export class GitHubProvider implements Provider {
     targetBranch: string;
     label: string;
   }): Promise<ReleaseRequest[]> {
-    const {data} = await this.http.request('GET', `${this.repo}/issues`, {
-      query: {
-        labels: options.label,
-        state: 'closed',
-        sort: 'updated',
-        direction: 'asc',
-        per_page: '100',
-      },
+    const data = await this.http.requestAll(`${this.repo}/issues`, {
+      labels: options.label,
+      state: 'closed',
+      sort: 'updated',
+      direction: 'asc',
+      per_page: '100',
     });
     const merged: ReleaseRequest[] = [];
     for (const issue of data as {

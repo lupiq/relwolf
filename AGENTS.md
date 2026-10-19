@@ -39,21 +39,21 @@ Flow: Conventional Commits → next SemVer → release MR (changelog + version f
 
 ## Architecture (`src/`)
 
-| File                               | Responsibility                                                                                                                    |
-| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `cli.ts`                           | Entry point: load config, build provider from env, call `run`                                                                     |
-| `config.ts`                        | `relwolf.yaml` schema (zod, strict; incl. `pull-request-title` template), path normalisation/validation, `Config`/`PackageConfig` |
-| `release.ts`                       | Orchestration: `run()` → skip guards, shallow check, `tagMergedReleases`, `prepareReleaseRequest`                                 |
-| `plan.ts`                          | Per-package plan: last tags, commits since, next version, changelog range                                                         |
-| `version.ts`                       | SemVer parse/compare/bump, `nextVersion` incl. pre-release logic                                                                  |
-| `commits.ts`                       | Conventional commit parsing and bump level                                                                                        |
-| `tags.ts`                          | Tag naming, discovery, tag regex for git-cliff, validation of untrusted tags                                                      |
-| `changelog.ts`                     | git-cliff invocation (`generateNotes`, `prependToChangelog` via temp file)                                                        |
-| `body.ts`                          | MR title/body rendering and parsing (hidden `relwolf:notes` markers, sanitised)                                                   |
-| `git.ts`                           | Thin git wrapper (`execFile`), `run()` helper for subprocesses                                                                    |
-| `updaters/*`                       | Pure `(content, version, file) => content` functions + registry in `index.ts`                                                     |
-| `providers/types.ts`               | `Provider` interface – the only place providers must satisfy                                                                      |
-| `providers/gitlab.ts`, `github.ts` | REST implementations; `http.ts` shared fetch client; `index.ts` env detection                                                     |
+| File                               | Responsibility                                                                                                                                                                                                                  |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `cli.ts`                           | Entry point: load config, build provider from env, call `run`                                                                                                                                                                   |
+| `config.ts`                        | `relwolf.yaml` schema (zod, strict; incl. `pull-request-title` template), path normalisation/validation, `Config`/`PackageConfig`                                                                                               |
+| `release.ts`                       | Orchestration: `run()` → skip guards, shallow check, `tagMergedReleases`, `prepareReleaseRequest`                                                                                                                               |
+| `plan.ts`                          | Per-package plan: last tags, commits since, next version, changelog range                                                                                                                                                       |
+| `version.ts`                       | SemVer parse/compare/bump, `nextVersion` incl. pre-release logic                                                                                                                                                                |
+| `commits.ts`                       | Conventional commit parsing and bump level                                                                                                                                                                                      |
+| `tags.ts`                          | Tag naming, discovery, tag regex for git-cliff, validation of untrusted tags                                                                                                                                                    |
+| `changelog.ts`                     | git-cliff invocation (`generateNotes`, `prependToChangelog` via temp file)                                                                                                                                                      |
+| `body.ts`                          | MR title/body rendering and parsing (hidden `relwolf:notes` markers, sanitised)                                                                                                                                                 |
+| `git.ts`                           | Thin git wrapper (`execFile`), `run()` helper for subprocesses                                                                                                                                                                  |
+| `updaters/*`                       | Pure `(content, version, file) => content` functions + registry in `index.ts`                                                                                                                                                   |
+| `providers/types.ts`               | `Provider` interface – the only place providers must satisfy                                                                                                                                                                    |
+| `providers/gitlab.ts`, `github.ts` | REST implementations; `http.ts` shared fetch client (retries 429/403+Retry-After for all methods, 502-504 and network errors for idempotent ones only; `requestAll` follows pagination, max 10 pages); `index.ts` env detection |
 
 Key mechanics worth knowing:
 
@@ -126,5 +126,5 @@ sentence-case subject, i.e. the text after `type:` starts with a capital letter)
 
 - Extra updaters (pyproject.toml, Cargo.toml, …), `extra-files` style globs, lockfile updates.
 - Configurable patch-bump types (decision so far: only `fix`), custom labels/branch names, MR title template.
-- Draft/pre-release handling for GitLab, signing, retries/pagination beyond 100 merged MRs.
+- Draft/pre-release handling for GitLab, signing.
 - Providers for other platforms: implement `Provider` and extend `providers/index.ts`.

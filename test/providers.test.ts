@@ -12,7 +12,11 @@ interface Call {
 }
 
 function mockFetch(
-  handler: (call: Call) => {status?: number; json?: unknown} | undefined,
+  handler: (
+    call: Call,
+  ) =>
+    | {status?: number; json?: unknown; headers?: Record<string, string>}
+    | undefined,
 ) {
   const calls: Call[] = [];
   const fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
@@ -27,7 +31,7 @@ function mockFetch(
     const status = result.status ?? 200;
     return new Response(
       result.json === undefined ? null : JSON.stringify(result.json),
-      {status},
+      {status, ...(result.headers ? {headers: result.headers} : {})},
     );
   });
   return {calls, fetch: fetchMock};
@@ -73,6 +77,20 @@ describe('GitLabProvider', () => {
       source_branch: 'relwolf/main',
       target_branch: 'main',
     });
+  });
+
+  it('follows x-next-page when listing merged merge requests', async () => {
+    const {provider, calls} = make(call =>
+      call.url.searchParams.get('page') === '2'
+        ? {json: [gitlabMr({iid: 2})]}
+        : {json: [gitlabMr({iid: 1})], headers: {'x-next-page': '2'}},
+    );
+    const merged = await provider.listMergedReleaseRequests({
+      targetBranch: 'main',
+      label: 'relwolf: pending',
+    });
+    expect(merged.map(m => m.id)).toEqual([1, 2]);
+    expect(calls).toHaveLength(2);
   });
 
   it('maps merge requests', async () => {
@@ -431,6 +449,34 @@ describe('GitHubProvider', () => {
     });
     expect(result).toHaveLength(1);
     expect(result[0]).toMatchObject({id: 1, state: 'merged', mergeSha: 'sha1'});
+  });
+
+  it('follows the Link header when listing closed pull requests', async () => {
+    const {provider, calls} = make(call => {
+      const path = call.url.pathname;
+      if (path.endsWith('/issues')) {
+        return call.url.searchParams.get('page') === '2'
+          ? {json: [{number: 2, pull_request: {}}]}
+          : {
+              json: [{number: 1, pull_request: {}}],
+              headers: {
+                Link: '<https://api.github.com/repos/lupiq/relwolf/issues?page=2>; rel="next", <https://api.github.com/repos/lupiq/relwolf/issues?page=2>; rel="last"',
+              },
+            };
+      }
+      const number = Number(path.split('/').at(-1));
+      return {
+        json: ghPull({number, state: 'closed', merged_at: '2026-01-01'}),
+      };
+    });
+    const result = await provider.listMergedReleaseRequests({
+      targetBranch: 'main',
+      label: 'relwolf: pending',
+    });
+    expect(result.map(r => r.id)).toEqual([1, 2]);
+    expect(calls.filter(c => c.url.pathname.endsWith('/issues'))).toHaveLength(
+      2,
+    );
   });
 
   it('swaps labels', async () => {
