@@ -1,4 +1,4 @@
-name: relwolf
+name: relwolf Release Bot
 description: Release bot based on Conventional Commits - opens a release pull request and tags merged releases
 author: lupiq
 branding:
