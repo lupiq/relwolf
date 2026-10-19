@@ -97,6 +97,40 @@ describe('release request', () => {
     expect(provider.commits).toHaveLength(0);
   });
 
+  it('closes the open request when its only commit is reverted', async () => {
+    const sha = repo.commit('feat: a');
+    await exec();
+    expect(provider.requests[0]!.state).toBe('open');
+
+    repo.commit(`Revert "feat: a"\n\nThis reverts commit ${sha}.`);
+    const result = await exec();
+    expect(result.releaseRequest).toBeUndefined();
+    expect(provider.requests[0]!.state).toBe('closed');
+  });
+
+  it('leaves reverted commits and their reverts out of the changelog', async () => {
+    const sha = repo.commit('feat: reverted feature');
+    repo.commit('fix: kept fix');
+    repo.commit(
+      `Revert "feat: reverted feature"\n\nThis reverts commit ${sha}.`,
+    );
+    await exec();
+    const body = provider.requests[0]!.body;
+    expect(body).toContain('Kept fix');
+    expect(body).not.toContain('reverted feature');
+    expect(body).not.toContain('Revert');
+  });
+
+  it('ignores reverted commits when computing the version', async () => {
+    repo.commit('feat: a');
+    repo.commit('fix: b');
+    repo.commit('Revert "feat: a"');
+    await exec();
+    expect(provider.requests[0]!.title).toBe(
+      'chore(release): prepare for v0.0.1',
+    );
+  });
+
   it('opens a release request with changelog and updated files', async () => {
     repo.write('package.json', PACKAGE_JSON);
     repo.commit('feat: initial feature');
@@ -472,6 +506,16 @@ describe('RELWOLF_RELEASE_AS', () => {
     await exec(undefined, {releaseAs: 'v1.0.0'});
     await exec(undefined, {releaseAs: 'auto'});
     expect(title()).toBe('chore(release): prepare for v0.1.0');
+  });
+
+  it('closes the open request when auto leaves nothing to release', async () => {
+    repo.commit('chore: a');
+    await exec(undefined, {releaseAs: '1.0.0'});
+    expect(provider.requests[0]!.state).toBe('open');
+
+    const result = await exec(undefined, {releaseAs: 'auto'});
+    expect(result.releaseRequest).toBeUndefined();
+    expect(provider.requests[0]!.state).toBe('closed');
   });
 
   it('rejects versions that are not greater than the last tag', async () => {

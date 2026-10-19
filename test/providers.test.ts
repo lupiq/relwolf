@@ -160,6 +160,16 @@ describe('GitLabProvider', () => {
     });
   });
 
+  it('closes merge requests', async () => {
+    const {provider, calls} = make(() => ({json: gitlabMr()}));
+    await provider.closeReleaseRequest(7);
+    expect([calls[0]!.method, calls[0]!.url.pathname, calls[0]!.body]).toEqual([
+      'PUT',
+      expect.stringMatching(/merge_requests\/7$/),
+      {state_event: 'close'},
+    ]);
+  });
+
   it('updates title/body and labels', async () => {
     const {provider, calls} = make(() => ({json: gitlabMr()}));
     await provider.updateReleaseRequest(7, {title: 'T', body: 'B'});
@@ -549,6 +559,16 @@ describe('GitHubProvider', () => {
       color: 'ffffff',
       description: 'd',
     });
+  });
+
+  it('closes pull requests', async () => {
+    const {provider, calls} = make(() => ({json: {}}));
+    await provider.closeReleaseRequest(3);
+    expect([calls[0]!.method, calls[0]!.url.pathname, calls[0]!.body]).toEqual([
+      'PATCH',
+      '/repos/lupiq/relwolf/pulls/3',
+      {state: 'closed'},
+    ]);
   });
 
   it('updates pull requests', async () => {

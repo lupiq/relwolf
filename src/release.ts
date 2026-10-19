@@ -223,6 +223,7 @@ async function buildFiles(
       tagPattern: plan.tagPattern,
       includePath: pkg.path === '.' ? undefined : `${pkg.path}/**`,
       excludePaths: nested.map(nestedPath => `${nestedPath}/**`),
+      skipCommits: plan.revertedCommits,
     };
     const env = options.env ?? process.env;
 
@@ -308,6 +309,12 @@ async function prepareReleaseRequest(
   }
   if (plans.length === 0) {
     log('No releasable changes (feat, fix or breaking commits) found.');
+    if (existing) {
+      await provider.closeReleaseRequest(existing.id);
+      log(
+        `Closed release request #${existing.id} because there is nothing to release anymore.`,
+      );
+    }
     return undefined;
   }
 

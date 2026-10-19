@@ -17,6 +17,8 @@ export interface CliffInvocation {
   tagPattern: string;
   includePath?: string | undefined;
   excludePaths: string[];
+  /** Commits to leave out of the changelog, e.g. reverted ones. */
+  skipCommits?: string[] | undefined;
 }
 
 function resolveCliffCommand(env: NodeJS.ProcessEnv): {
@@ -38,6 +40,7 @@ function baseArgs(options: CliffInvocation): string[] {
   if (options.includePath) args.push('--include-path', options.includePath);
   for (const exclude of options.excludePaths)
     args.push('--exclude-path', exclude);
+  for (const sha of options.skipCommits ?? []) args.push('--skip-commit', sha);
   return args;
 }
 

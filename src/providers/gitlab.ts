@@ -154,6 +154,12 @@ export class GitLabProvider implements Provider {
     });
   }
 
+  async closeReleaseRequest(id: number): Promise<void> {
+    await this.http.request('PUT', `${this.project}/merge_requests/${id}`, {
+      body: {state_event: 'close'},
+    });
+  }
+
   async listMergedReleaseRequests(options: {
     targetBranch: string;
     label: string;

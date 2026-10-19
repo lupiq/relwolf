@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {bumpLevel, parseCommit} from '../src/commits.js';
+import {bumpLevel, parseCommit, withoutReverted} from '../src/commits.js';
 
 describe('parseCommit', () => {
   it('parses type, scope and description', () => {
@@ -64,5 +64,38 @@ describe('bumpLevel', () => {
     expect(bumpLevel(commits('fix: a', 'feat: b'))).toBe('minor');
     expect(bumpLevel(commits('feat: b', 'fix: a'))).toBe('minor');
     expect(bumpLevel(commits('fix: a', 'feat: b', 'chore!: c'))).toBe('major');
+  });
+});
+
+describe('withoutReverted', () => {
+  const c = (sha: string, message: string) => ({sha, message});
+  const shas = (list: {sha: string}[]) => list.map(x => x.sha);
+
+  it('drops a commit and its revert, matched by sha', () => {
+    const list = [
+      c('c3', 'Revert "feat: a"\n\nThis reverts commit a1b2c3d4.'),
+      c('c2', 'fix: b'),
+      c('a1b2c3d4e5', 'feat: a'),
+    ];
+    expect(shas(withoutReverted(list))).toEqual(['c2']);
+  });
+
+  it('matches squashed reverts by subject', () => {
+    const list = [c('c2', 'Revert "feat: a"'), c('c1', 'feat: a')];
+    expect(withoutReverted(list)).toEqual([]);
+  });
+
+  it('restores a commit when its revert is reverted', () => {
+    const list = [
+      c('c3', 'Revert "Revert "feat: a""'),
+      c('c2', 'Revert "feat: a"'),
+      c('c1', 'feat: a'),
+    ];
+    expect(shas(withoutReverted(list))).toEqual(['c1']);
+  });
+
+  it('ignores reverts of commits outside the list', () => {
+    const list = [c('c2', 'Revert "feat: old"'), c('c1', 'fix: x')];
+    expect(shas(withoutReverted(list))).toEqual(['c1']);
   });
 });

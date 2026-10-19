@@ -60,6 +60,9 @@ export interface Provider {
     options: {title: string; body: string},
   ): Promise<void>;
 
+  /** Closes an open release request without merging it. */
+  closeReleaseRequest(id: number): Promise<void>;
+
   listMergedReleaseRequests(options: {
     targetBranch: string;
     label: string;

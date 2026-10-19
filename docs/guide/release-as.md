@@ -39,7 +39,8 @@ Variable: RELWOLF_RELEASE_AS = 1.0.0
 
 - The request is **stored in the release merge request** and kept on later runs until the merge request is merged.
   Later runs without the variable keep it.
-- `auto` removes it again.
+- `auto` removes it again. If the commits then contain nothing to release (only `chore`, `docs`, …), the open release
+  merge request is **closed**.
 - The version must be **greater than the last tag**; otherwise relwolf fails with a hint to run with
   `RELWOLF_RELEASE_AS=auto`.
 - At least one commit must exist since the last tag; otherwise nothing happens.

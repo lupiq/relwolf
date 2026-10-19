@@ -193,6 +193,12 @@ export class GitHubProvider implements Provider {
     });
   }
 
+  async closeReleaseRequest(id: number): Promise<void> {
+    await this.http.request('PATCH', `${this.repo}/pulls/${id}`, {
+      body: {state: 'closed'},
+    });
+  }
+
   async listMergedReleaseRequests(options: {
     targetBranch: string;
     label: string;

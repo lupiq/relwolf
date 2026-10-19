@@ -125,6 +125,10 @@ export class FakeProvider implements Provider {
     Object.assign(this.mustFind(id), options);
   }
 
+  async closeReleaseRequest(id: number): Promise<void> {
+    this.mustFind(id).state = 'closed';
+  }
+
   async listMergedReleaseRequests(options: {
     targetBranch: string;
     label: string;

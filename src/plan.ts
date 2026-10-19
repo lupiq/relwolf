@@ -1,4 +1,10 @@
-import {bumpLevel, parseCommit, type ConventionalCommit} from './commits.js';
+import {
+  bumpLevel,
+  parseCommit,
+  splitReverted,
+  withoutReverted,
+  type ConventionalCommit,
+} from './commits.js';
 import type {PackageConfig} from './config.js';
 import type {Git} from './git.js';
 import {ReleaseAsError} from './release-as.js';
@@ -26,6 +32,8 @@ export interface PackagePlan {
   range?: string | undefined;
   tagPattern: string;
   commits: ConventionalCommit[];
+  /** Reverted commits and their reverts, left out of the changelog. */
+  revertedCommits: string[];
 }
 
 /** Other packages located inside `pkg`, whose changes must not count for `pkg`. */
@@ -57,7 +65,7 @@ async function conventionalCommits(
   range: string | undefined,
   pathspecs: string[],
 ): Promise<ConventionalCommit[]> {
-  const raw = await git.log(range, pathspecs);
+  const raw = withoutReverted(await git.log(range, pathspecs));
   return raw.flatMap(commit => parseCommit(commit.sha, commit.message) ?? []);
 }
 
@@ -128,5 +136,8 @@ export async function planPackage(
     range,
     tagPattern: tagPattern(pkg.component, Boolean(pkg.prerelease)),
     commits: sinceStable,
+    revertedCommits: splitReverted(await git.log(range, pathspecs)).dropped.map(
+      commit => commit.sha,
+    ),
   };
 }

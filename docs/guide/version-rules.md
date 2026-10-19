@@ -17,6 +17,9 @@ description: How relwolf maps Conventional Commits to SemVer bumps - feat, fix a
   `initial-version` is set.
 - Tags are `v1.2.3`; packages with a `component` use `<component>-v1.2.3`.
 - Only commits touching a package's path count for that package.
+- Reverted commits do not count: a `Revert "feat: a"` commit (or git's `This reverts commit <sha>` line) cancels the
+  original commit since the last release. If nothing else is releasable, an open release merge request is closed.
+  Both commits are also left out of the changelog.
 
 ## Examples
 
