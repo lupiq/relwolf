@@ -1,3 +1,18 @@
+## [0.3.0](https://github.com/lupiq/relwolf/compare/v0.2.0...v0.3.0) - 2026-10-19
+
+### 🚀 Features
+
+- Improve MR/PR and reverted commit handling
+- Make MR/PR title configurable
+
+### 🐛 Bug Fixes
+
+- Change GitHub action name to be unique
+
+### 👷 CI
+
+- Update used actions to latest version
+
 ## [0.2.0](https://github.com/lupiq/relwolf/compare/v0.1.0...v0.2.0) - 2026-10-19
 
 ### 🚀 Features
