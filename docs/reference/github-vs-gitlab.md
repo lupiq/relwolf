@@ -27,7 +27,7 @@ relwolf's hosting platform is an interface with two implementations. The provide
 
 ```yaml [GitLab]
 relwolf:
-  image: ghcr.io/lupiq/relwolf:1 # x-relwolf-major
+  image: ghcr.io/lupiq/relwolf:0 # x-relwolf-major
   stage: release
   resource_group: relwolf
   variables:
@@ -55,7 +55,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: lupiq/relwolf@v1 # x-relwolf-major
+      - uses: lupiq/relwolf@v0 # x-relwolf-major
         with:
           token: ${{ secrets.RELWOLF_TOKEN }}
 ```

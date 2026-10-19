@@ -24,7 +24,7 @@ CI/CD variables to the job as environment variables, so the job needs no further
 
 ```yaml [.gitlab-ci.yml]
 relwolf:
-  image: ghcr.io/lupiq/relwolf:1 # x-relwolf-major
+  image: ghcr.io/lupiq/relwolf:0 # x-relwolf-major
   stage: release
   resource_group: relwolf
   variables:
