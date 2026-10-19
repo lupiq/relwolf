@@ -9,7 +9,11 @@ header_marker = "<!-- git-cliff: end of header -->"
 # See https://keats.github.io/tera/#getting-started
 body = """
 {% if version %}\
-    ## [{{ version | trim_start_matches(pat="v") }}] - {{ timestamp | date(format="%Y-%m-%d") }}
+    {% if previous.version %}\
+        ## [{{ version | trim_start_matches(pat="v") }}](https://github.com/lupiq/relwolf/compare/{{ previous.version }}...{{ version }}) - {{ timestamp | date(format="%Y-%m-%d") }}
+    {% else %}\
+        ## {{ version | trim_start_matches(pat="v") }} - {{ timestamp | date(format="%Y-%m-%d") }}
+    {% endif %}\
 {% else %}\
     ## [unreleased]
 {% endif %}\
@@ -21,6 +25,20 @@ body = """
             {{ commit.message | upper_first }}\
     {% endfor %}
 {% endfor %}
+{# Maintainers (by e-mail) and bots are not thanked #}\
+{% set maintainers = ["nicolas@lupiq.com"] %}\
+{% set_global contributors = [] %}\
+{% for commit in commits %}\
+    {% if commit.author.email not in maintainers and "[bot]" not in commit.author.name and commit.author.name not in contributors %}\
+        {% set_global contributors = contributors | concat(with=commit.author.name) %}\
+    {% endif %}\
+{% endfor %}\
+{% if contributors | length > 0 %}\
+    ### ❤️ Special thanks to
+    {% for name in contributors %}
+        - {{ name }}\
+    {% endfor %}
+{% endif %}
 """
 # Remove leading and trailing whitespaces from the changelog's body.
 trim = true
