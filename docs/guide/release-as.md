@@ -16,7 +16,7 @@ Variable: RELWOLF_RELEASE_AS = 1.0.0
 
 ```yaml [GitHub]
 # workflow_dispatch input "release-as", passed to the action:
-- uses: lupiq/relwolf@v1 # x-relwolf-major
+- uses: lupiq/relwolf@v0 # x-relwolf-major
   with:
     token: ${{ secrets.RELWOLF_TOKEN }}
     release-as: ${{ inputs.release-as }}

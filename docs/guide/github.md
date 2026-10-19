@@ -40,7 +40,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # relwolf needs the full history and all tags
-      - uses: lupiq/relwolf@v1 # x-relwolf-major
+      - uses: lupiq/relwolf@v0 # x-relwolf-major
         with:
           token: ${{ secrets.RELWOLF_TOKEN }}
 ```
@@ -68,7 +68,7 @@ on:
         required: false
         default: ''
 # ...
-- uses: lupiq/relwolf@v1 # x-relwolf-major
+- uses: lupiq/relwolf@v0 # x-relwolf-major
   with:
     token: ${{ secrets.RELWOLF_TOKEN }}
     release-as: ${{ inputs.release-as }}

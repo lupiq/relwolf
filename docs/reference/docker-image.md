@@ -17,7 +17,7 @@ contains Node.js, git and relwolf with git-cliff.
 | `sha-<commit>` | a specific build                |
 
 ```yaml
-image: ghcr.io/lupiq/relwolf:1 # x-relwolf-major
+image: ghcr.io/lupiq/relwolf:0 # x-relwolf-major
 ```
 
 The image has **no `ENTRYPOINT`** (GitLab overrides it), and `relwolf` is on the `PATH`.

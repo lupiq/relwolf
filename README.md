@@ -37,7 +37,7 @@ relwolf is developed by [lupiq](https://lupiq.com).
          - uses: actions/checkout@v7
            with:
              fetch-depth: 0 # relwolf needs the full history and all tags
-         - uses: lupiq/relwolf@v1 # x-relwolf-major
+         - uses: lupiq/relwolf@v0 # x-relwolf-major
            with:
              token: ${{ secrets.RELWOLF_TOKEN }}
    ```
