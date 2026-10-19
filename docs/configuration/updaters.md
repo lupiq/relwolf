@@ -32,7 +32,7 @@ Its name selects the granularity of the first matching version on that line. A l
 | ------------------- | ----------------------------------- | ----------------- |
 | `x-relwolf-version` | the full version                    | `1.2.3` → `2.0.0` |
 | `x-relwolf-minor`   | `MAJOR.MINOR`, not for pre-releases | `1.2` → `2.0`     |
-| `x-relwolf-major`   | `MAJOR`, not for pre-releases       | `v1` → `v2`       |
+| `x-relwolf-major`   | `MAJOR`, not for pre-releases       | `1` → `2`         |
 
 Use the partial markers for references to floating tags:
 

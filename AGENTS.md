@@ -26,7 +26,7 @@ Flow: Conventional Commits → next SemVer → release MR (changelog + version f
 - Changelog is produced by **git-cliff** (npm package, bundled); users control the format with their own `cliff.toml`.
   Which commit types appear is purely git-cliff configuration. relwolf's own `cliff.toml` lists all types except `chore`.
 - Updaters: `package-json`, `pom-xml`, `gradle`, `generic` (line markers `x-relwolf-version`, `x-relwolf-minor`, `x-relwolf-major`; the partial ones leave
-  pre-releases unchanged). The README and the docs pages with `@v1`/`:1` examples are kept current this way (`generic` updaters in `relwolf.yaml`; each file with a marker must be listed there).
+  pre-releases unchanged). The README and the docs pages with `@v1`/`:1` examples are kept current this way (`generic` updaters in `relwolf.yaml`; each file with a marker must be listed there). The docs build strips `# x-relwolf-*` comments from code fences (`markdown.config` in `config.mts`, except on `configuration/updaters.md`), so copied snippets stay clean.
 - GitLab project settings assumed: squash + fast-forward-only, no merge commits. MRs are labelled
   `relwolf: pending` / `relwolf: tagged`; source branch of the release MR `relwolf/<branch>`.
 - The CI job provides a full git clone (`GIT_DEPTH: 0`); relwolf aborts with a clear error on shallow clones.

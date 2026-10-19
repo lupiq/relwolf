@@ -12,6 +12,22 @@ export default defineConfig({
   cleanUrls: true,
   lastUpdated: true,
   sitemap: {hostname},
+  markdown: {
+    // Version markers keep relwolf's own docs up to date, but must not end up in copied snippets.
+    config(md) {
+      const fence = md.renderer.rules.fence!;
+      md.renderer.rules.fence = (tokens, idx, options, env, self) => {
+        const token = tokens[idx]!;
+        if (env.relativePath !== 'configuration/updaters.md') {
+          token.content = token.content.replace(
+            /[ \t]+(?:#|\/\/) x-relwolf-(?:version|minor|major)[ \t]*$/gm,
+            '',
+          );
+        }
+        return fence(tokens, idx, options, env, self);
+      };
+    },
+  },
   head: [
     ['link', {rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg'}],
     ['link', {rel: 'icon', type: 'image/png', href: '/favicon.png'}],
