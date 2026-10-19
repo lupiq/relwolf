@@ -3,12 +3,12 @@
 A release bot for **GitLab** (and GitHub) that follows the workflow of Google's
 [release-please](https://github.com/googleapis/release-please):
 
-1. On every push to the release branch, relwolf reads the
+1. On every push to the default branch, relwolf reads the
    [Conventional Commits](https://www.conventionalcommits.org/) since the last release and
    determines the next [SemVer](https://semver.org/) version.
-2. It opens (or updates) a **release merge request** on the branch `relwolf/<branch>` that contains the
-   updated changelog and the new version in your project files.
-3. When that merge request is merged, relwolf **tags** the merge commit (`v1.2.3`) and creates a
+2. It opens (or updates) a **release merge request** from the branch `relwolf/<branch>` (e.g. `relwolf/main`)
+   into the default branch. It contains the updated changelog and the new version in your project files.
+3. When that merge request is merged, relwolf **tags** the resulting commit on the default branch (`v1.2.3`) and creates a
    **release** whose description is the changelog entry.
 
 relwolf runs once per job (no daemon, no webhooks) and is shipped as a Docker image, so it can be
@@ -18,9 +18,10 @@ used directly as the `image:` of a GitLab CI job.
 
 1. Create a **personal / project access token** with the `api` scope and role Developer or higher
    (it must be able to push the branch `relwolf/main`, create merge requests, tags and releases) and store it
-   as a masked CI/CD variable, e.g. `RELWOLF_TOKEN`.
-2. Project settings: merge method **Fast-forward merge** with **Squash** enabled (merge commits are not
-   needed), and _Delete source branch_ as default is recommended.
+   as a masked CI/CD variable named **`RELWOLF_TOKEN`** (required; relwolf aborts without it). GitLab exposes
+   CI/CD variables to the job as environment variables, so the job needs no further configuration for it.
+2. Project settings: merge method **Fast-forward merge** with **Squash** enabled (relwolf assumes there are no
+   merge commits), and _Delete source branch_ as default is recommended.
 3. Add a job to `.gitlab-ci.yml`:
 
    ```yaml
@@ -44,8 +45,8 @@ The image has no `ENTRYPOINT`, so `relwolf` is simply a command on the `PATH`.
 
 Each run executes two phases:
 
-1. **Tag merged releases.** Merge requests labelled `relwolf: pending` that were merged into the release
-   branch get their tag created on the merge commit and a release published (the notes are taken from the
+1. **Tag merged releases.** Merge requests labelled `relwolf: pending` that were merged into the default
+   branch get their tag created on the commit the merge produced (the squash commit) and a release published (the notes are taken from the
    merge request description, so you can edit them before merging). Afterwards the label is switched to
    `relwolf: tagged`. Every step is idempotent, so a failed job can simply be re-run.
 2. **Prepare the next release.** For every configured package, the commits since the last release tag are
@@ -55,7 +56,7 @@ Each run executes two phases:
    - force-pushes a single commit to `relwolf/<branch>` through the API (the working tree is never modified),
    - creates or updates the merge request `chore(release): prepare for v1.2.3` labelled `relwolf: pending`.
 
-Pipelines that are not branch pipelines for the release branch (merge request pipelines, tag pipelines,
+Pipelines that are not branch pipelines for the default branch (merge request pipelines, tag pipelines,
 other branches) are skipped without an error.
 
 ### Version rules
@@ -84,7 +85,7 @@ version (`1.3.0`) with the changelog covering everything since the last stable r
 `relwolf.yaml` in the repository root (optional; defaults to a single root package without file updaters):
 
 ```yaml
-branch: main # release branch; defaults to the CI default branch, then "main"
+branch: main # branch to release from; defaults to the CI default branch, then "main"
 cliff-config: cliff.toml # git-cliff config; defaults to git-cliff's own discovery/default
 prerelease: beta # optional, default for all packages
 bump-minor-pre-major: true # optional, default for all packages
@@ -141,8 +142,8 @@ relwolf delegates all changelog formatting to git-cliff (bundled via npm). Put a
 repository (relwolf passes it with `--config` when you set `cliff-config`, and git-cliff finds `cliff.toml`
 in the repository root on its own) to control groups, templates, header and footer. relwolf adds
 `--tag`, `--tag-pattern`, `--include-path`/`--exclude-path` and the commit range, and prepends the entry to
-the changelog file. Release merge requests are titled `chore(release): prepare for …`, which the default
-git-cliff configuration skips.
+the changelog file. Release merge requests are titled `chore(release): prepare for …`; make sure your
+`cliff.toml` does not list that commit in the changelog (relwolf's own `cliff.toml` skips all `chore` commits).
 
 ## Environment variables
 
@@ -158,7 +159,8 @@ git-cliff configuration skips.
 
 The hosting platform is an interface (`src/providers/types.ts`) with two implementations: **GitLab** and
 **GitHub**. relwolf releases itself with the GitHub provider (`.github/workflows/release.yml`).
-GitLab releases have no pre-release flag, so the `prerelease` hint is only used on GitHub.
+On GitHub, the release merge request is a pull request. GitLab releases have no pre-release flag, so the
+`prerelease` hint is only used on GitHub.
 
 ## Docker image
 
@@ -172,7 +174,7 @@ pnpm install
 pnpm typecheck
 pnpm lint           # ESLint + typescript-eslint (strict, type-checked)
 pnpm format:check   # Prettier (use `pnpm format` to fix)
-pnpm test            # unit + integration tests (real git repositories and git-cliff)
+pnpm test           # unit + integration tests (real git repositories and git-cliff)
 pnpm build
 ```
 

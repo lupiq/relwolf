@@ -6,7 +6,7 @@ User-facing documentation lives in `README.md`; keep both in sync.
 ## Goal
 
 Release bot modelled on Google's release-please, for **GitLab** (gitlab.com and self-managed), provider-agnostic
-so GitHub works too. Runs once per CI job (push to the release branch), no daemon. Shipped as Docker image
+so GitHub works too. Runs once per CI job (push to the default branch), no daemon. Shipped as Docker image
 `ghcr.io/lupiq/relwolf` so it can be used as the `image:` of a GitLab CI job. relwolf releases itself via the
 GitHub provider.
 
@@ -26,7 +26,7 @@ Flow: Conventional Commits → next SemVer → release MR (changelog + version f
   Which commit types appear is purely git-cliff configuration. relwolf's own `cliff.toml` lists all types except `chore`.
 - Updaters: `package-json`, `pom-xml`, `gradle`, `generic` (line marker `x-relwolf-version`).
 - GitLab project settings assumed: squash + fast-forward-only, no merge commits. MRs are labelled
-  `relwolf: pending` / `relwolf: tagged`; release branch `relwolf/<branch>`.
+  `relwolf: pending` / `relwolf: tagged`; source branch of the release MR `relwolf/<branch>`.
 - The CI job provides a full git clone (`GIT_DEPTH: 0`); relwolf aborts with a clear error on shallow clones.
   Git is used read-only; all writes (branch commit, MR, labels, tags, releases) go through the provider API.
 - Provider layer is replaceable (`src/providers/types.ts`); GitLab and GitHub are implemented.
