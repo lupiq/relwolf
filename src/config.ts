@@ -145,6 +145,9 @@ const configSchema = z.strictObject({
     .strictObject({pending: label.optional(), tagged: label.optional()})
     .default({}),
   'draft': z.boolean().default(false),
+  'no-changes-text': z
+    .string()
+    .default('No changes, version bumped to stay in sync.'),
   'assignees': userNames.default([]),
   'reviewers': userNames.default([]),
   'patch-types': z.array(commitType).default(['fix']),
@@ -158,6 +161,7 @@ const configSchema = z.strictObject({
   'linked-versions': z
     .union([z.boolean(), z.array(z.array(z.string().min(1)).min(2))])
     .default(false),
+  'linked-tags': z.enum(['per-package', 'single']).default('per-package'),
   'prerelease': prereleaseId.optional(),
   'bump-minor-pre-major': z.boolean().default(true),
   'packages': z
@@ -200,6 +204,8 @@ export interface Config {
   releaseName: string;
   labels: {pending: string; tagged: string};
   draft: boolean;
+  /** Text for the changelog and release notes of a package without changes; empty to add nothing. */
+  noChangesText: string;
   assignees: string[];
   reviewers: string[];
   /** Commit types (lower case) that trigger a minor or patch release; breaking changes always trigger a major one. */
@@ -213,6 +219,8 @@ export interface Config {
   separatePullRequests: boolean;
   /** Groups of package paths that always share one version. */
   linkedGroups: string[][];
+  /** `single`: a linked group gets one tag and release, named by `tagPackagePath`. */
+  linkedTags: 'per-package' | 'single';
   packages: PackageConfig[];
 }
 
@@ -262,6 +270,11 @@ export function tagFormat(
   const [prefix = '', suffix = ''] = resolved.split('${version}');
 
   return {prefix, suffix};
+}
+
+/** The package of a linked group whose tag format names the shared tag: the root package, else the first one. */
+export function tagPackagePath(group: readonly string[]): string {
+  return group.includes('.') ? '.' : (group[0] ?? '.');
 }
 
 export function parseConfig(source: string | undefined): Config {
@@ -357,7 +370,6 @@ export function parseConfig(source: string | undefined): Config {
 
   const seenPaths = new Set<string>();
   const seenComponents = new Set<string | undefined>();
-  const seenTagFormats = new Set<string>();
 
   for (const pkg of packages) {
     if (seenPaths.has(pkg.path)) {
@@ -375,16 +387,6 @@ export function parseConfig(source: string | undefined): Config {
     }
 
     seenComponents.add(pkg.component);
-
-    const format = `${pkg.tagPrefix}\u0000${pkg.tagSuffix}`;
-
-    if (seenTagFormats.has(format)) {
-      throw new ConfigError(
-        'tag-template must contain ${component} when several packages are released, otherwise their tags collide',
-      );
-    }
-
-    seenTagFormats.add(format);
   }
 
   const patchTypes = parsed['patch-types'].map(type => type.toLowerCase());
@@ -436,6 +438,37 @@ export function parseConfig(source: string | undefined): Config {
     grouped.add(entry);
   }
 
+  const single = parsed['linked-tags'] === 'single';
+
+  if (single && linkedGroups.length === 0) {
+    throw new ConfigError('linked-tags: "single" requires "linked-versions"');
+  }
+
+  const followers = new Set(
+    single
+      ? linkedGroups.flatMap(group =>
+          group.filter(entry => entry !== tagPackagePath(group)),
+        )
+      : [],
+  );
+  const seenTagFormats = new Set<string>();
+
+  for (const pkg of packages) {
+    const format = `${pkg.tagPrefix}\u0000${pkg.tagSuffix}`;
+
+    if (followers.has(pkg.path)) {
+      continue;
+    }
+
+    if (seenTagFormats.has(format)) {
+      throw new ConfigError(
+        'tag-template must contain ${component} when several packages are released, otherwise their tags collide',
+      );
+    }
+
+    seenTagFormats.add(format);
+  }
+
   if (
     parsed['separate-pull-requests'] &&
     packages.some(pkg => !pkg.component) &&
@@ -473,6 +506,7 @@ export function parseConfig(source: string | undefined): Config {
     releaseName: parsed['release-name'],
     labels,
     draft: parsed.draft,
+    noChangesText: parsed['no-changes-text'],
     assignees: parsed.assignees,
     reviewers: parsed.reviewers,
     minorTypes,
@@ -481,6 +515,7 @@ export function parseConfig(source: string | undefined): Config {
     ...(parsed['bootstrap-sha'] ? {bootstrapSha: parsed['bootstrap-sha']} : {}),
     separatePullRequests: parsed['separate-pull-requests'],
     linkedGroups,
+    linkedTags: parsed['linked-tags'],
     packages,
   };
 }

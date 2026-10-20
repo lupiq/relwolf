@@ -783,3 +783,130 @@ packages:
     ]);
   });
 });
+
+describe('multi-module Gradle project with a shared version', () => {
+  const yaml = `
+linked-versions: true
+packages:
+  ".":
+    updaters: []
+  services/orders:
+    component: orders
+    updaters: []
+  common/core:
+    component: core
+    updaters: []
+`;
+
+  it('releases every module with one version and its own changelog', async () => {
+    repo.write('services/orders/a.txt', 'x');
+    repo.write('common/core/c.txt', 'x');
+    repo.commit('chore: scaffold');
+    repo.commit('feat: new order flow', 'services/orders/a.txt');
+    await exec(yaml);
+
+    const files = provider.commits[0]!.files.map(f => f.path).sort();
+
+    expect(files).toEqual([
+      'CHANGELOG.md',
+      'common/core/CHANGELOG.md',
+      'services/orders/CHANGELOG.md',
+    ]);
+    expect(provider.requests[0]!.title).toMatch(/core-v0\.1\.0/);
+
+    mergeLastRelease(repo, provider, 1);
+    await exec(yaml);
+    expect([...provider.tags.keys()].sort()).toEqual([
+      'core-v0.1.0',
+      'orders-v0.1.0',
+      'v0.1.0',
+    ]);
+  });
+});
+
+describe('linked packages with a single tag', () => {
+  const yaml = `
+linked-versions: true
+linked-tags: single
+packages:
+  ".":
+    updaters: []
+  services/orders:
+    component: orders
+    updaters: []
+  common/core:
+    component: core
+    updaters: []
+`;
+
+  it('creates one tag and release but a changelog per module', async () => {
+    repo.write('services/orders/a.txt', 'x');
+    repo.write('common/core/c.txt', 'x');
+    repo.commit('chore: scaffold');
+    repo.commit('feat: new order flow', 'services/orders/a.txt');
+    repo.commit('fix: core bug', 'common/core/c.txt');
+    await exec(yaml);
+
+    expect(provider.commits[0]!.files.map(f => f.path).sort()).toEqual([
+      'CHANGELOG.md',
+      'common/core/CHANGELOG.md',
+      'services/orders/CHANGELOG.md',
+    ]);
+    expect(provider.requests[0]!.title).toBe(
+      'chore(release): Create release v0.1.0',
+    );
+
+    const [entry, ...rest] = parseBody(provider.requests[0]!.body);
+
+    expect(rest).toEqual([]);
+    expect(entry!.notes).toMatch(/## orders[\s\S]*new order flow/i);
+    expect(entry!.notes).toMatch(/## core[\s\S]*core bug/i);
+
+    mergeLastRelease(repo, provider, 1);
+    await exec(yaml);
+    expect([...provider.tags.keys()]).toEqual(['v0.1.0']);
+    expect(provider.releases).toHaveLength(1);
+
+    repo.commit('fix: later', 'common/core/c.txt');
+    await exec(yaml);
+    expect(provider.requests[1]!.title).toMatch(/v0\.1\.1/);
+  });
+
+  async function releaseThenChangeOrders(config: string) {
+    repo.write('services/orders/a.txt', 'x');
+    repo.write('common/core/c.txt', 'x');
+    repo.commit('chore: scaffold');
+    repo.commit('feat: orders first', 'services/orders/a.txt');
+    await exec(config);
+    mergeLastRelease(repo, provider, 1);
+    await exec(config);
+    repo.commit('fix: orders only', 'services/orders/a.txt');
+    await exec(config);
+
+    return provider.commits.at(-1)!.files;
+  }
+
+  it('marks modules without changes in the changelog and release notes', async () => {
+    const files = await releaseThenChangeOrders(yaml);
+    const core = files.find(f => f.path === 'common/core/CHANGELOG.md')!;
+    const orders = files.find(f => f.path === 'services/orders/CHANGELOG.md')!;
+
+    expect(core.content).toMatch(
+      /0\.1\.1[\s\S]*No changes, version bumped to stay in sync\./,
+    );
+    expect(orders.content).not.toMatch(/No changes/);
+    expect(parseBody(provider.requests[1]!.body)[0]!.notes).toMatch(
+      /## core\n\nNo changes, version bumped/,
+    );
+  });
+
+  it('can customise the text', async () => {
+    const files = await releaseThenChangeOrders(
+      `no-changes-text: "Nothing here."${yaml}`,
+    );
+
+    expect(
+      files.find(f => f.path === 'common/core/CHANGELOG.md')!.content,
+    ).toMatch(/Nothing here\./);
+  });
+});

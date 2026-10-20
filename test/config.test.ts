@@ -228,6 +228,8 @@ describe('new properties', () => {
       'branch-prefix: "../x/"',
       'linked-versions: [[a, b]]',
       'linked-versions: [[a]]',
+      'linked-tags: single',
+      'linked-tags: nope',
       'tag-template: "${version}"\npackages:\n  a: {}\n  b: {component: b}',
     ];
 
@@ -253,5 +255,13 @@ describe('new properties', () => {
     );
 
     expect(config.linkedGroups).toEqual([['a', 'b']]);
+  });
+
+  it('allows a shared tag format for packages of a single-tag group', () => {
+    const config = parseConfig(
+      'linked-versions: true\nlinked-tags: single\ntag-template: "v${version}"\npackages:\n  a: {}\n  b: {component: b}',
+    );
+
+    expect(config.linkedTags).toBe('single');
   });
 });

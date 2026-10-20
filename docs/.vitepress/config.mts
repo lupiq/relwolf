@@ -109,6 +109,7 @@ export default defineConfig({
           {text: 'Version rules', link: '/guide/version-rules'},
           {text: 'Controlling the next version', link: '/guide/release-as'},
           {text: 'Pre-releases', link: '/guide/pre-releases'},
+          {text: 'Migrating changelogs', link: '/guide/migrating'},
         ],
       },
       {

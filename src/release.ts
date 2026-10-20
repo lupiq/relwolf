@@ -14,7 +14,12 @@ import {
   prependToChangelog,
   type CliffInvocation,
 } from './changelog.js';
-import {ROOT_KEY, type Config, type PackageConfig} from './config.js';
+import {
+  ROOT_KEY,
+  tagPackagePath,
+  type Config,
+  type PackageConfig,
+} from './config.js';
 import {Git} from './git.js';
 import {
   maxLevel,
@@ -289,7 +294,7 @@ async function buildFiles(
   };
 
   const allPackages = options.config.packages;
-  const entries: BodyEntry[] = [];
+  const notesByTag = new Map<string, {pkg: PackageConfig; notes: string}[]>();
 
   for (const plan of plans) {
     const {pkg} = plan;
@@ -310,13 +315,22 @@ async function buildFiles(
     };
     const env = options.env ?? process.env;
 
-    const notes = await generateNotes(cliff, env);
+    const placeholder = plan.empty ? options.config.noChangesText : '';
+    const notes = placeholder || (await generateNotes(cliff, env));
 
-    entries.push({tag: plan.tag, prerelease: plan.prerelease, notes});
+    const sections = notesByTag.get(plan.tag) ?? [];
+
+    sections.push({pkg, notes});
+    notesByTag.set(plan.tag, sections);
 
     const changelog = await load(pkg.changelogPath, false);
 
-    changelog.current = await prependToChangelog(cliff, changelog.current, env);
+    changelog.current = await prependToChangelog(
+      cliff,
+      changelog.current,
+      env,
+      placeholder,
+    );
 
     for (const updater of pkg.updaters) {
       for (const file of await expandPath(git, updater.path)) {
@@ -330,6 +344,26 @@ async function buildFiles(
         );
       }
     }
+  }
+
+  const entries: BodyEntry[] = [];
+
+  for (const [tag, sections] of notesByTag) {
+    const [only] = sections;
+    // Packages sharing one tag get one section each in the release notes.
+    const notes =
+      sections.length === 1 && only
+        ? only.notes
+        : sections
+            .filter(section => section.notes.trim())
+            .map(
+              section =>
+                `## ${packageKey(section.pkg)}\n\n${section.notes.trim()}`,
+            )
+            .join('\n\n');
+    const plan = plans.find(candidate => candidate.tag === tag);
+
+    entries.push({tag, prerelease: Boolean(plan?.prerelease), notes});
   }
 
   const files: FileChange[] = [];
@@ -438,6 +472,12 @@ async function planGroup(
   log: (message: string) => void,
 ): Promise<PackagePlan[]> {
   const settings = planSettings(config);
+  const tagsOf =
+    config.linkedTags === 'single'
+      ? group.find(
+          pkg => pkg.path === tagPackagePath(group.map(member => member.path)),
+        )
+      : undefined;
   const own = [];
 
   for (const pkg of group) {
@@ -446,7 +486,7 @@ async function planGroup(
         git,
         pkg,
         config.packages,
-        {releaseAs: versions.get(componentKey(pkg))},
+        {releaseAs: versions.get(componentKey(pkg)), tagsOf},
         settings,
       ),
     );
@@ -471,7 +511,7 @@ async function planGroup(
       git,
       pkg,
       config.packages,
-      {minLevel: level, force: true},
+      {minLevel: level, force: true, tagsOf},
       settings,
     );
 
@@ -498,7 +538,7 @@ async function planGroup(
       git,
       pkg,
       config.packages,
-      {releaseAs: shared, force: true},
+      {releaseAs: shared, force: true, tagsOf},
       settings,
     );
 
@@ -596,8 +636,11 @@ async function prepareReleaseRequest(
 
   const baseSha = await git.head();
   const {files, entries} = await buildFiles(options, git, plans);
-  const tags = plans.map(plan => plan.tag);
-  const planVersions = plans.map(plan => formatVersion(plan.version));
+  const unique = plans.filter(
+    (plan, index) => plans.findIndex(other => other.tag === plan.tag) === index,
+  );
+  const tags = unique.map(plan => plan.tag);
+  const planVersions = unique.map(plan => formatVersion(plan.version));
   const title = renderTitle(tags, config.pullRequestTitle, planVersions);
   const message = config.releaseCommitMessage
     ? renderTitle(tags, config.releaseCommitMessage, planVersions)

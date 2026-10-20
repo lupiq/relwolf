@@ -87,6 +87,8 @@ export async function prependToChangelog(
   options: CliffInvocation,
   existing: string,
   env: NodeJS.ProcessEnv = process.env,
+  /** Text added below the new entry, for releases without any change. */
+  placeholder?: string,
 ): Promise<string> {
   const dir = await mkdtemp(path.join(tmpdir(), 'relwolf-'));
   const file = path.join(dir, 'CHANGELOG.md');
@@ -95,7 +97,15 @@ export async function prependToChangelog(
     await writeFile(file, existing);
     await cliff(options, ['--prepend', file], env);
 
-    return await readFile(file, 'utf8');
+    const result = await readFile(file, 'utf8');
+
+    if (!placeholder || !result.endsWith(existing)) {
+      return result;
+    }
+
+    const added = result.slice(0, result.length - existing.length).trimEnd();
+
+    return `${added}\n\n${placeholder}\n\n${existing}`.trimEnd() + '\n';
   } finally {
     await rm(dir, {recursive: true, force: true});
   }

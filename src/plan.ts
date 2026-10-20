@@ -37,6 +37,8 @@ export interface PackagePlan {
   commits: ConventionalCommit[];
   /** Bump level derived from the commits; `null` if only a requested or linked version applies. */
   level: BumpLevel | null;
+  /** No commit touched the package since the last release (it only follows the version of linked packages). */
+  empty: boolean;
   /** Reverted commits and their reverts, left out of the changelog. */
   revertedCommits: string[];
 }
@@ -97,6 +99,8 @@ export interface PlanOptions {
   minLevel?: BumpLevel | null | undefined;
   /** Release even without any change in the package (linked packages). */
   force?: boolean | undefined;
+  /** Package whose tags are used instead of the package's own (single tag of a linked group). */
+  tagsOf?: PackageConfig | undefined;
 }
 
 const LEVELS: readonly BumpLevel[] = ['patch', 'minor', 'major'];
@@ -119,7 +123,8 @@ export async function planPackage(
   settings: PlanSettings = DEFAULT_PLAN_SETTINGS,
 ): Promise<PackagePlan | null> {
   const {releaseAs, force = false} = options;
-  const releaseTags = findReleaseTags(await git.tagsMergedIntoHead(), pkg);
+  const tagged = options.tagsOf ?? pkg;
+  const releaseTags = findReleaseTags(await git.tagsMergedIntoHead(), tagged);
   const lastAny = highest(releaseTags);
   const lastStable = highestStable(releaseTags);
   const pathspecs = pathspecsFor(pkg, all, settings.excludePaths);
@@ -181,17 +186,18 @@ export async function planPackage(
     );
   }
 
+  const touching = await git.log(range, pathspecs);
+
   return {
     pkg,
     version,
-    tag: tagName(pkg, formatVersion(version)),
+    tag: tagName(tagged, formatVersion(version)),
     prerelease: isPrerelease(version),
     range,
-    tagPattern: tagPattern(pkg, Boolean(pkg.prerelease)),
+    tagPattern: tagPattern(tagged, Boolean(pkg.prerelease)),
     level,
+    empty: touching.length === 0,
     commits: sinceStable,
-    revertedCommits: splitReverted(await git.log(range, pathspecs)).dropped.map(
-      commit => commit.sha,
-    ),
+    revertedCommits: splitReverted(touching).dropped.map(commit => commit.sha),
   };
 }
