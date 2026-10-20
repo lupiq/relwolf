@@ -12,6 +12,11 @@ description: How relwolf maps Conventional Commits to SemVer bumps - feat, fix a
 | `fix:`                                   | patch |
 | everything else                          | none  |
 
+::: tip Customisable types
+The table shows the defaults. Use [`minor-types` and `patch-types`](/configuration/#commit-types) to change which
+commit types trigger a minor or patch release, e.g. `patch-types: [fix, build]`. Breaking changes always bump major.
+:::
+
 - Before `1.0.0` a breaking change only bumps the minor version (`bump-minor-pre-major`, default `true`).
 - Without any tag the first release is calculated from `0.0.0` (`feat` → `0.1.0`, `fix` → `0.0.1`), unless
   `initial-version` is set.
