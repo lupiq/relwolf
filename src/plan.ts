@@ -66,6 +66,7 @@ async function conventionalCommits(
   pathspecs: string[],
 ): Promise<ConventionalCommit[]> {
   const raw = withoutReverted(await git.log(range, pathspecs));
+
   return raw.flatMap(commit => parseCommit(commit.sha, commit.message) ?? []);
 }
 
@@ -97,7 +98,9 @@ export async function planPackage(
 
   if (releaseAs && level === null) {
     // A requested version needs at least one change to release, but not necessarily a releasable one.
-    if ((await git.log(range, pathspecs)).length === 0) return null;
+    if ((await git.log(range, pathspecs)).length === 0) {
+      return null;
+    }
   }
 
   if (!releaseAs && pkg.prerelease && lastIsPrerelease) {
@@ -107,7 +110,10 @@ export async function planPackage(
       `${lastAny.tag}..HEAD`,
       pathspecs,
     );
-    if (bumpLevel(sinceLast) === null) return null;
+
+    if (bumpLevel(sinceLast) === null) {
+      return null;
+    }
   }
 
   const version = nextVersion({
@@ -119,7 +125,10 @@ export async function planPackage(
     initialVersion: pkg.initialVersion,
     releaseAs,
   });
-  if (!version) return null;
+
+  if (!version) {
+    return null;
+  }
 
   if (releaseAs && lastAny && compareVersions(version, lastAny.version) <= 0) {
     throw new ReleaseAsError(

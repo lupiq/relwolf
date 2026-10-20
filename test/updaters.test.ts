@@ -6,6 +6,7 @@ describe('package-json updater', () => {
     const input =
       '{\n    "name": "x",\n    "version": "1.0.0",\n    "dependencies": { "y": "1.0.0" }\n}\n';
     const output = applyUpdater('package-json', input, '1.1.0', 'package.json');
+
     expect(JSON.parse(output)).toEqual({
       name: 'x',
       version: '1.1.0',
@@ -65,6 +66,7 @@ describe('pom-xml updater', () => {
 
   it('handles self-closing elements and attributes', () => {
     const input = '<project a="b>c"><x/><version>1.0.0</version></project>';
+
     expect(applyUpdater('pom-xml', input, '2.0.0', 'pom.xml')).toBe(
       '<project a="b>c"><x/><version>2.0.0</version></project>',
     );
@@ -72,6 +74,7 @@ describe('pom-xml updater', () => {
 
   it('fails when the project has no own version', () => {
     const input = '<project><parent><version>1</version></parent></project>';
+
     expect(() => applyUpdater('pom-xml', input, '1.0.0', 'pom.xml')).toThrow(
       UpdaterError,
     );
@@ -86,6 +89,7 @@ describe('gradle updater', () => {
     ["version='1.0.0-SNAPSHOT'", "version='2.0.0'"],
   ])('updates %s', (input, expected) => {
     const content = `plugins { id 'java' }\n${input}\ndependencies { implementation 'x:y:1.0.0' }\n`;
+
     expect(applyUpdater('gradle', content, '2.0.0', 'build.gradle')).toBe(
       `plugins { id 'java' }\n${expected}\ndependencies { implementation 'x:y:1.0.0' }\n`,
     );
@@ -129,6 +133,7 @@ describe('generic updater', () => {
       "const VERSION = 'v1.0.0'; // x-relwolf-version",
       'dep: 3.0.0',
     ].join('\n');
+
     // the pure comment line has no version and must fail, so test it separately
     expect(() => applyUpdater('generic', input, '1.1.0', 'f')).toThrow(
       /contains no matching version/,
@@ -137,6 +142,7 @@ describe('generic updater', () => {
       .split('\n')
       .filter(l => l !== '// x-relwolf-version')
       .join('\n');
+
     expect(applyUpdater('generic', ok, '1.1.0-beta.1', 'f')).toBe(
       [
         'image: foo:1.0.0',
@@ -165,6 +171,7 @@ describe('generic updater', () => {
       'c: 1.2.3 # x-relwolf-version',
       'd: other@v7',
     ].join('\n');
+
     expect(applyUpdater('generic', input, '2.0.0', 'f')).toBe(
       [
         'a: lupiq/relwolf@v2 # x-relwolf-major',
@@ -181,6 +188,7 @@ describe('generic updater', () => {
       'b: 1.2 # x-relwolf-minor',
       'c: 1.2.3 # x-relwolf-version',
     ].join('\n');
+
     expect(applyUpdater('generic', input, '2.0.0-beta.1', 'f')).toBe(
       [
         'a: @v1 # x-relwolf-major',
@@ -202,6 +210,7 @@ describe('generic updater', () => {
       'Use `x-relwolf-version` for 1.0.0 like this',
       '<div>1.0.0</div> <!-- x-relwolf-version -->',
     ].join('\n');
+
     expect(applyUpdater('generic', input, '2.0.0', 'f')).toBe(
       [
         'x: 2.0.0 # x-relwolf-version',

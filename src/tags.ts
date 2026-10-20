@@ -31,11 +31,19 @@ export function findReleaseTags(
 ): ReleaseTag[] {
   const prefix = tagPrefix(component);
   const result: ReleaseTag[] = [];
+
   for (const tag of allTags) {
-    if (!tag.startsWith(prefix)) continue;
+    if (!tag.startsWith(prefix)) {
+      continue;
+    }
+
     const version = parseVersion(tag.slice(prefix.length));
-    if (version) result.push({tag, version});
+
+    if (version) {
+      result.push({tag, version});
+    }
   }
+
   return result;
 }
 
@@ -64,6 +72,7 @@ export function tagPattern(
   const pre = includePrereleases
     ? '(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?'
     : '';
+
   return `^${escapeRegex(tagPrefix(component))}${core}${pre}$`;
 }
 
@@ -72,5 +81,6 @@ export function isValidReleaseTag(tag: string): boolean {
   const match = /^(?:[A-Za-z0-9][A-Za-z0-9._-]*?-)?v(\d+\.\d+\.\d+.*)$/.exec(
     tag,
   );
+
   return match?.[1] !== undefined && parseVersion(match[1]) !== null;
 }

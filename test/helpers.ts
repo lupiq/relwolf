@@ -27,6 +27,7 @@ export class TestRepo {
 
   write(file: string, content: string): void {
     const full = path.join(this.dir, file);
+
     mkdirSync(path.dirname(full), {recursive: true});
     writeFileSync(full, content);
   }
@@ -36,6 +37,7 @@ export class TestRepo {
     this.write(file, `${Math.random()}\n`);
     this.git('add', '-A');
     this.git('commit', '-q', '-m', message);
+
     return this.git('rev-parse', 'HEAD');
   }
 
@@ -76,7 +78,9 @@ export class FakeProvider implements Provider {
   private nextId = 1;
 
   async ensureLabel(label: LabelDefinition): Promise<void> {
-    if (!this.labels.includes(label.name)) this.labels.push(label.name);
+    if (!this.labels.includes(label.name)) {
+      this.labels.push(label.name);
+    }
   }
 
   async commitFiles(options: CommitCall): Promise<void> {
@@ -114,7 +118,9 @@ export class FakeProvider implements Provider {
       sourceBranch: options.sourceBranch,
       targetBranch: options.targetBranch,
     };
+
     this.requests.push(request);
+
     return request;
   }
 
@@ -146,6 +152,7 @@ export class FakeProvider implements Provider {
     options: {add: string[]; remove: string[]},
   ): Promise<void> {
     const request = this.mustFind(id);
+
     request.labels = [
       ...request.labels.filter(l => !options.remove.includes(l)),
       ...options.add,
@@ -153,8 +160,12 @@ export class FakeProvider implements Provider {
   }
 
   async createTag(name: string, sha: string): Promise<'created' | 'exists'> {
-    if (this.tags.has(name)) return 'exists';
+    if (this.tags.has(name)) {
+      return 'exists';
+    }
+
     this.tags.set(name, sha);
+
     return 'created';
   }
 
@@ -173,7 +184,11 @@ export class FakeProvider implements Provider {
 
   mustFind(id: number) {
     const request = this.requests.find(r => r.id === id);
-    if (!request) throw new Error(`no request ${id}`);
+
+    if (!request) {
+      throw new Error(`no request ${id}`);
+    }
+
     return request;
   }
 }
@@ -185,13 +200,22 @@ export function mergeLastRelease(
   requestId: number,
 ): string {
   const last = provider.commits.at(-1);
-  if (!last) throw new Error('no release commit recorded');
-  for (const file of last.files) repo.write(file.path, file.content);
+
+  if (!last) {
+    throw new Error('no release commit recorded');
+  }
+
+  for (const file of last.files) {
+    repo.write(file.path, file.content);
+  }
+
   repo.git('add', '-A');
   repo.git('commit', '-q', '-m', last.message);
   const sha = repo.head();
   const request = provider.mustFind(requestId);
+
   request.state = 'merged';
   request.mergeSha = sha;
+
   return sha;
 }

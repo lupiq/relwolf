@@ -14,9 +14,11 @@ export function updateGradle(
 ): string {
   const properties = file.endsWith('.properties');
   const pattern = properties ? PROPERTIES : GROOVY_KOTLIN;
+
   if (!pattern.test(content)) {
     throw new UpdaterError(`${file}: no top-level version assignment found`);
   }
+
   return properties
     ? content.replace(
         PROPERTIES,

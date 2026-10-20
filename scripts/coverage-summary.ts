@@ -25,12 +25,15 @@ const row = (name: string, entry: Entry): string =>
 
 function render(summary: Record<string, Entry> | undefined): string {
   const lines = ['## Test coverage', ''];
+
   if (!summary?.total) {
     lines.push('No coverage report was produced; see the job log.');
+
     return lines.join('\n') + '\n';
   }
 
   const {total, ...files} = summary;
+
   lines.push(
     `**${pct(total.lines)}** of the lines are covered.`,
     '',
@@ -38,11 +41,13 @@ function render(summary: Record<string, Entry> | undefined): string {
     '| --- | --- | --- | --- | --- |',
     row('**Total**', total),
   );
+
   for (const [file, entry] of Object.entries(files).sort(([a], [b]) =>
     a.localeCompare(b),
   )) {
     lines.push(row(path.relative(process.cwd(), file), entry));
   }
+
   return lines.join('\n') + '\n';
 }
 
@@ -52,5 +57,9 @@ const summary = existsSync(file)
   : undefined;
 const markdown = render(summary);
 const target = process.env.GITHUB_STEP_SUMMARY;
-if (target) appendFileSync(target, markdown);
-else console.log(markdown);
+
+if (target) {
+  appendFileSync(target, markdown);
+} else {
+  console.log(markdown);
+}

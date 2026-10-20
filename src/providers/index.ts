@@ -12,22 +12,35 @@ export interface ProviderContext {
 
 function required(env: NodeJS.ProcessEnv, name: string): string {
   const value = env[name];
-  if (!value) throw new Error(`Missing required environment variable ${name}`);
+
+  if (!value) {
+    throw new Error(`Missing required environment variable ${name}`);
+  }
+
   return value;
 }
 
 function detectProvider(env: NodeJS.ProcessEnv): 'gitlab' | 'github' {
   const explicit = env.RELWOLF_PROVIDER;
+
   if (explicit) {
     if (explicit !== 'gitlab' && explicit !== 'github') {
       throw new Error(
         `RELWOLF_PROVIDER must be "gitlab" or "github", got "${explicit}"`,
       );
     }
+
     return explicit;
   }
-  if (env.GITLAB_CI) return 'gitlab';
-  if (env.GITHUB_ACTIONS) return 'github';
+
+  if (env.GITLAB_CI) {
+    return 'gitlab';
+  }
+
+  if (env.GITHUB_ACTIONS) {
+    return 'github';
+  }
+
   throw new Error(
     'Could not detect the CI provider; set RELWOLF_PROVIDER to "gitlab" or "github"',
   );

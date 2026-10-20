@@ -101,6 +101,16 @@ Prettier on staged files) + `pnpm lint`; `commit-msg` = commitlint (`commitlint.
 sentence-case subject, i.e. the text after `type:` starts with a capital letter). Note: `pnpm add` ignores
 `save-exact` here, so pin versions in `package.json` manually (no `^`/`~`).
 
+## Code style
+
+Enforced by ESLint (`curly: all`, `padding-line-between-statements`); `pnpm lint --fix` applies them:
+
+- `if`/`else`/loops always use curly braces, even for one-liners.
+- Blank line before every `return`, before and after block statements (`if`, `for`, `try`, `switch`, …) and after
+  a group of `const`/`let` declarations.
+- Write long call chains and expressions on one line and let Prettier wrap them. Manual line breaks are kept by
+  Prettier and then deviate from its own formatting.
+
 ## Packaging and CI
 
 - `Dockerfile`: multi-stage (build, prod deps, final `node:24-slim` + git, `safe.directory '*'`). The image could not

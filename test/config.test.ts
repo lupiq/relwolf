@@ -8,6 +8,7 @@ import {formatVersion} from '../src/version.js';
 describe('parseConfig', () => {
   it('defaults to a single root package', () => {
     const config = parseConfig(undefined);
+
     expect(config.packages).toEqual([
       {
         path: '.',
@@ -36,9 +37,11 @@ packages:
       - type: generic
         path: docs/version.txt
 `);
+
     expect(config.branch).toBe('develop');
     expect(config.cliffConfig).toBe('config/cliff.toml');
     const [pkg] = config.packages;
+
     expect(pkg).toMatchObject({
       path: '.',
       prerelease: 'beta',
@@ -70,8 +73,10 @@ packages:
       - type: generic
         path: version.txt
 `);
+
     expect(config.packages).toHaveLength(2);
     const [root, api] = config.packages;
+
     expect(root).toMatchObject({path: '.', prerelease: 'rc'});
     expect(api).toMatchObject({
       path: 'services/api',
@@ -173,10 +178,12 @@ packages:
 describe('loadConfig', () => {
   it('reads relwolf.yaml from the directory', async () => {
     const dir = mkdtempSync(path.join(tmpdir(), 'relwolf-cfg-'));
+
     try {
       expect(await loadConfig(dir)).toMatchObject({found: false});
       writeFileSync(path.join(dir, 'relwolf.yaml'), 'branch: trunk\n');
       const {config, found} = await loadConfig(dir);
+
       expect(found).toBe(true);
       expect(config.branch).toBe('trunk');
     } finally {

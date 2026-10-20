@@ -16,11 +16,13 @@ describe('parseReleaseAs', () => {
 
   it('parses bare versions and the v prefix', () => {
     const result = parseReleaseAs('v1.0.0', single);
+
     expect(formatVersion(result.get('')!)).toBe('1.0.0');
   });
 
   it('parses components and auto', () => {
     const result = parseReleaseAs('a=2.0.0, b=auto', mono);
+
     expect(formatVersion(result.get('a')!)).toBe('2.0.0');
     expect(result.get('b')).toBeNull();
   });

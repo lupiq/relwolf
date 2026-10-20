@@ -77,11 +77,13 @@ describe('withoutReverted', () => {
       c('c2', 'fix: b'),
       c('a1b2c3d4e5', 'feat: a'),
     ];
+
     expect(shas(withoutReverted(list))).toEqual(['c2']);
   });
 
   it('matches squashed reverts by subject', () => {
     const list = [c('c2', 'Revert "feat: a"'), c('c1', 'feat: a')];
+
     expect(withoutReverted(list)).toEqual([]);
   });
 
@@ -91,11 +93,13 @@ describe('withoutReverted', () => {
       c('c2', 'Revert "feat: a"'),
       c('c1', 'feat: a'),
     ];
+
     expect(shas(withoutReverted(list))).toEqual(['c1']);
   });
 
   it('ignores reverts of commits outside the list', () => {
     const list = [c('c2', 'Revert "feat: old"'), c('c1', 'fix: x')];
+
     expect(shas(withoutReverted(list))).toEqual(['c1']);
   });
 });

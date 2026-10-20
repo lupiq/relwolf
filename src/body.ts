@@ -31,6 +31,7 @@ export function renderTitle(
 ): string {
   const tagList = tags.join(', ');
   const version = (versions.length === 1 ? versions[0] : undefined) ?? tagList;
+
   return template
     .replaceAll('${tags}', () => tagList)
     .replaceAll('${version}', () => version);
@@ -59,6 +60,7 @@ export function renderBody(
     override =>
       `<!-- relwolf:release-as component="${override.component}" version="${override.version}" -->`,
   );
+
   return [
     '🐺 **relwolf** prepared the following release(s). Merging this request tags and publishes them.',
     list,
@@ -77,11 +79,17 @@ export function renderBody(
 
 export function parseBody(body: string): BodyEntry[] {
   const entries: BodyEntry[] = [];
+
   for (const match of body.matchAll(NOTES_PATTERN)) {
     const [, tag = '', prerelease, notes = ''] = match;
-    if (!isValidReleaseTag(tag)) continue;
+
+    if (!isValidReleaseTag(tag)) {
+      continue;
+    }
+
     entries.push({tag, prerelease: prerelease === 'true', notes});
   }
+
   return entries;
 }
 

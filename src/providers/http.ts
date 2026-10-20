@@ -27,12 +27,20 @@ const IDEMPOTENT = new Set(['GET', 'HEAD', 'PUT', 'PATCH', 'DELETE']);
 /** The next page number from GitHub's `Link` header or GitLab's `x-next-page` header. */
 function nextPage(headers: Headers): string | undefined {
   for (const part of (headers.get('link') ?? '').split(',')) {
-    if (!part.includes('rel="next"')) continue;
+    if (!part.includes('rel="next"')) {
+      continue;
+    }
+
     const target = /<([^>]+)>/.exec(part)?.[1];
     const page = target && new URL(target).searchParams.get('page');
-    if (page) return page;
+
+    if (page) {
+      return page;
+    }
   }
+
   const next = headers.get('x-next-page');
+
   return next === '' ? undefined : (next ?? undefined);
 }
 
@@ -60,20 +68,30 @@ export class HttpClient {
   ): Promise<unknown[]> {
     const items: unknown[] = [];
     let page: string | undefined;
+
     for (let count = 0; count < MAX_PAGES; count++) {
       const response = await this.request('GET', path, {
         query: {...query, ...(page ? {page} : {})},
       });
-      if (Array.isArray(response.data)) items.push(...response.data);
+
+      if (Array.isArray(response.data)) {
+        items.push(...response.data);
+      }
+
       page = nextPage(response.headers);
-      if (!page) break;
+
+      if (!page) {
+        break;
+      }
     }
+
     return items;
   }
 
   /** Seconds from `Retry-After`, if the server asked us to wait. */
   private retryAfterMs(response: Response): number | undefined {
     const seconds = Number(response.headers.get('retry-after'));
+
     return Number.isFinite(seconds) && seconds > 0
       ? Math.min(seconds * 1000, MAX_RETRY_DELAY_MS)
       : undefined;
@@ -91,23 +109,31 @@ export class HttpClient {
     for (let attempt = 0; ; attempt++) {
       let response: Response | undefined;
       let delay: number | undefined;
+
       try {
         response = await this.fetchImpl(url, init);
       } catch (error) {
-        if (attempt >= this.retries || !IDEMPOTENT.has(method)) throw error;
+        if (attempt >= this.retries || !IDEMPOTENT.has(method)) {
+          throw error;
+        }
       }
+
       if (response) {
         const rateLimited =
           response.status === 429 ||
           (response.status === 403 && response.headers.has('retry-after'));
         const unavailable = [502, 503, 504].includes(response.status);
+
         if (
           attempt >= this.retries ||
           !(rateLimited || (unavailable && IDEMPOTENT.has(method)))
-        )
+        ) {
           return response;
+        }
+
         delay = this.retryAfterMs(response);
       }
+
       await this.sleep(delay ?? this.baseDelayMs * 2 ** attempt);
     }
   }
@@ -123,8 +149,10 @@ export class HttpClient {
     } = {},
   ): Promise<HttpResponse> {
     const url = new URL(this.baseUrl.replace(/\/+$/, '') + path);
-    for (const [key, value] of Object.entries(options.query ?? {}))
+
+    for (const [key, value] of Object.entries(options.query ?? {})) {
       url.searchParams.set(key, value);
+    }
 
     const response = await this.send(method, url.toString(), {
       method,
@@ -141,6 +169,7 @@ export class HttpClient {
 
     const text = await response.text();
     let data: any = null;
+
     if (text) {
       try {
         data = JSON.parse(text);
@@ -151,11 +180,13 @@ export class HttpClient {
 
     if (!response.ok && !(options.allow ?? []).includes(response.status)) {
       const detail = typeof data === 'string' ? data : JSON.stringify(data);
+
       throw new ProviderError(
         `${method} ${url.pathname} failed with ${response.status}: ${detail.slice(0, 500)}`,
         response.status,
       );
     }
+
     return {status: response.status, data, headers: response.headers};
   }
 }

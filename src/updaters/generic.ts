@@ -45,6 +45,7 @@ const MARKER_AT_END =
 
 function markerOf(line: string): Marker | undefined {
   const name = MARKER_AT_END.exec(line)?.[1];
+
   return MARKERS.find(candidate => candidate.name === name);
 }
 
@@ -63,15 +64,24 @@ export function updateGeneric(
   let found = 0;
   const lines = content.split('\n').map(line => {
     const marker = markerOf(line);
-    if (!marker) return line;
+
+    if (!marker) {
+      return line;
+    }
+
     found++;
     const match = marker.pattern.exec(line);
+
     if (!match) {
       throw new UpdaterError(
         `${file}: line with "${marker.name}" contains no matching version: ${line.trim()}`,
       );
     }
-    if (marker.stableOnly && version.includes('-')) return line;
+
+    if (marker.stableOnly && version.includes('-')) {
+      return line;
+    }
+
     return (
       line.slice(0, match.index) +
       (match[1] ?? '') +
@@ -79,10 +89,12 @@ export function updateGeneric(
       line.slice(match.index + match[0].length)
     );
   });
+
   if (found === 0) {
     throw new UpdaterError(
       `${file}: no line contains one of the markers ${MARKERS.map(m => `"${m.name}"`).join(', ')}`,
     );
   }
+
   return lines.join('\n');
 }

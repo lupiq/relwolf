@@ -10,14 +10,17 @@ async function main(): Promise<void> {
   };
 
   const {config, found} = await loadConfig(cwd);
-  if (!found)
+
+  if (!found) {
     log(
       'No relwolf.yaml found, using defaults (single root package, no file updaters).',
     );
+  }
 
   const {provider, currentBranch, defaultBranch} = createProviderFromEnv(
     process.env,
   );
+
   await run({
     cwd,
     config,

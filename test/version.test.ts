@@ -10,7 +10,11 @@ import {
 
 const v = (input: string): Version => {
   const parsed = parseVersion(input);
-  if (!parsed) throw new Error(`invalid ${input}`);
+
+  if (!parsed) {
+    throw new Error(`invalid ${input}`);
+  }
+
   return parsed;
 };
 
@@ -54,10 +58,12 @@ describe('compareVersions', () => {
       '1.1.0',
       '2.0.0',
     ];
+
     for (let i = 0; i < ordered.length - 1; i++) {
       expect(compareVersions(v(ordered[i]!), v(ordered[i + 1]!))).toBe(-1);
       expect(compareVersions(v(ordered[i + 1]!), v(ordered[i]!))).toBe(1);
     }
+
     expect(compareVersions(v('1.0.0'), v('1.0.0'))).toBe(0);
   });
 });
@@ -122,6 +128,7 @@ describe('nextVersion', () => {
       lastAny: v('1.0.0'),
       prerelease: 'beta',
     });
+
     expect(formatVersion(result!)).toBe('1.1.0-beta.1');
   });
 
@@ -133,6 +140,7 @@ describe('nextVersion', () => {
       lastAny: v('1.1.0-beta.1'),
       prerelease: 'beta',
     });
+
     expect(formatVersion(result!)).toBe('1.1.0-beta.2');
   });
 
@@ -144,6 +152,7 @@ describe('nextVersion', () => {
       lastAny: v('1.1.0-beta.3'),
       prerelease: 'beta',
     });
+
     expect(formatVersion(result!)).toBe('2.0.0-beta.1');
   });
 
@@ -155,6 +164,7 @@ describe('nextVersion', () => {
       lastAny: v('1.1.0-beta.4'),
       prerelease: 'rc',
     });
+
     expect(formatVersion(result!)).toBe('1.1.0-rc.1');
   });
 
@@ -165,6 +175,7 @@ describe('nextVersion', () => {
       lastStable: v('1.0.0'),
       lastAny: v('1.1.0-beta.2'),
     });
+
     expect(formatVersion(result!)).toBe('1.1.0');
   });
 
@@ -176,6 +187,7 @@ describe('nextVersion', () => {
       lastAny: v('1.0.1-beta'),
       prerelease: 'beta',
     });
+
     expect(formatVersion(result!)).toBe('1.0.1-beta.1');
   });
 });

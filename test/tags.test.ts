@@ -47,6 +47,7 @@ describe('tags', () => {
 
   it('picks the highest tags semantically, not lexically', () => {
     const tags = findReleaseTags(all);
+
     expect(highest(tags)?.tag).toBe('v1.10.0-beta.1');
     expect(highestStable(tags)?.tag).toBe('v1.9.0');
     expect(highest([])).toBeUndefined();
@@ -54,10 +55,12 @@ describe('tags', () => {
 
   it('creates anchored regexes', () => {
     const stable = new RegExp(tagPattern('my.app', false));
+
     expect(stable.test('my.app-v1.0.0')).toBe(true);
     expect(stable.test('myxapp-v1.0.0')).toBe(false);
     expect(stable.test('my.app-v1.0.0-beta.1')).toBe(false);
     const any = new RegExp(tagPattern(undefined, true));
+
     expect(any.test('v1.0.0-beta.1')).toBe(true);
     expect(any.test('app-v1.0.0')).toBe(false);
   });
@@ -66,6 +69,7 @@ describe('tags', () => {
     expect(isValidReleaseTag('v1.2.3')).toBe(true);
     expect(isValidReleaseTag('app-v1.2.3-beta.1')).toBe(true);
     expect(isValidReleaseTag('web-app-v1.2.3')).toBe(true);
+
     for (const bad of [
       'main',
       'v1',

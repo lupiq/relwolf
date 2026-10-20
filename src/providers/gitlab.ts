@@ -34,6 +34,7 @@ function toReleaseRequest(mr: GitLabMergeRequest): ReleaseRequest {
       : mr.state === 'merged'
         ? 'merged'
         : 'closed';
+
   return {
     id: mr.iid,
     title: mr.title,
@@ -68,7 +69,11 @@ export class GitLabProvider implements Provider {
         allow: [404],
       },
     );
-    if (existing.status !== 404) return;
+
+    if (existing.status !== 404) {
+      return;
+    }
+
     await this.http.request('POST', `${this.project}/labels`, {
       body: {
         name: label.name,
@@ -118,6 +123,7 @@ export class GitLabProvider implements Provider {
       },
     );
     const [mr] = data as GitLabMergeRequest[];
+
     return mr ? toReleaseRequest(mr) : null;
   }
 
@@ -142,6 +148,7 @@ export class GitLabProvider implements Provider {
         },
       },
     );
+
     return toReleaseRequest(data as GitLabMergeRequest);
   }
 
@@ -172,6 +179,7 @@ export class GitLabProvider implements Provider {
       sort: 'asc',
       per_page: '100',
     });
+
     return (data as GitLabMergeRequest[]).map(toReleaseRequest);
   }
 
@@ -196,11 +204,19 @@ export class GitLabProvider implements Provider {
         allow: [400, 409],
       },
     );
-    if (response.status < 300) return 'created';
-    if (/already exists/i.test(JSON.stringify(response.data))) return 'exists';
+
+    if (response.status < 300) {
+      return 'created';
+    }
+
+    if (/already exists/i.test(JSON.stringify(response.data))) {
+      return 'exists';
+    }
+
     await this.http.request('POST', `${this.project}/repository/tags`, {
       body: {tag_name: name, ref: sha},
     });
+
     return 'created';
   }
 
@@ -212,6 +228,7 @@ export class GitLabProvider implements Provider {
         allow: [404],
       },
     );
+
     return response.status !== 404;
   }
 

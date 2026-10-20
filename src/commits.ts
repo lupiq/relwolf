@@ -20,7 +20,11 @@ export function parseCommit(
     .trim()
     .split('\n');
   const match = HEADER.exec(header);
-  if (!match) return null;
+
+  if (!match) {
+    return null;
+  }
+
   const [, type = '', scope, bang, description = ''] = match;
   const commit: ConventionalCommit = {
     sha,
@@ -28,7 +32,11 @@ export function parseCommit(
     description: description.trim(),
     breaking: bang === '!' || BREAKING_FOOTER.test(rest.join('\n')),
   };
-  if (scope) commit.scope = scope;
+
+  if (scope) {
+    commit.scope = scope;
+  }
+
   return commit;
 }
 
@@ -36,11 +44,19 @@ export function bumpLevel(
   commits: readonly ConventionalCommit[],
 ): BumpLevel | null {
   let level: BumpLevel | null = null;
+
   for (const commit of commits) {
-    if (commit.breaking) return 'major';
-    if (commit.type === 'feat') level = 'minor';
-    else if (commit.type === 'fix' && level === null) level = 'patch';
+    if (commit.breaking) {
+      return 'major';
+    }
+
+    if (commit.type === 'feat') {
+      level = 'minor';
+    } else if (commit.type === 'fix' && level === null) {
+      level = 'patch';
+    }
   }
+
   return level;
 }
 
@@ -62,17 +78,28 @@ export function splitReverted<T extends MessageCommit>(
 ): {kept: T[]; dropped: T[]} {
   const subject = (c: T) => c.message.trim().split('\n')[0] ?? '';
   const target = new Map<number, number>();
+
   commits.forEach((commit, index) => {
     const header = REVERT_HEADER.exec(subject(commit));
-    if (!header) return;
+
+    if (!header) {
+      return;
+    }
+
     const sha = REVERTS_SHA.exec(commit.message)?.[1]?.toLowerCase();
+
     for (const [older, candidate] of commits.entries()) {
-      if (older <= index) continue;
+      if (older <= index) {
+        continue;
+      }
+
       const matches = sha
         ? candidate.sha.toLowerCase().startsWith(sha)
         : subject(candidate) === header[1];
+
       if (matches) {
         target.set(index, older);
+
         return;
       }
     }
@@ -80,17 +107,28 @@ export function splitReverted<T extends MessageCommit>(
 
   // Newest first: a revert only takes effect if it was not reverted itself.
   const dropped = new Set<number>();
+
   commits.forEach((commit, index) => {
-    if (REVERT_HEADER.test(subject(commit))) dropped.add(index);
+    if (REVERT_HEADER.test(subject(commit))) {
+      dropped.add(index);
+    }
   });
   const effective = new Set<number>();
+
   for (let index = 0; index < commits.length; index++) {
     const reverted = [...target].some(
       ([revert, victim]) => victim === index && effective.has(revert),
     );
-    if (!reverted && target.has(index)) effective.add(index);
-    if (reverted) dropped.add(index);
+
+    if (!reverted && target.has(index)) {
+      effective.add(index);
+    }
+
+    if (reverted) {
+      dropped.add(index);
+    }
   }
+
   return {
     kept: commits.filter((_, index) => !dropped.has(index)),
     dropped: commits.filter((_, index) => dropped.has(index)),

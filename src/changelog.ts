@@ -25,22 +25,42 @@ function resolveCliffCommand(env: NodeJS.ProcessEnv): {
   command: string;
   prefix: string[];
 } {
-  if (env.RELWOLF_GIT_CLIFF)
+  if (env.RELWOLF_GIT_CLIFF) {
     return {command: env.RELWOLF_GIT_CLIFF, prefix: []};
+  }
+
   const script = fileURLToPath(import.meta.resolve('git-cliff/cli'));
+
   return {command: process.execPath, prefix: [script]};
 }
 
 function baseArgs(options: CliffInvocation): string[] {
   const args: string[] = [];
-  if (options.range) args.push(options.range);
-  else args.push('--unreleased');
+
+  if (options.range) {
+    args.push(options.range);
+  } else {
+    args.push('--unreleased');
+  }
+
   args.push('--tag', options.tag, '--tag-pattern', options.tagPattern);
-  if (options.configPath) args.push('--config', options.configPath);
-  if (options.includePath) args.push('--include-path', options.includePath);
-  for (const exclude of options.excludePaths)
+
+  if (options.configPath) {
+    args.push('--config', options.configPath);
+  }
+
+  if (options.includePath) {
+    args.push('--include-path', options.includePath);
+  }
+
+  for (const exclude of options.excludePaths) {
     args.push('--exclude-path', exclude);
-  for (const sha of options.skipCommits ?? []) args.push('--skip-commit', sha);
+  }
+
+  for (const sha of options.skipCommits ?? []) {
+    args.push('--skip-commit', sha);
+  }
+
   return args;
 }
 
@@ -50,6 +70,7 @@ async function cliff(
   env: NodeJS.ProcessEnv,
 ): Promise<string> {
   const {command, prefix} = resolveCliffCommand(env);
+
   return run(command, [...prefix, ...baseArgs(options), ...extra], options.cwd);
 }
 
@@ -69,9 +90,11 @@ export async function prependToChangelog(
 ): Promise<string> {
   const dir = await mkdtemp(path.join(tmpdir(), 'relwolf-'));
   const file = path.join(dir, 'CHANGELOG.md');
+
   try {
     await writeFile(file, existing);
     await cliff(options, ['--prepend', file], env);
+
     return await readFile(file, 'utf8');
   } finally {
     await rm(dir, {recursive: true, force: true});

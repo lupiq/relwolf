@@ -24,6 +24,19 @@ export default defineConfig(
   {
     files: ['**/*.{js,mjs,ts}'],
     rules: {
+      'curly': ['error', 'all'],
+      'padding-line-between-statements': [
+        'error',
+        {blankLine: 'always', prev: '*', next: 'return'},
+        {blankLine: 'always', prev: 'block-like', next: '*'},
+        {blankLine: 'always', prev: '*', next: 'block-like'},
+        {blankLine: 'always', prev: ['const', 'let', 'var'], next: '*'},
+        {
+          blankLine: 'any',
+          prev: ['const', 'let', 'var'],
+          next: ['const', 'let', 'var'],
+        },
+      ],
       '@typescript-eslint/no-unused-vars': [
         'error',
         {argsIgnorePattern: '^_', varsIgnorePattern: '^_'},

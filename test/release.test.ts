@@ -39,6 +39,7 @@ describe('guards', () => {
   it('skips pipelines that are not for the release branch', async () => {
     repo.commit('feat: a');
     const result = await exec(undefined, {currentBranch: 'feature/x'});
+
     expect(result.skipped).toMatch(/feature\/x/);
     expect(provider.requests).toHaveLength(0);
 
@@ -56,6 +57,7 @@ describe('guards', () => {
     repo.commit('feat: a');
     repo.commit('fix: b');
     const clone = mkdtempSync(path.join(tmpdir(), 'relwolf-shallow-'));
+
     try {
       execFileSync('git', [
         'clone',
@@ -92,6 +94,7 @@ describe('release request', () => {
     repo.commit('chore: setup');
     repo.commit('docs: readme');
     const result = await exec();
+
     expect(result.releaseRequest).toBeUndefined();
     expect(provider.requests).toHaveLength(0);
     expect(provider.commits).toHaveLength(0);
@@ -105,23 +108,27 @@ describe('release request', () => {
 
   it('closes the open request when its only commit is reverted', async () => {
     const sha = repo.commit('feat: a');
+
     await exec();
     expect(provider.requests[0]!.state).toBe('open');
 
     repo.commit(`Revert "feat: a"\n\nThis reverts commit ${sha}.`);
     const result = await exec();
+
     expect(result.releaseRequest).toBeUndefined();
     expect(provider.requests[0]!.state).toBe('closed');
   });
 
   it('leaves reverted commits and their reverts out of the changelog', async () => {
     const sha = repo.commit('feat: reverted feature');
+
     repo.commit('fix: kept fix');
     repo.commit(
       `Revert "feat: reverted feature"\n\nThis reverts commit ${sha}.`,
     );
     await exec();
     const body = provider.requests[0]!.body;
+
     expect(body).toContain('Kept fix');
     expect(body).not.toContain('reverted feature');
     expect(body).not.toContain('Revert');
@@ -147,6 +154,7 @@ describe('release request', () => {
 
     expect(result.releaseRequest).toMatchObject({id: 1, action: 'created'});
     const [request] = provider.requests;
+
     expect(request).toMatchObject({
       title: 'chore(release): Create release v0.1.0',
       sourceBranch: 'relwolf/main',
@@ -156,12 +164,14 @@ describe('release request', () => {
     expect(provider.labels).toContain('relwolf: pending');
 
     const [commit] = provider.commits;
+
     expect(commit).toMatchObject({
       branch: 'relwolf/main',
       baseSha: repo.head(),
       message: request!.title,
     });
     const byPath = Object.fromEntries(commit!.files.map(f => [f.path, f]));
+
     expect(Object.keys(byPath).sort()).toEqual([
       'CHANGELOG.md',
       'package.json',
@@ -174,6 +184,7 @@ describe('release request', () => {
     expect(JSON.parse(byPath['package.json']!.content).version).toBe('0.1.0');
 
     const entries = parseBody(request!.body);
+
     expect(entries).toHaveLength(1);
     expect(entries[0]).toMatchObject({tag: 'v0.1.0', prerelease: false});
     expect(entries[0]!.notes).toMatch(/initial feature/i);
@@ -200,11 +211,13 @@ describe('release request', () => {
     );
 
     const again = await exec(NODE_CONFIG);
+
     expect(again.releaseRequest).toMatchObject({id: 1, action: 'unchanged'});
     expect(provider.commits).toHaveLength(1);
 
     repo.commit('feat: second');
     const updated = await exec(NODE_CONFIG);
+
     expect(updated.releaseRequest).toMatchObject({id: 1, action: 'updated'});
     expect(provider.requests).toHaveLength(1);
     expect(provider.requests[0]!.title).toBe(
@@ -249,6 +262,7 @@ describe('tagging merged release requests', () => {
     repo.write('package.json', PACKAGE_JSON);
     repo.commit('feat: initial');
     await exec(NODE_CONFIG);
+
     return mergeLastRelease(repo, provider, 1);
   }
 
@@ -279,14 +293,17 @@ describe('tagging merged release requests', () => {
     await firstRelease();
     await exec(NODE_CONFIG);
     const second = await exec(NODE_CONFIG);
+
     expect(second.tagged).toEqual([]);
     expect(provider.releases).toHaveLength(1);
   });
 
   it('recovers when the tag already exists but the release does not', async () => {
     const sha = await firstRelease();
+
     provider.tags.set('v0.1.0', sha);
     const result = await exec(NODE_CONFIG);
+
     expect(result.tagged).toEqual(['v0.1.0']);
     expect(provider.releases).toHaveLength(1);
     expect(provider.requests[0]!.labels).toEqual(['relwolf: tagged']);
@@ -322,6 +339,7 @@ describe('tagging merged release requests', () => {
       provider.commits.at(-1)!.files.map(f => [f.path, f]),
     );
     const changelog = files['CHANGELOG.md']!;
+
     expect(changelog.exists).toBe(true);
     expect(changelog.content).toMatch(/0\.2\.0[\s\S]*0\.1\.0/);
     expect(changelog.content).toMatch(/later bug/i);
@@ -341,6 +359,7 @@ describe('tagging merged release requests', () => {
     provider.mustFind(1).mergeSha = '0'.repeat(40);
 
     const result = await exec(NODE_CONFIG);
+
     expect(result.tagged).toEqual([]);
     expect(provider.tags.size).toBe(0);
     expect(provider.requests[0]!.labels).toEqual(['relwolf: pending']);
@@ -350,6 +369,7 @@ describe('tagging merged release requests', () => {
     repo.commit('feat: initial');
     await exec();
     const request = provider.mustFind(1);
+
     request.state = 'merged';
     request.mergeSha = repo.head();
     request.body = 'edited away';
@@ -396,6 +416,7 @@ describe('pre-releases', () => {
       'chore(release): Create release v0.1.0-beta.2',
     );
     const notes = parseBody(provider.requests[1]!.body)[0]!.notes;
+
     expect(notes).toMatch(/two/i);
     expect(notes).not.toMatch(/one/i);
     mergeLastRelease(repo, provider, 2);
@@ -404,6 +425,7 @@ describe('pre-releases', () => {
     // dropping the prerelease option graduates to the stable version, even without new commits
     const stable =
       'packages:\n  ".":\n    updaters: [{ type: package-json }]\n';
+
     await exec(stable);
     expect(provider.requests[2]!.title).toBe(
       'chore(release): Create release v0.1.0',
@@ -411,8 +433,10 @@ describe('pre-releases', () => {
     const files = Object.fromEntries(
       provider.commits.at(-1)!.files.map(f => [f.path, f]),
     );
+
     expect(JSON.parse(files['package.json']!.content).version).toBe('0.1.0');
     const graduationNotes = parseBody(provider.requests[2]!.body)[0]!.notes;
+
     expect(graduationNotes).toMatch(/one/i);
     expect(graduationNotes).toMatch(/two/i);
   });
@@ -450,6 +474,7 @@ packages:
     const files = Object.fromEntries(
       provider.commits[0]!.files.map(f => [f.path, f]),
     );
+
     expect(Object.keys(files).sort()).toEqual([
       'CHANGELOG.md',
       'package.json',
@@ -472,6 +497,7 @@ packages:
     setup();
     repo.commit('fix: api fix', 'services/api/code.txt');
     const first = await exec(config);
+
     expect(first.releaseRequest?.action).toBe('created');
     expect(provider.requests[0]!.title).toBe(
       'chore(release): Create release api-v0.0.1',
@@ -479,6 +505,7 @@ packages:
     mergeLastRelease(repo, provider, 1);
 
     const tagged = await exec(config);
+
     expect(tagged.tagged).toEqual(['api-v0.0.1']);
     expect(provider.releases[0]!.tag).toBe('api-v0.0.1');
 
@@ -520,6 +547,7 @@ describe('RELWOLF_RELEASE_AS', () => {
     expect(provider.requests[0]!.state).toBe('open');
 
     const result = await exec(undefined, {releaseAs: 'auto'});
+
     expect(result.releaseRequest).toBeUndefined();
     expect(provider.requests[0]!.state).toBe('closed');
   });
@@ -549,6 +577,7 @@ describe('RELWOLF_RELEASE_AS', () => {
     mergeLastRelease(repo, provider, 1);
     await exec();
     const result = await exec(undefined, {releaseAs: '1.0.0'});
+
     expect(result.releaseRequest).toBeUndefined();
   });
 
@@ -558,6 +587,7 @@ describe('RELWOLF_RELEASE_AS', () => {
     repo.commit('feat: init', 'services/api/code.txt');
     const config =
       'packages:\n  services/api:\n    component: api\n    updaters: []\n';
+
     await exec(config, {releaseAs: 'api=2.0.0'});
     expect(title()).toBe('chore(release): Create release api-v2.0.0');
   });

@@ -1,7 +1,9 @@
 import {existsSync} from 'node:fs';
 import {defineConfig} from 'vitest/config';
 
-if (existsSync('.env.e2e')) process.loadEnvFile('.env.e2e');
+if (existsSync('.env.e2e')) {
+  process.loadEnvFile('.env.e2e');
+}
 
 export default defineConfig({
   test: {

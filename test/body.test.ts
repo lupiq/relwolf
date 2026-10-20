@@ -25,6 +25,7 @@ describe('release request body', () => {
 
   it('embeds the base commit and the tags', () => {
     const body = renderBody(entries, 'abc123');
+
     expect(body).toContain('<!-- relwolf:base abc123 -->');
     expect(body).toContain('`v1.2.3`');
     expect(body).toContain('(pre-release)');
@@ -40,12 +41,14 @@ describe('release request body', () => {
       },
     ];
     const parsed = parseBody(renderBody(evil, 'sha'));
+
     expect(parsed.map(e => e.tag)).toEqual(['v1.0.0']);
   });
 
   it('ignores entries with invalid tags', () => {
     const body =
       '<!-- relwolf:notes tag="main" prerelease="false" -->\nx\n<!-- /relwolf:notes -->';
+
     expect(parseBody(body)).toEqual([]);
   });
 
@@ -60,6 +63,7 @@ describe('release request body', () => {
 
   it('renders custom title templates', () => {
     const template = 'release: ${version} (${tags})';
+
     expect(renderTitle(['v1.0.0'], template, ['1.0.0'])).toBe(
       'release: 1.0.0 (v1.0.0)',
     );

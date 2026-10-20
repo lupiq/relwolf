@@ -36,6 +36,7 @@ function toReleaseRequest(pull: GitHubPull): ReleaseRequest {
     : pull.state === 'open'
       ? 'open'
       : 'closed';
+
   return {
     id: pull.number,
     title: pull.title,
@@ -55,10 +56,13 @@ export class GitHubProvider implements Provider {
 
   constructor(options: GitHubOptions) {
     const [owner, name] = options.repository.split('/');
-    if (!owner || !name)
+
+    if (!owner || !name) {
       throw new Error(
         `Invalid GitHub repository "${options.repository}", expected "owner/name"`,
       );
+    }
+
     this.owner = owner;
     this.repo = `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}`;
     this.http = new HttpClient(
@@ -80,7 +84,11 @@ export class GitHubProvider implements Provider {
         allow: [404],
       },
     );
-    if (existing.status !== 404) return;
+
+    if (existing.status !== 404) {
+      return;
+    }
+
     await this.http.request('POST', `${this.repo}/labels`, {
       body: {
         name: label.name,
@@ -134,6 +142,7 @@ export class GitHubProvider implements Provider {
       `${this.repo}/git/ref/${ref}`,
       {allow: [404]},
     );
+
     if (existing.status === 404) {
       await this.http.request('POST', `${this.repo}/git/refs`, {
         body: {ref: `refs/heads/${options.branch}`, sha: commit.sha},
@@ -158,6 +167,7 @@ export class GitHubProvider implements Provider {
       },
     });
     const [pull] = data as GitHubPull[];
+
     return pull ? toReleaseRequest(pull) : null;
   }
 
@@ -177,7 +187,9 @@ export class GitHubProvider implements Provider {
       },
     });
     const pull = data as GitHubPull;
+
     await this.setLabels(pull.number, {add: options.labels, remove: []});
+
     return toReleaseRequest({
       ...pull,
       labels: options.labels.map(name => ({name})),
@@ -211,20 +223,26 @@ export class GitHubProvider implements Provider {
       per_page: '100',
     });
     const merged: ReleaseRequest[] = [];
+
     for (const issue of data as {
       number: number;
       pull_request?: unknown;
     }[]) {
-      if (!issue.pull_request) continue;
+      if (!issue.pull_request) {
+        continue;
+      }
+
       const {data: pull} = await this.http.request(
         'GET',
         `${this.repo}/pulls/${issue.number}`,
       );
       const candidate = pull as GitHubPull;
+
       if (candidate.merged_at && candidate.base?.ref === options.targetBranch) {
         merged.push(toReleaseRequest(candidate));
       }
     }
+
     return merged;
   }
 
@@ -237,6 +255,7 @@ export class GitHubProvider implements Provider {
         body: {labels: options.add},
       });
     }
+
     for (const label of options.remove) {
       await this.http.request(
         'DELETE',
@@ -253,8 +272,15 @@ export class GitHubProvider implements Provider {
       body: {ref: `refs/tags/${name}`, sha},
       allow: [422],
     });
-    if (response.status < 300) return 'created';
-    if (/already exists/i.test(JSON.stringify(response.data))) return 'exists';
+
+    if (response.status < 300) {
+      return 'created';
+    }
+
+    if (/already exists/i.test(JSON.stringify(response.data))) {
+      return 'exists';
+    }
+
     throw new Error(
       `Could not create tag ${name}: ${JSON.stringify(response.data)}`,
     );
@@ -268,6 +294,7 @@ export class GitHubProvider implements Provider {
         allow: [404],
       },
     );
+
     return response.status !== 404;
   }
 

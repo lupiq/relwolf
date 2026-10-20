@@ -7,6 +7,7 @@ export function updatePackageJson(
   file: string,
 ): string {
   let data: unknown;
+
   try {
     data = JSON.parse(content);
   } catch (error) {
@@ -14,6 +15,7 @@ export function updatePackageJson(
       `${file}: invalid JSON: ${(error as Error).message}`,
     );
   }
+
   if (
     typeof data !== 'object' ||
     data === null ||
@@ -22,8 +24,10 @@ export function updatePackageJson(
   ) {
     throw new UpdaterError(`${file}: no top-level "version" field found`);
   }
+
   (data as {version: string}).version = version;
   const indent = /^[ \t]+(?=")/m.exec(content)?.[0] ?? '  ';
+
   return (
     JSON.stringify(data, null, indent) + (content.endsWith('\n') ? '\n' : '')
   );

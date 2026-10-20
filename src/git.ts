@@ -24,6 +24,7 @@ export async function run(
       cwd,
       maxBuffer: 256 * 1024 * 1024,
     });
+
     return stdout;
   } catch (error) {
     // The git-cliff npm wrapper appends a long stack trace after the real message.
@@ -31,6 +32,7 @@ export async function run(
       ((error as {stderr?: string}).stderr ?? String(error)).split(
         /\nfile:\/\//,
       )[0] ?? '';
+
     throw new CommandError(`${command} ${args.join(' ')}`, stderr, error);
   }
 }
@@ -59,6 +61,7 @@ export class Git {
 
   async tagsMergedIntoHead(): Promise<string[]> {
     const out = await this.git('tag', '--merged', 'HEAD');
+
     return out
       .split('\n')
       .map(line => line.trim())
@@ -68,10 +71,14 @@ export class Git {
   async isAncestorOfHead(sha: string): Promise<boolean> {
     try {
       await this.git('merge-base', '--is-ancestor', sha, 'HEAD');
+
       return true;
     } catch (error) {
       // Exit code 1 (not an ancestor) and 128 (commit unknown locally) both mean "not part of HEAD".
-      if (error instanceof CommandError) return false;
+      if (error instanceof CommandError) {
+        return false;
+      }
+
       throw error;
     }
   }
@@ -79,6 +86,7 @@ export class Git {
   async hasTag(tag: string): Promise<boolean> {
     try {
       await this.git('rev-parse', '--verify', '--quiet', `refs/tags/${tag}`);
+
       return true;
     } catch {
       return false;
@@ -95,14 +103,21 @@ export class Git {
     pathspecs: string[],
   ): Promise<RawCommit[]> {
     const args = ['log', '--no-merges', '--format=%x1e%H%x1f%B'];
+
     args.push(range ?? 'HEAD');
-    if (pathspecs.length > 0) args.push('--', ...pathspecs);
+
+    if (pathspecs.length > 0) {
+      args.push('--', ...pathspecs);
+    }
+
     const out = await this.git(...args);
+
     return out
       .split('\x1e')
       .filter(chunk => chunk.trim() !== '')
       .map(chunk => {
         const [sha = '', ...message] = chunk.split('\x1f');
+
         return {sha: sha.trim(), message: message.join('\x1f')};
       });
   }

@@ -12,7 +12,11 @@ const SEMVER =
 
 export function parseVersion(input: string): Version | null {
   const match = SEMVER.exec(input);
-  if (!match) return null;
+
+  if (!match) {
+    return null;
+  }
+
   return {
     major: Number(match[1]),
     minor: Number(match[2]),
@@ -23,6 +27,7 @@ export function parseVersion(input: string): Version | null {
 
 export function formatVersion(version: Version): string {
   const core = `${version.major}.${version.minor}.${version.patch}`;
+
   return version.prerelease.length > 0
     ? `${core}-${version.prerelease.join('.')}`
     : core;
@@ -36,8 +41,11 @@ const isNumeric = (value: string): boolean => /^\d+$/.test(value);
 
 export function compareVersions(a: Version, b: Version): number {
   for (const key of ['major', 'minor', 'patch'] as const) {
-    if (a[key] !== b[key]) return a[key] < b[key] ? -1 : 1;
+    if (a[key] !== b[key]) {
+      return a[key] < b[key] ? -1 : 1;
+    }
   }
+
   if (a.prerelease.length === 0 || b.prerelease.length === 0) {
     return a.prerelease.length === b.prerelease.length
       ? 0
@@ -45,20 +53,39 @@ export function compareVersions(a: Version, b: Version): number {
         ? 1
         : -1;
   }
+
   const length = Math.max(a.prerelease.length, b.prerelease.length);
+
   for (let i = 0; i < length; i++) {
     const left = a.prerelease[i];
     const right = b.prerelease[i];
-    if (left === undefined) return -1;
-    if (right === undefined) return 1;
-    if (left === right) continue;
+
+    if (left === undefined) {
+      return -1;
+    }
+
+    if (right === undefined) {
+      return 1;
+    }
+
+    if (left === right) {
+      continue;
+    }
+
     const leftNumeric = isNumeric(left);
     const rightNumeric = isNumeric(right);
-    if (leftNumeric && rightNumeric)
+
+    if (leftNumeric && rightNumeric) {
       return Number(left) < Number(right) ? -1 : 1;
-    if (leftNumeric !== rightNumeric) return leftNumeric ? -1 : 1;
+    }
+
+    if (leftNumeric !== rightNumeric) {
+      return leftNumeric ? -1 : 1;
+    }
+
     return left < right ? -1 : 1;
   }
+
   return 0;
 }
 
@@ -73,6 +100,7 @@ export function bumpVersion(
 ): Version {
   const effective: BumpLevel =
     level === 'major' && base.major === 0 && minorPreMajor ? 'minor' : level;
+
   switch (effective) {
     case 'major':
       return {major: base.major + 1, minor: 0, patch: 0, prerelease: []};
@@ -111,9 +139,13 @@ export interface NextVersionInput {
 
 export function nextVersion(input: NextVersionInput): Version | null {
   const {level, releaseAs} = input;
-  if (releaseAs && isPrerelease(releaseAs)) return releaseAs;
+
+  if (releaseAs && isPrerelease(releaseAs)) {
+    return releaseAs;
+  }
 
   let base: Version;
+
   if (releaseAs) {
     base = releaseAs;
   } else if (level === null) {
@@ -131,10 +163,14 @@ export function nextVersion(input: NextVersionInput): Version | null {
   }
 
   const id = input.prerelease;
-  if (!id) return base;
+
+  if (!id) {
+    return base;
+  }
 
   const last = input.lastAny;
   let counter = 1;
+
   if (
     last &&
     isPrerelease(last) &&
@@ -142,6 +178,7 @@ export function nextVersion(input: NextVersionInput): Version | null {
     last.prerelease[0] === id
   ) {
     const current = last.prerelease[1];
+
     counter =
       last.prerelease.length === 2 &&
       current !== undefined &&
@@ -149,5 +186,6 @@ export function nextVersion(input: NextVersionInput): Version | null {
         ? Number(current) + 1
         : 1;
   }
+
   return {...base, prerelease: [id, String(counter)]};
 }

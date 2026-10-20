@@ -93,6 +93,7 @@ function normalizeRepoPath(value: string, what: string): string {
   const normalized =
     path.posix.normalize(value.replaceAll('\\', '/')).replace(/\/+$/, '') ||
     '.';
+
   if (
     path.posix.isAbsolute(normalized) ||
     normalized === '..' ||
@@ -102,6 +103,7 @@ function normalizeRepoPath(value: string, what: string): string {
       `${what} must be a relative path inside the repository: "${value}"`,
     );
   }
+
   return normalized;
 }
 
@@ -113,6 +115,7 @@ const DEFAULT_UPDATER_PATH: Record<Exclude<UpdaterType, 'generic'>, string> = {
 
 export function parseConfig(source: string | undefined): Config {
   let raw: unknown = {};
+
   if (source !== undefined && source.trim() !== '') {
     try {
       raw = parse(source);
@@ -124,12 +127,15 @@ export function parseConfig(source: string | undefined): Config {
   }
 
   const result = configSchema.safeParse(raw ?? {});
+
   if (!result.success) {
     const details = result.error.issues
       .map(issue => `  - ${issue.path.join('.') || '(root)'}: ${issue.message}`)
       .join('\n');
+
     throw new ConfigError(`Invalid ${CONFIG_FILE}:\n${details}`);
   }
+
   const parsed = result.data;
 
   const packages: PackageConfig[] = Object.entries(parsed.packages).map(
@@ -148,8 +154,10 @@ export function parseConfig(source: string | undefined): Config {
               `Package "${rawPath}": updater "generic" requires a "path"`,
             );
           }
+
           return {type: 'generic', path: join(updater.path, 'Updater path')};
         }
+
         return {
           type: updater.type,
           path: join(
@@ -160,8 +168,10 @@ export function parseConfig(source: string | undefined): Config {
       });
 
       let initialVersion: Version | undefined;
+
       if (pkg['initial-version'] !== undefined) {
         initialVersion = parseVersion(pkg['initial-version']) ?? undefined;
+
         if (!initialVersion || initialVersion.prerelease.length > 0) {
           throw new ConfigError(
             `Package "${rawPath}": "initial-version" must be a stable semantic version, got "${pkg['initial-version']}"`,
@@ -170,6 +180,7 @@ export function parseConfig(source: string | undefined): Config {
       }
 
       const prerelease = pkg.prerelease ?? parsed.prerelease;
+
       return {
         path: pkgPath,
         ...(pkg.component ? {component: pkg.component} : {}),
@@ -186,15 +197,20 @@ export function parseConfig(source: string | undefined): Config {
     },
   );
 
-  if (packages.length === 0)
+  if (packages.length === 0) {
     throw new ConfigError(`${CONFIG_FILE} must define at least one package`);
+  }
 
   const seenPaths = new Set<string>();
   const seenComponents = new Set<string | undefined>();
+
   for (const pkg of packages) {
-    if (seenPaths.has(pkg.path))
+    if (seenPaths.has(pkg.path)) {
       throw new ConfigError(`Duplicate package path "${pkg.path}"`);
+    }
+
     seenPaths.add(pkg.path);
+
     if (seenComponents.has(pkg.component)) {
       throw new ConfigError(
         pkg.component
@@ -202,6 +218,7 @@ export function parseConfig(source: string | undefined): Config {
           : 'At most one package may omit "component"; give every other package a unique one',
       );
     }
+
     seenComponents.add(pkg.component);
   }
 
@@ -221,10 +238,14 @@ export async function loadConfig(
   repoDir: string,
 ): Promise<{config: Config; found: boolean}> {
   let source: string | undefined;
+
   try {
     source = await readFile(path.join(repoDir, CONFIG_FILE), 'utf8');
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      throw error;
+    }
   }
+
   return {config: parseConfig(source), found: source !== undefined};
 }

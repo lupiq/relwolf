@@ -24,6 +24,7 @@ const ICON: Record<string, string> = {passed: '✅', failed: '❌'};
 
 function clean(text: string, limit = 1500): string {
   const plain = text.replace(ANSI, '').trim();
+
   return plain.length > limit ? `${plain.slice(0, limit)}\n…` : plain;
 }
 
@@ -35,11 +36,13 @@ function renderSummary(report: Report | undefined): string {
 
   if (!report) {
     lines.push('No test report was produced; see the job log.');
+
     return lines.join('\n') + '\n';
   }
 
   const failed = assertions.filter(a => a.status === 'failed').length;
   const passed = assertions.filter(a => a.status === 'passed').length;
+
   lines.push(
     failed > 0
       ? `**${failed} failed**, ${passed} passed`
@@ -51,13 +54,16 @@ function renderSummary(report: Report | undefined): string {
 
   if (assertions.length > 0) {
     lines.push('| Scenario | Result | Duration |', '| --- | --- | --- |');
+
     for (const a of assertions) {
       const seconds =
         a.duration == null ? '–' : `${(a.duration / 1000).toFixed(1)} s`;
+
       lines.push(
         `| ${a.fullName.replaceAll('|', '\\|')} | ${ICON[a.status] ?? '⏭️'} ${a.status} | ${seconds} |`,
       );
     }
+
     lines.push('');
   }
 
@@ -67,6 +73,7 @@ function renderSummary(report: Report | undefined): string {
       .map(a => ({title: a.fullName, message: a.failureMessages.join('\n')})),
     ...suiteErrors.map(r => ({title: 'Test suite', message: r.message})),
   ];
+
   for (const {title, message} of details) {
     lines.push(
       `<details><summary>${title}</summary>`,
@@ -79,6 +86,7 @@ function renderSummary(report: Report | undefined): string {
       '',
     );
   }
+
   return lines.join('\n');
 }
 
@@ -88,5 +96,9 @@ const report = existsSync(file)
   : undefined;
 const markdown = renderSummary(report);
 const target = process.env.GITHUB_STEP_SUMMARY;
-if (target) appendFileSync(target, markdown);
-else console.log(markdown);
+
+if (target) {
+  appendFileSync(target, markdown);
+} else {
+  console.log(markdown);
+}

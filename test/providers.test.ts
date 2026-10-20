@@ -26,14 +26,17 @@ function mockFetch(
       body: init?.body ? JSON.parse(init.body as string) : undefined,
       headers: init?.headers as Record<string, string>,
     };
+
     calls.push(call);
     const result = handler(call) ?? {status: 200, json: {}};
     const status = result.status ?? 200;
+
     return new Response(
       result.json === undefined ? null : JSON.stringify(result.json),
       {status, ...(result.headers ? {headers: result.headers} : {})},
     );
   });
+
   return {calls, fetch: fetchMock};
 }
 
@@ -59,11 +62,13 @@ describe('GitLabProvider', () => {
       token: 'secret',
       fetch: mock.fetch,
     });
+
     return {provider, calls: mock.calls};
   };
 
   it('authenticates with the PAT and encodes the project', async () => {
     const {provider, calls} = make(() => ({json: []}));
+
     await provider.findOpenReleaseRequest({
       sourceBranch: 'relwolf/main',
       targetBranch: 'main',
@@ -89,12 +94,14 @@ describe('GitLabProvider', () => {
       targetBranch: 'main',
       label: 'relwolf: pending',
     });
+
     expect(merged.map(m => m.id)).toEqual([1, 2]);
     expect(calls).toHaveLength(2);
   });
 
   it('maps merge requests', async () => {
     const {provider} = make(() => ({json: [gitlabMr()]}));
+
     expect(
       await provider.findOpenReleaseRequest({
         sourceBranch: 'a',
@@ -113,6 +120,7 @@ describe('GitLabProvider', () => {
 
   it('returns null when no merge request is open', async () => {
     const {provider} = make(() => ({json: []}));
+
     expect(
       await provider.findOpenReleaseRequest({
         sourceBranch: 'a',
@@ -137,6 +145,7 @@ describe('GitLabProvider', () => {
       targetBranch: 'main',
       label: 'relwolf: pending',
     });
+
     expect(result.map(r => [r.state, r.mergeSha])).toEqual([
       ['merged', 'm'],
       ['merged', 's'],
@@ -146,6 +155,7 @@ describe('GitLabProvider', () => {
 
   it('queries merged requests by label and target branch', async () => {
     const {provider, calls} = make(() => ({json: []}));
+
     await provider.listMergedReleaseRequests({
       targetBranch: 'main',
       label: 'relwolf: pending',
@@ -166,6 +176,7 @@ describe('GitLabProvider', () => {
       body: 'B',
       labels: ['relwolf: pending'],
     });
+
     expect(created.id).toBe(7);
     expect(calls[0]!.method).toBe('POST');
     expect(calls[0]!.body).toEqual({
@@ -180,6 +191,7 @@ describe('GitLabProvider', () => {
 
   it('closes merge requests', async () => {
     const {provider, calls} = make(() => ({json: gitlabMr()}));
+
     await provider.closeReleaseRequest(7);
     expect([calls[0]!.method, calls[0]!.url.pathname, calls[0]!.body]).toEqual([
       'PUT',
@@ -190,6 +202,7 @@ describe('GitLabProvider', () => {
 
   it('updates title/body and labels', async () => {
     const {provider, calls} = make(() => ({json: gitlabMr()}));
+
     await provider.updateReleaseRequest(7, {title: 'T', body: 'B'});
     await provider.setLabels(7, {
       add: ['relwolf: tagged'],
@@ -213,6 +226,7 @@ describe('GitLabProvider', () => {
 
   it('force-commits on top of the base sha', async () => {
     const {provider, calls} = make(() => ({status: 201, json: {}}));
+
     await provider.commitFiles({
       branch: 'relwolf/main',
       baseSha: 'abc',
@@ -254,6 +268,7 @@ describe('GitLabProvider', () => {
         ? {status: 404, json: {message: '404'}}
         : {status: 201, json: {}},
     );
+
     await missing.provider.ensureLabel(label);
     expect(missing.calls.map(c => c.method)).toEqual(['GET', 'POST']);
     expect(missing.calls[0]!.url.pathname).toContain(
@@ -266,12 +281,14 @@ describe('GitLabProvider', () => {
     });
 
     const present = make(() => ({json: {}}));
+
     await present.provider.ensureLabel(label);
     expect(present.calls.map(c => c.method)).toEqual(['GET']);
   });
 
   it('creates tags and treats existing tags as success', async () => {
     const created = make(() => ({status: 201, json: {}}));
+
     expect(await created.provider.createTag('v1.0.0', 'sha')).toBe('created');
     expect(created.calls[0]!.body).toEqual({tag_name: 'v1.0.0', ref: 'sha'});
 
@@ -279,12 +296,14 @@ describe('GitLabProvider', () => {
       status: 409,
       json: {message: 'Tag v1.0.0 already exists'},
     }));
+
     expect(await exists.provider.createTag('v1.0.0', 'sha')).toBe('exists');
 
     const existsAs400 = make(() => ({
       status: 400,
       json: {message: 'Tag v1.0.0 already exists'},
     }));
+
     expect(await existsAs400.provider.createTag('v1.0.0', 'sha')).toBe(
       'exists',
     );
@@ -293,6 +312,7 @@ describe('GitLabProvider', () => {
       status: 400,
       json: {message: 'Target sha not found'},
     }));
+
     await expect(
       broken.provider.createTag('v1.0.0', 'sha'),
     ).rejects.toBeInstanceOf(ProviderError);
@@ -303,11 +323,14 @@ describe('GitLabProvider', () => {
       status: 404,
       json: {message: '404 Not Found'},
     }));
+
     expect(await absent.provider.releaseExists('v1.0.0')).toBe(false);
     const present = make(() => ({json: {tag_name: 'v1.0.0'}}));
+
     expect(await present.provider.releaseExists('v1.0.0')).toBe(true);
 
     const create = make(() => ({status: 201, json: {}}));
+
     await create.provider.createRelease({
       tag: 'v1.0.0',
       name: 'v1.0.0',
@@ -327,6 +350,7 @@ describe('GitLabProvider', () => {
       json: {message: '401 Unauthorized'},
     }));
     const error = await provider.releaseExists('v1').catch((e: unknown) => e);
+
     expect(error).toBeInstanceOf(ProviderError);
     expect((error as ProviderError).status).toBe(401);
     expect((error as Error).message).toContain('401 Unauthorized');
@@ -356,6 +380,7 @@ describe('GitHubProvider', () => {
       token: 'secret',
       fetch: mock.fetch,
     });
+
     return {provider, calls: mock.calls};
   };
 
@@ -371,6 +396,7 @@ describe('GitHubProvider', () => {
       sourceBranch: 'relwolf/main',
       targetBranch: 'main',
     });
+
     expect(found).toMatchObject({
       id: 3,
       state: 'open',
@@ -397,6 +423,7 @@ describe('GitHubProvider', () => {
       body: 'B',
       labels: ['relwolf: pending'],
     });
+
     expect(created.labels).toEqual(['relwolf: pending']);
     expect(calls[0]!.body).toEqual({
       title: 'T',
@@ -411,6 +438,7 @@ describe('GitHubProvider', () => {
   it('only returns merged pull requests of the target branch', async () => {
     const {provider} = make(call => {
       const path = call.url.pathname;
+
       if (path.endsWith('/issues')) {
         return {
           json: [
@@ -421,7 +449,8 @@ describe('GitHubProvider', () => {
           ],
         };
       }
-      if (path.endsWith('/pulls/1'))
+
+      if (path.endsWith('/pulls/1')) {
         return {
           json: ghPull({
             number: 1,
@@ -430,9 +459,13 @@ describe('GitHubProvider', () => {
             merge_commit_sha: 'sha1',
           }),
         };
-      if (path.endsWith('/pulls/2'))
+      }
+
+      if (path.endsWith('/pulls/2')) {
         return {json: ghPull({number: 2, state: 'closed', merged_at: null})};
-      if (path.endsWith('/pulls/3'))
+      }
+
+      if (path.endsWith('/pulls/3')) {
         return {
           json: ghPull({
             number: 3,
@@ -441,12 +474,15 @@ describe('GitHubProvider', () => {
             base: {ref: 'other'},
           }),
         };
+      }
+
       throw new Error(`unexpected ${path}`);
     });
     const result = await provider.listMergedReleaseRequests({
       targetBranch: 'main',
       label: 'relwolf: pending',
     });
+
     expect(result).toHaveLength(1);
     expect(result[0]).toMatchObject({id: 1, state: 'merged', mergeSha: 'sha1'});
   });
@@ -454,6 +490,7 @@ describe('GitHubProvider', () => {
   it('follows the Link header when listing closed pull requests', async () => {
     const {provider, calls} = make(call => {
       const path = call.url.pathname;
+
       if (path.endsWith('/issues')) {
         return call.url.searchParams.get('page') === '2'
           ? {json: [{number: 2, pull_request: {}}]}
@@ -464,7 +501,9 @@ describe('GitHubProvider', () => {
               },
             };
       }
+
       const number = Number(path.split('/').at(-1));
+
       return {
         json: ghPull({number, state: 'closed', merged_at: '2026-01-01'}),
       };
@@ -473,6 +512,7 @@ describe('GitHubProvider', () => {
       targetBranch: 'main',
       label: 'relwolf: pending',
     });
+
     expect(result.map(r => r.id)).toEqual([1, 2]);
     expect(calls.filter(c => c.url.pathname.endsWith('/issues'))).toHaveLength(
       2,
@@ -481,6 +521,7 @@ describe('GitHubProvider', () => {
 
   it('swaps labels', async () => {
     const {provider, calls} = make(() => ({json: []}));
+
     await provider.setLabels(3, {
       add: ['relwolf: tagged'],
       remove: ['relwolf: pending'],
@@ -494,15 +535,26 @@ describe('GitHubProvider', () => {
   it('commits through the git data API, creating the branch when missing', async () => {
     const {provider, calls} = make(call => {
       const {method, url} = call;
-      if (url.pathname.endsWith('/git/commits/base'))
+
+      if (url.pathname.endsWith('/git/commits/base')) {
         return {json: {tree: {sha: 'basetree'}}};
-      if (url.pathname.endsWith('/git/trees'))
+      }
+
+      if (url.pathname.endsWith('/git/trees')) {
         return {status: 201, json: {sha: 'newtree'}};
-      if (url.pathname.endsWith('/git/commits'))
+      }
+
+      if (url.pathname.endsWith('/git/commits')) {
         return {status: 201, json: {sha: 'newcommit'}};
-      if (method === 'GET') return {status: 404, json: {message: 'Not Found'}};
+      }
+
+      if (method === 'GET') {
+        return {status: 404, json: {message: 'Not Found'}};
+      }
+
       return {status: 201, json: {}};
     });
+
     await provider.commitFiles({
       branch: 'relwolf/main',
       baseSha: 'base',
@@ -534,14 +586,22 @@ describe('GitHubProvider', () => {
   it('force-updates an existing branch', async () => {
     const {provider, calls} = make(call => {
       const {url} = call;
-      if (url.pathname.endsWith('/git/commits/base'))
+
+      if (url.pathname.endsWith('/git/commits/base')) {
         return {json: {tree: {sha: 't'}}};
-      if (url.pathname.endsWith('/git/trees'))
+      }
+
+      if (url.pathname.endsWith('/git/trees')) {
         return {status: 201, json: {sha: 'nt'}};
-      if (url.pathname.endsWith('/git/commits'))
+      }
+
+      if (url.pathname.endsWith('/git/commits')) {
         return {status: 201, json: {sha: 'nc'}};
+      }
+
       return {json: {}};
     });
+
     await provider.commitFiles({
       branch: 'relwolf/main',
       baseSha: 'base',
@@ -549,6 +609,7 @@ describe('GitHubProvider', () => {
       files: [],
     });
     const last = calls.at(-1)!;
+
     expect([last.method, last.url.pathname, last.body]).toEqual([
       'PATCH',
       '/repos/lupiq/relwolf/git/refs/heads/relwolf/main',
@@ -558,6 +619,7 @@ describe('GitHubProvider', () => {
 
   it('creates tags, releases and labels', async () => {
     const tag = make(() => ({status: 201, json: {}}));
+
     expect(await tag.provider.createTag('v1.0.0', 'sha')).toBe('created');
     expect(tag.calls[0]!.body).toEqual({ref: 'refs/tags/v1.0.0', sha: 'sha'});
 
@@ -565,17 +627,20 @@ describe('GitHubProvider', () => {
       status: 422,
       json: {message: 'Reference already exists'},
     }));
+
     expect(await exists.provider.createTag('v1.0.0', 'sha')).toBe('exists');
 
     const broken = make(() => ({
       status: 422,
       json: {message: 'Object does not exist'},
     }));
+
     await expect(broken.provider.createTag('v1.0.0', 'sha')).rejects.toThrow(
       /Could not create tag/,
     );
 
     const release = make(() => ({status: 201, json: {}}));
+
     await release.provider.createRelease({
       tag: 'v1.0.0',
       name: 'v1.0.0',
@@ -590,11 +655,13 @@ describe('GitHubProvider', () => {
     });
 
     const absent = make(() => ({status: 404, json: {}}));
+
     expect(await absent.provider.releaseExists('v1')).toBe(false);
 
     const missingLabel = make(call =>
       call.method === 'GET' ? {status: 404, json: {}} : {status: 201, json: {}},
     );
+
     await missingLabel.provider.ensureLabel({
       name: 'x',
       color: 'ffffff',
@@ -609,6 +676,7 @@ describe('GitHubProvider', () => {
 
   it('closes pull requests', async () => {
     const {provider, calls} = make(() => ({json: {}}));
+
     await provider.closeReleaseRequest(3);
     expect([calls[0]!.method, calls[0]!.url.pathname, calls[0]!.body]).toEqual([
       'PATCH',
@@ -619,6 +687,7 @@ describe('GitHubProvider', () => {
 
   it('updates pull requests', async () => {
     const {provider, calls} = make(() => ({json: {}}));
+
     await provider.updateReleaseRequest(3, {title: 'T', body: 'B'});
     expect([calls[0]!.method, calls[0]!.url.pathname, calls[0]!.body]).toEqual([
       'PATCH',
@@ -644,6 +713,7 @@ describe('createProviderFromEnv', () => {
       CI_COMMIT_BRANCH: 'main',
       CI_DEFAULT_BRANCH: 'main',
     });
+
     expect(ctx.provider.name).toBe('gitlab');
     expect(ctx.currentBranch).toBe('main');
     expect(ctx.defaultBranch).toBe('main');
@@ -656,6 +726,7 @@ describe('createProviderFromEnv', () => {
       CI_API_V4_URL: 'u',
       CI_PROJECT_ID: '1',
     });
+
     expect(ctx.currentBranch).toBe('');
   });
 
@@ -667,6 +738,7 @@ describe('createProviderFromEnv', () => {
       GITHUB_REF_TYPE: 'branch',
       GITHUB_REF_NAME: 'main',
     });
+
     expect(ctx.provider.name).toBe('github');
     expect(ctx.currentBranch).toBe('main');
     expect(
@@ -682,6 +754,7 @@ describe('createProviderFromEnv', () => {
 
   it('allows an explicit provider and rejects unknown ones', () => {
     const env = {RELWOLF_TOKEN: 't', GITHUB_REPOSITORY: 'a/b'};
+
     expect(
       createProviderFromEnv({...env, RELWOLF_PROVIDER: 'github'}).provider.name,
     ).toBe('github');

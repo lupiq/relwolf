@@ -15,7 +15,11 @@ export function updatePomXml(
 
   for (const match of content.matchAll(TOKEN)) {
     const [token, closing, name, selfClosing] = match;
-    if (name === undefined) continue;
+
+    if (name === undefined) {
+      continue;
+    }
+
     const index = match.index;
 
     if (closing) {
@@ -28,11 +32,13 @@ export function updatePomXml(
         versionEnd = index;
         break;
       }
+
       depth--;
     } else if (selfClosing) {
       continue;
     } else {
       depth++;
+
       if (depth === 2 && name === 'version' && versionStart < 0) {
         versionStart = index + token.length;
       }
@@ -44,5 +50,6 @@ export function updatePomXml(
       `${file}: no <version> element found directly under <project>`,
     );
   }
+
   return content.slice(0, versionStart) + version + content.slice(versionEnd);
 }

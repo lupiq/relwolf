@@ -43,18 +43,23 @@ export function parseReleaseAs(
           : `RELWOLF_RELEASE_AS: unknown component "${key}".`,
       );
     }
+
     if (raw === RESET) {
       result.set(key, null);
       continue;
     }
+
     const version = parseVersion(raw.replace(/^v/, ''));
+
     if (!version) {
       throw new ReleaseAsError(
         `RELWOLF_RELEASE_AS: "${raw}" is not a valid semantic version.`,
       );
     }
+
     result.set(key, version);
   }
+
   return result;
 }
 
