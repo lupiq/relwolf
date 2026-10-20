@@ -5,7 +5,6 @@ coverage
 docs/.vitepress/cache
 docs/.vitepress/dist
 *.log
-.env.e2e
 e2e-report.json
 
 # MacOS
