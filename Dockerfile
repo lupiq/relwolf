@@ -1,4 +1,8 @@
 FROM node:24-slim AS base
+# The arm64 build runs under emulation; the npm registry occasionally resets connections, so retry more often
+ENV npm_config_fetch_retries=6 \
+    npm_config_fetch_retry_mintimeout=5000 \
+    npm_config_fetch_retry_maxtimeout=60000
 RUN npm install --global pnpm@12.14.0
 WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
