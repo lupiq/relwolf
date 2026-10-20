@@ -15,6 +15,8 @@ describe('parseConfig', () => {
         changelogPath: 'CHANGELOG.md',
         updaters: [],
         minorPreMajor: true,
+        tagPrefix: 'v',
+        tagSuffix: '',
       },
     ]);
     expect(config.branch).toBeUndefined();
@@ -189,5 +191,67 @@ describe('loadConfig', () => {
     } finally {
       rmSync(dir, {recursive: true, force: true});
     }
+  });
+});
+
+describe('new properties', () => {
+  it('has defaults that keep the previous behaviour', () => {
+    const config = parseConfig(undefined);
+
+    expect(config).toMatchObject({
+      branchPrefix: 'relwolf/',
+      releaseName: '${tag}',
+      labels: {pending: 'relwolf: pending', tagged: 'relwolf: tagged'},
+      draft: false,
+      patchTypes: ['fix'],
+      minorTypes: ['feat'],
+      excludePaths: [],
+      separatePullRequests: false,
+      linkedGroups: [],
+    });
+  });
+
+  it('rejects invalid values', () => {
+    const bad = [
+      'patch-types: [feat]',
+      'minor-types: [fix]\npatch-types: [FIX]',
+      'tag-template: "v${component}"\npackages:\n  a: {component: a}\n  b: {component: b}\n  c: {}',
+      'tag-template: "v"',
+      'tag-template: "${version}${version}"',
+      'tag-template: "v ${version}"',
+      'pull-request-body: "no notes"',
+      'pull-request-body: "${notes} ${notes}"',
+      'release-name: "${foo}"',
+      'bootstrap-sha: nothex',
+      'exclude-paths: ["../x"]',
+      'labels: {pending: same, tagged: same}',
+      'branch-prefix: "../x/"',
+      'linked-versions: [[a, b]]',
+      'linked-versions: [[a]]',
+      'tag-template: "${version}"\npackages:\n  a: {}\n  b: {component: b}',
+    ];
+
+    for (const yaml of bad) {
+      expect(() => parseConfig(yaml), yaml).toThrow();
+    }
+  });
+
+  it('resolves the tag template per package', () => {
+    const config = parseConfig(
+      'tag-template: "${component}@${version}"\npackages:\n  a: {component: x}\n  b: {component: y}',
+    );
+
+    expect(config.packages.map(p => [p.tagPrefix, p.tagSuffix])).toEqual([
+      ['x@', ''],
+      ['y@', ''],
+    ]);
+  });
+
+  it('resolves linked versions', () => {
+    const config = parseConfig(
+      'linked-versions: true\npackages:\n  a: {component: a}\n  b: {component: b}',
+    );
+
+    expect(config.linkedGroups).toEqual([['a', 'b']]);
   });
 });

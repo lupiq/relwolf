@@ -8,6 +8,8 @@ export interface ReleaseRequest {
   url: string;
   state: ReleaseRequestState;
   labels: string[];
+  /** Whether the request is a draft (GitLab: title prefix "Draft: ", which is not part of `title`). */
+  draft: boolean;
   /** Commit on the target branch that contains the merged changes (merged requests only). */
   mergeSha?: string | undefined;
 }
@@ -53,11 +55,16 @@ export interface Provider {
     title: string;
     body: string;
     labels: string[];
+    draft: boolean;
+    /** Usernames; unknown users are an error. */
+    assignees: string[];
+    reviewers: string[];
   }): Promise<ReleaseRequest>;
 
   updateReleaseRequest(
     id: number,
-    options: {title: string; body: string},
+    /** `draft` keeps the draft state; a request is never turned into a draft later on. */
+    options: {title: string; body: string; draft?: boolean},
   ): Promise<void>;
 
   /** Closes an open release request without merging it. */

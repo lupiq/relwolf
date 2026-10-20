@@ -22,6 +22,7 @@ interface GitHubPull {
   html_url: string;
   state: string;
   merged_at?: string | null;
+  draft?: boolean;
   merge_commit_sha?: string | null;
   labels: {name: string}[];
   base?: {ref: string};
@@ -44,6 +45,7 @@ function toReleaseRequest(pull: GitHubPull): ReleaseRequest {
     url: pull.html_url,
     state,
     labels: pull.labels.map(label => label.name),
+    draft: pull.draft ?? false,
     mergeSha: pull.merge_commit_sha ?? undefined,
   };
 }
@@ -177,6 +179,9 @@ export class GitHubProvider implements Provider {
     title: string;
     body: string;
     labels: string[];
+    draft: boolean;
+    assignees: string[];
+    reviewers: string[];
   }): Promise<ReleaseRequest> {
     const {data} = await this.http.request('POST', `${this.repo}/pulls`, {
       body: {
@@ -184,11 +189,28 @@ export class GitHubProvider implements Provider {
         head: options.sourceBranch,
         base: options.targetBranch,
         body: options.body,
+        draft: options.draft,
       },
     });
     const pull = data as GitHubPull;
 
     await this.setLabels(pull.number, {add: options.labels, remove: []});
+
+    if (options.assignees.length > 0) {
+      await this.http.request(
+        'POST',
+        `${this.repo}/issues/${pull.number}/assignees`,
+        {body: {assignees: options.assignees}},
+      );
+    }
+
+    if (options.reviewers.length > 0) {
+      await this.http.request(
+        'POST',
+        `${this.repo}/pulls/${pull.number}/requested_reviewers`,
+        {body: {reviewers: options.reviewers}},
+      );
+    }
 
     return toReleaseRequest({
       ...pull,
@@ -198,7 +220,7 @@ export class GitHubProvider implements Provider {
 
   async updateReleaseRequest(
     id: number,
-    options: {title: string; body: string},
+    options: {title: string; body: string; draft?: boolean},
   ): Promise<void> {
     await this.http.request('PATCH', `${this.repo}/pulls/${id}`, {
       body: {title: options.title, body: options.body},

@@ -5,6 +5,7 @@ import type {
   Provider,
   ReleaseRequest,
 } from './types.js';
+import {ProviderError} from './types.js';
 
 export interface GitLabOptions {
   /** e.g. https://gitlab.com/api/v4 */
@@ -25,7 +26,13 @@ interface GitLabMergeRequest {
   merge_commit_sha: string | null;
   squash_commit_sha: string | null;
   sha: string | null;
+  draft?: boolean;
 }
+
+const DRAFT_PREFIX = /^(?:draft:\s*|\[draft\]\s*|\(draft\)\s*)/i;
+
+const withDraft = (title: string, draft: boolean): string =>
+  draft ? `Draft: ${title}` : title;
 
 function toReleaseRequest(mr: GitLabMergeRequest): ReleaseRequest {
   const state =
@@ -37,11 +44,12 @@ function toReleaseRequest(mr: GitLabMergeRequest): ReleaseRequest {
 
   return {
     id: mr.iid,
-    title: mr.title,
+    title: mr.title.replace(DRAFT_PREFIX, ''),
     body: mr.description ?? '',
     url: mr.web_url,
     state,
     labels: mr.labels,
+    draft: mr.draft ?? DRAFT_PREFIX.test(mr.title),
     mergeSha:
       mr.merge_commit_sha ?? mr.squash_commit_sha ?? mr.sha ?? undefined,
   };
@@ -133,7 +141,12 @@ export class GitLabProvider implements Provider {
     title: string;
     body: string;
     labels: string[];
+    draft: boolean;
+    assignees: string[];
+    reviewers: string[];
   }): Promise<ReleaseRequest> {
+    const assigneeIds = await this.userIds(options.assignees);
+    const reviewerIds = await this.userIds(options.reviewers);
     const {data} = await this.http.request(
       'POST',
       `${this.project}/merge_requests`,
@@ -141,9 +154,11 @@ export class GitLabProvider implements Provider {
         body: {
           source_branch: options.sourceBranch,
           target_branch: options.targetBranch,
-          title: options.title,
+          title: withDraft(options.title, options.draft),
           description: options.body,
           labels: options.labels.join(','),
+          ...(assigneeIds.length > 0 ? {assignee_ids: assigneeIds} : {}),
+          ...(reviewerIds.length > 0 ? {reviewer_ids: reviewerIds} : {}),
           remove_source_branch: true,
         },
       },
@@ -154,11 +169,33 @@ export class GitLabProvider implements Provider {
 
   async updateReleaseRequest(
     id: number,
-    options: {title: string; body: string},
+    options: {title: string; body: string; draft?: boolean},
   ): Promise<void> {
     await this.http.request('PUT', `${this.project}/merge_requests/${id}`, {
-      body: {title: options.title, description: options.body},
+      body: {
+        title: withDraft(options.title, options.draft ?? false),
+        description: options.body,
+      },
     });
+  }
+
+  private async userIds(usernames: string[]): Promise<number[]> {
+    const ids: number[] = [];
+
+    for (const username of usernames) {
+      const {data} = await this.http.request('GET', '/users', {
+        query: {username},
+      });
+      const [user] = data as {id: number}[];
+
+      if (!user) {
+        throw new ProviderError(`GitLab user "${username}" not found`);
+      }
+
+      ids.push(user.id);
+    }
+
+    return ids;
   }
 
   async closeReleaseRequest(id: number): Promise<void> {

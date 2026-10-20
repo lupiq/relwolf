@@ -1,8 +1,10 @@
 import {
   bumpLevel,
+  DEFAULT_BUMP_RULES,
   parseCommit,
   splitReverted,
   withoutReverted,
+  type BumpRules,
   type ConventionalCommit,
 } from './commits.js';
 import type {PackageConfig} from './config.js';
@@ -20,6 +22,7 @@ import {
   formatVersion,
   isPrerelease,
   nextVersion,
+  type BumpLevel,
   type Version,
 } from './version.js';
 
@@ -32,6 +35,8 @@ export interface PackagePlan {
   range?: string | undefined;
   tagPattern: string;
   commits: ConventionalCommit[];
+  /** Bump level derived from the commits; `null` if only a requested or linked version applies. */
+  level: BumpLevel | null;
   /** Reverted commits and their reverts, left out of the changelog. */
   revertedCommits: string[];
 }
@@ -50,13 +55,29 @@ export function nestedPackagePaths(
     .map(other => other.path);
 }
 
+/** Global settings that influence how commits are counted. */
+export interface PlanSettings {
+  bumpRules: BumpRules;
+  /** Globs relative to the repository root, whose changes never count. */
+  excludePaths: readonly string[];
+  /** Start of the history for packages without a tag. */
+  bootstrapSha?: string | undefined;
+}
+
+export const DEFAULT_PLAN_SETTINGS: PlanSettings = {
+  bumpRules: DEFAULT_BUMP_RULES,
+  excludePaths: [],
+};
+
 export function pathspecsFor(
   pkg: PackageConfig,
   all: readonly PackageConfig[],
+  excludePaths: readonly string[] = [],
 ): string[] {
   return [
     pkg.path,
     ...nestedPackagePaths(pkg, all).map(nested => `:(exclude)${nested}`),
+    ...excludePaths.map(pattern => `:(exclude,glob)${pattern}`),
   ];
 }
 
@@ -70,40 +91,63 @@ async function conventionalCommits(
   return raw.flatMap(commit => parseCommit(commit.sha, commit.message) ?? []);
 }
 
+export interface PlanOptions {
+  releaseAs?: Version | undefined;
+  /** Raises the bump level, used for packages that share their version with a changed one. */
+  minLevel?: BumpLevel | null | undefined;
+  /** Release even without any change in the package (linked packages). */
+  force?: boolean | undefined;
+}
+
+const LEVELS: readonly BumpLevel[] = ['patch', 'minor', 'major'];
+
+export function maxLevel(
+  a: BumpLevel | null | undefined,
+  b: BumpLevel | null | undefined,
+): BumpLevel | null {
+  const rank = (level: BumpLevel | null | undefined): number =>
+    level ? LEVELS.indexOf(level) : -1;
+
+  return (rank(a) >= rank(b) ? a : b) ?? null;
+}
+
 export async function planPackage(
   git: Git,
   pkg: PackageConfig,
   all: readonly PackageConfig[],
-  releaseAs?: Version,
+  options: PlanOptions = {},
+  settings: PlanSettings = DEFAULT_PLAN_SETTINGS,
 ): Promise<PackagePlan | null> {
-  const releaseTags = findReleaseTags(
-    await git.tagsMergedIntoHead(),
-    pkg.component,
-  );
+  const {releaseAs, force = false} = options;
+  const releaseTags = findReleaseTags(await git.tagsMergedIntoHead(), pkg);
   const lastAny = highest(releaseTags);
   const lastStable = highestStable(releaseTags);
-  const pathspecs = pathspecsFor(pkg, all);
+  const pathspecs = pathspecsFor(pkg, all, settings.excludePaths);
+  const bootstrap = settings.bootstrapSha && `${settings.bootstrapSha}..HEAD`;
 
   const sinceStable = await conventionalCommits(
     git,
-    lastStable && `${lastStable.tag}..HEAD`,
+    (lastStable && `${lastStable.tag}..HEAD`) ?? bootstrap,
     pathspecs,
   );
-  const level = bumpLevel(sinceStable);
+  const level = maxLevel(
+    bumpLevel(sinceStable, settings.bumpRules),
+    options.minLevel,
+  );
 
   const lastIsPrerelease =
     lastAny !== undefined && isPrerelease(lastAny.version);
   const rangeStart = pkg.prerelease ? lastAny : lastStable;
-  const range = rangeStart && `${rangeStart.tag}..HEAD`;
+  const range = (rangeStart && `${rangeStart.tag}..HEAD`) ?? bootstrap;
 
-  if (releaseAs && level === null) {
+  if (releaseAs && level === null && !force) {
     // A requested version needs at least one change to release, but not necessarily a releasable one.
     if ((await git.log(range, pathspecs)).length === 0) {
       return null;
     }
   }
 
-  if (!releaseAs && pkg.prerelease && lastIsPrerelease) {
+  if (!releaseAs && !force && pkg.prerelease && lastIsPrerelease) {
     // Don't publish another pre-release unless something releasable happened since the last one.
     const sinceLast = await conventionalCommits(
       git,
@@ -111,7 +155,7 @@ export async function planPackage(
       pathspecs,
     );
 
-    if (bumpLevel(sinceLast) === null) {
+    if (bumpLevel(sinceLast, settings.bumpRules) === null) {
       return null;
     }
   }
@@ -140,10 +184,11 @@ export async function planPackage(
   return {
     pkg,
     version,
-    tag: tagName(pkg.component, formatVersion(version)),
+    tag: tagName(pkg, formatVersion(version)),
     prerelease: isPrerelease(version),
     range,
-    tagPattern: tagPattern(pkg.component, Boolean(pkg.prerelease)),
+    tagPattern: tagPattern(pkg, Boolean(pkg.prerelease)),
+    level,
     commits: sinceStable,
     revertedCommits: splitReverted(await git.log(range, pathspecs)).dropped.map(
       commit => commit.sha,

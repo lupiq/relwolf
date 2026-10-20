@@ -42,7 +42,7 @@ Flow: Conventional Commits → next SemVer → release MR (changelog + version f
 | File                               | Responsibility                                                                                                                                                                                                                  |
 | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `cli.ts`                           | Entry point: load config, build provider from env, call `run`                                                                                                                                                                   |
-| `config.ts`                        | `relwolf.yaml` schema (zod, strict; incl. `pull-request-title` template), path normalisation/validation, `Config`/`PackageConfig`                                                                                               |
+| `config.ts`                        | `relwolf.yaml` schema (zod, strict; incl. all template/label/type/linking options), path normalisation/validation, `Config`/`PackageConfig`                                                                                     |
 | `release.ts`                       | Orchestration: `run()` → skip guards, shallow check, `tagMergedReleases`, `prepareReleaseRequest`                                                                                                                               |
 | `plan.ts`                          | Per-package plan: last tags, commits since, next version, changelog range                                                                                                                                                       |
 | `version.ts`                       | SemVer parse/compare/bump, `nextVersion` incl. pre-release logic                                                                                                                                                                |
@@ -145,7 +145,15 @@ Enforced by ESLint (`curly: all`, `padding-line-between-statements`); `pnpm lint
 
 ## Ideas / not implemented
 
-- Extra updaters (pyproject.toml, Cargo.toml, …), `extra-files` style globs, lockfile updates.
-- Configurable patch-bump types (decision so far: only `fix`), custom labels/branch names, MR title template.
+- Extra updaters (pyproject.toml, Cargo.toml, …), lockfile updates.
 - Draft/pre-release handling for GitLab, signing.
 - Providers for other platforms: implement `Provider` and extend `providers/index.ts`.
+
+## Configuration properties (global unless noted)
+
+`patch-types`, `minor-types` (full lists, no overlap), `exclude-paths` (globs → `:(exclude,glob)` for git, `--exclude-path` for
+git-cliff), `bootstrap-sha` (only without tag), `tag-template` (resolved per package into `tagPrefix`/`tagSuffix`; tags are
+parsed with `parseReleaseTag`), `release-name`, `branch-prefix`, `labels`, `draft`/`assignees`/`reviewers` (creation only),
+`release-commit-message`, `pull-request-body` (markers always appended), `linked-versions` (`true` or groups of package paths,
+planned in `release.ts#planGroup`), `separate-pull-requests` (one `ReleaseUnit` per package/group, branch suffix = component or
+`root`; `RunResult.releaseRequests` is an array), globs in updater paths (`Git.listFiles`). Defaults reproduce the old behaviour.

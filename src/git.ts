@@ -59,6 +59,13 @@ export class Git {
     return (await this.git('rev-parse', 'HEAD')).trim();
   }
 
+  /** Tracked files matching a glob (relative to the repository root), sorted. */
+  async listFiles(pattern: string): Promise<string[]> {
+    const out = await this.git('ls-files', '-z', '--', `:(glob)${pattern}`);
+
+    return out.split('\0').filter(Boolean).sort();
+  }
+
   async tagsMergedIntoHead(): Promise<string[]> {
     const out = await this.git('tag', '--merged', 'HEAD');
 

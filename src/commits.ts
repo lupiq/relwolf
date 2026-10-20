@@ -40,8 +40,18 @@ export function parseCommit(
   return commit;
 }
 
+export interface BumpRules {
+  /** Commit types (lower case) that trigger a minor release. */
+  minor: readonly string[];
+  /** Commit types (lower case) that trigger a patch release. */
+  patch: readonly string[];
+}
+
+export const DEFAULT_BUMP_RULES: BumpRules = {minor: ['feat'], patch: ['fix']};
+
 export function bumpLevel(
   commits: readonly ConventionalCommit[],
+  rules: BumpRules = DEFAULT_BUMP_RULES,
 ): BumpLevel | null {
   let level: BumpLevel | null = null;
 
@@ -50,9 +60,9 @@ export function bumpLevel(
       return 'major';
     }
 
-    if (commit.type === 'feat') {
+    if (rules.minor.includes(commit.type)) {
       level = 'minor';
-    } else if (commit.type === 'fix' && level === null) {
+    } else if (level === null && rules.patch.includes(commit.type)) {
       level = 'patch';
     }
   }

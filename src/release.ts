@@ -1,11 +1,10 @@
 import {readFile} from 'node:fs/promises';
 import path from 'node:path';
 import {
-  LABEL_PENDING,
-  LABEL_TAGGED,
   parseBody,
   parseOverrides,
   renderBody,
+  renderReleaseName,
   renderTitle,
   type BodyEntry,
   type BodyOverride,
@@ -15,9 +14,15 @@ import {
   prependToChangelog,
   type CliffInvocation,
 } from './changelog.js';
-import type {Config} from './config.js';
+import {ROOT_KEY, type Config, type PackageConfig} from './config.js';
 import {Git} from './git.js';
-import {nestedPackagePaths, planPackage, type PackagePlan} from './plan.js';
+import {
+  maxLevel,
+  nestedPackagePaths,
+  planPackage,
+  type PackagePlan,
+  type PlanSettings,
+} from './plan.js';
 import type {FileChange, Provider} from './providers/types.js';
 import {
   componentKey,
@@ -25,8 +30,14 @@ import {
   parseReleaseAs,
   type ReleaseAs,
 } from './release-as.js';
+import {isValidReleaseTag, parseReleaseTag} from './tags.js';
 import {applyUpdater} from './updaters/index.js';
-import {formatVersion, parseVersion, type Version} from './version.js';
+import {
+  compareVersions,
+  formatVersion,
+  parseVersion,
+  type Version,
+} from './version.js';
 
 export interface RunOptions {
   /** Working directory of the checked-out repository. */
@@ -42,28 +53,31 @@ export interface RunOptions {
   log?: (message: string) => void;
 }
 
+export interface ReleaseRequestResult {
+  id: number;
+  url: string;
+  action: 'created' | 'updated' | 'unchanged';
+}
+
 export interface RunResult {
   skipped?: string;
   tagged: string[];
-  releaseRequest?: {
-    id: number;
-    url: string;
-    action: 'created' | 'updated' | 'unchanged';
-  };
+  /** One entry per release request touched in this run (several with `separate-pull-requests`). */
+  releaseRequests: ReleaseRequestResult[];
 }
 
-const LABELS = {
+const labelDefinitions = (config: Config) => ({
   pending: {
-    name: LABEL_PENDING,
+    name: config.labels.pending,
     color: 'fbca04',
     description: 'Release prepared by relwolf, waiting to be merged',
   },
   tagged: {
-    name: LABEL_TAGGED,
+    name: config.labels.tagged,
     color: '0e8a16',
     description: 'Release created by relwolf',
   },
-};
+});
 
 export class RunError extends Error {
   constructor(message: string) {
@@ -87,7 +101,7 @@ export async function run(options: RunOptions): Promise<RunResult> {
 
     log(`Nothing to do: ${reason}.`);
 
-    return {skipped: reason, tagged: []};
+    return {skipped: reason, tagged: [], releaseRequests: []};
   }
 
   const git = new Git(options.cwd);
@@ -102,15 +116,26 @@ export async function run(options: RunOptions): Promise<RunResult> {
   const requested = parseReleaseAs(options.releaseAs, options.config.packages);
 
   const tagged = await tagMergedReleases(options, git, branch, log);
-  const releaseRequest = await prepareReleaseRequest(
-    options,
-    git,
-    branch,
-    requested,
-    log,
-  );
+  const releaseRequests: ReleaseRequestResult[] = [];
+  const units = releaseUnits(options.config);
 
-  return {tagged, ...(releaseRequest ? {releaseRequest} : {})};
+  for (const unit of units) {
+    const result = await prepareReleaseRequest(
+      options,
+      git,
+      branch,
+      unit,
+      units.length > 1,
+      requested,
+      log,
+    );
+
+    if (result) {
+      releaseRequests.push(result);
+    }
+  }
+
+  return {tagged, releaseRequests};
 }
 
 async function tagMergedReleases(
@@ -122,12 +147,16 @@ async function tagMergedReleases(
   const {provider} = options;
   const merged = await provider.listMergedReleaseRequests({
     targetBranch: branch,
-    label: LABEL_PENDING,
+    label: options.config.labels.pending,
   });
+  const {config} = options;
+  const labels = labelDefinitions(config);
   const created: string[] = [];
 
   for (const request of merged) {
-    const entries = parseBody(request.body);
+    const entries = parseBody(request.body, tag =>
+      isValidReleaseTag(tag, config.packages),
+    );
 
     if (entries.length === 0) {
       throw new RunError(
@@ -148,7 +177,7 @@ async function tagMergedReleases(
       continue;
     }
 
-    await provider.ensureLabel(LABELS.tagged);
+    await provider.ensureLabel(labels.tagged);
 
     for (const entry of entries) {
       const result = await provider.createTag(entry.tag, request.mergeSha);
@@ -166,9 +195,15 @@ async function tagMergedReleases(
       if (await provider.releaseExists(entry.tag)) {
         log(`Release ${entry.tag} already exists.`);
       } else {
+        const parsed = parseReleaseTag(entry.tag, config.packages);
+
         await provider.createRelease({
           tag: entry.tag,
-          name: entry.tag,
+          name: renderReleaseName(config.releaseName, {
+            tag: entry.tag,
+            version: parsed ? formatVersion(parsed.version) : entry.tag,
+            component: parsed?.pkg.component,
+          }),
           body: entry.notes,
           prerelease: entry.prerelease,
         });
@@ -179,8 +214,8 @@ async function tagMergedReleases(
     }
 
     await provider.setLabels(request.id, {
-      add: [LABEL_TAGGED],
-      remove: [LABEL_PENDING],
+      add: [config.labels.tagged],
+      remove: [config.labels.pending],
     });
   }
 
@@ -199,8 +234,28 @@ async function readIfExists(file: string): Promise<string | undefined> {
   }
 }
 
+const GLOB_CHARACTERS = /[*?[]/;
+
+/** A configured file path, or the tracked files matching it if it is a glob. */
+async function expandPath(git: Git, configured: string): Promise<string[]> {
+  if (!GLOB_CHARACTERS.test(configured)) {
+    return [configured];
+  }
+
+  const files = await git.listFiles(configured);
+
+  if (files.length === 0) {
+    throw new RunError(
+      `The glob "${configured}" configured in relwolf.yaml matches no file.`,
+    );
+  }
+
+  return files;
+}
+
 async function buildFiles(
   options: RunOptions,
+  git: Git,
   plans: PackagePlan[],
 ): Promise<{files: FileChange[]; entries: BodyEntry[]}> {
   const contents = new Map<
@@ -247,7 +302,10 @@ async function buildFiles(
       tag: plan.tag,
       tagPattern: plan.tagPattern,
       includePath: pkg.path === '.' ? undefined : `${pkg.path}/**`,
-      excludePaths: nested.map(nestedPath => `${nestedPath}/**`),
+      excludePaths: [
+        ...nested.map(nestedPath => `${nestedPath}/**`),
+        ...options.config.excludePaths,
+      ],
       skipCommits: plan.revertedCommits,
     };
     const env = options.env ?? process.env;
@@ -261,14 +319,16 @@ async function buildFiles(
     changelog.current = await prependToChangelog(cliff, changelog.current, env);
 
     for (const updater of pkg.updaters) {
-      const target = await load(updater.path, true);
+      for (const file of await expandPath(git, updater.path)) {
+        const target = await load(file, true);
 
-      target.current = applyUpdater(
-        updater.type,
-        target.current,
-        version,
-        updater.path,
-      );
+        target.current = applyUpdater(
+          updater.type,
+          target.current,
+          version,
+          file,
+        );
+      }
     }
   }
 
@@ -291,11 +351,11 @@ async function buildFiles(
 
 /** Requests stored in the open release request, updated by the ones given for this run. */
 function effectiveRequests(
-  options: RunOptions,
+  packages: readonly PackageConfig[],
   existingBody: string | undefined,
   requested: ReleaseAs,
 ): Map<string, Version> {
-  const keys = new Set(options.config.packages.map(componentKey));
+  const keys = new Set(packages.map(componentKey));
   const versions = new Map<string, Version>();
 
   for (const {component, version} of parseOverrides(existingBody ?? '')) {
@@ -317,30 +377,166 @@ function effectiveRequests(
   return versions;
 }
 
-async function prepareReleaseRequest(
-  options: RunOptions,
-  git: Git,
-  branch: string,
-  requested: ReleaseAs,
-  log: (message: string) => void,
-): Promise<RunResult['releaseRequest'] | undefined> {
-  const {provider} = options;
-  const sourceBranch = `relwolf/${branch}`;
-  const existing = await provider.findOpenReleaseRequest({
-    sourceBranch,
-    targetBranch: branch,
-  });
+/** Packages that are released together in one release request. */
+interface ReleaseUnit {
+  /** Branch suffix; none if there is only one unit. */
+  key: string;
+  packages: PackageConfig[];
+  /** Linked packages (sharing one version) inside this unit. */
+  groups: PackageConfig[][];
+}
 
-  const versions = effectiveRequests(options, existing?.body, requested);
+const packageKey = (pkg: PackageConfig): string => pkg.component ?? ROOT_KEY;
+
+export function releaseUnits(config: Config): ReleaseUnit[] {
+  const groups = config.linkedGroups.map(paths =>
+    paths.flatMap(
+      groupPath => config.packages.find(pkg => pkg.path === groupPath) ?? [],
+    ),
+  );
+
+  if (!config.separatePullRequests) {
+    return [{key: '', packages: config.packages, groups}];
+  }
+
+  const units: ReleaseUnit[] = [];
+  const seen = new Set<PackageConfig>();
+
+  for (const pkg of config.packages) {
+    if (seen.has(pkg)) {
+      continue;
+    }
+
+    const group = groups.find(members => members.includes(pkg));
+    const members = group ?? [pkg];
+
+    members.forEach(member => seen.add(member));
+    units.push({
+      key: members.map(packageKey).join('+'),
+      packages: members,
+      groups: group ? [group] : [],
+    });
+  }
+
+  return units;
+}
+
+function planSettings(config: Config): PlanSettings {
+  return {
+    bumpRules: {minor: config.minorTypes, patch: config.patchTypes},
+    excludePaths: config.excludePaths,
+    bootstrapSha: config.bootstrapSha,
+  };
+}
+
+/** Plans the packages of a linked group: all of them get the highest version any member needs. */
+async function planGroup(
+  git: Git,
+  config: Config,
+  group: readonly PackageConfig[],
+  versions: Map<string, Version>,
+  log: (message: string) => void,
+): Promise<PackagePlan[]> {
+  const settings = planSettings(config);
+  const own = [];
+
+  for (const pkg of group) {
+    own.push(
+      await planPackage(
+        git,
+        pkg,
+        config.packages,
+        {releaseAs: versions.get(componentKey(pkg))},
+        settings,
+      ),
+    );
+  }
+
+  const changed = own.flatMap(plan => plan ?? []);
+
+  if (changed.length === 0) {
+    return [];
+  }
+
+  const level = changed.reduce<ReturnType<typeof maxLevel>>(
+    (highest, plan) => maxLevel(highest, plan.level),
+    null,
+  );
+  const candidates: Version[] = group.flatMap(
+    pkg => versions.get(componentKey(pkg)) ?? [],
+  );
+
+  for (const pkg of group) {
+    const plan = await planPackage(
+      git,
+      pkg,
+      config.packages,
+      {minLevel: level, force: true},
+      settings,
+    );
+
+    if (plan) {
+      candidates.push(plan.version);
+    }
+  }
+
+  const [first, ...others] = candidates;
+
+  if (!first) {
+    return [];
+  }
+
+  const shared = others.reduce(
+    (highest, version) =>
+      compareVersions(version, highest) > 0 ? version : highest,
+    first,
+  );
   const plans: PackagePlan[] = [];
 
-  for (const pkg of options.config.packages) {
+  for (const pkg of group) {
+    const plan = await planPackage(
+      git,
+      pkg,
+      config.packages,
+      {releaseAs: shared, force: true},
+      settings,
+    );
+
+    if (plan) {
+      plans.push(plan);
+    }
+  }
+
+  log(
+    `Linked packages (${group.map(packageKey).join(', ')}) share the version ${formatVersion(shared)}.`,
+  );
+
+  return plans;
+}
+
+async function planUnit(
+  git: Git,
+  config: Config,
+  unit: ReleaseUnit,
+  versions: Map<string, Version>,
+  log: (message: string) => void,
+): Promise<PackagePlan[]> {
+  const settings = planSettings(config);
+  const grouped = new Set(unit.groups.flat());
+  const plans: PackagePlan[] = [];
+
+  for (const pkg of unit.packages) {
+    if (grouped.has(pkg)) {
+      continue;
+    }
+
     const releaseAs = versions.get(componentKey(pkg));
     const plan = await planPackage(
       git,
       pkg,
-      options.config.packages,
-      releaseAs,
+      config.packages,
+      {releaseAs},
+      settings,
     );
 
     if (plan) {
@@ -354,8 +550,39 @@ async function prepareReleaseRequest(
     }
   }
 
+  for (const group of unit.groups) {
+    plans.push(...(await planGroup(git, config, group, versions, log)));
+  }
+
+  return plans.sort(
+    (a, b) => config.packages.indexOf(a.pkg) - config.packages.indexOf(b.pkg),
+  );
+}
+
+async function prepareReleaseRequest(
+  options: RunOptions,
+  git: Git,
+  branch: string,
+  unit: ReleaseUnit,
+  separate: boolean,
+  requested: ReleaseAs,
+  log: (message: string) => void,
+): Promise<ReleaseRequestResult | undefined> {
+  const {provider, config} = options;
+  const labels = labelDefinitions(config);
+  const sourceBranch = `${config.branchPrefix}${branch}${separate ? `/${unit.key}` : ''}`;
+  const existing = await provider.findOpenReleaseRequest({
+    sourceBranch,
+    targetBranch: branch,
+  });
+
+  const versions = effectiveRequests(unit.packages, existing?.body, requested);
+  const plans = await planUnit(git, config, unit, versions, log);
+
   if (plans.length === 0) {
-    log('No releasable changes (feat, fix or breaking commits) found.');
+    log(
+      `No releasable changes found${separate ? ` for ${unit.key}` : ''} (see "patch-types" and "minor-types"; breaking commits always release).`,
+    );
 
     if (existing) {
       await provider.closeReleaseRequest(existing.id);
@@ -368,12 +595,13 @@ async function prepareReleaseRequest(
   }
 
   const baseSha = await git.head();
-  const {files, entries} = await buildFiles(options, plans);
-  const title = renderTitle(
-    plans.map(plan => plan.tag),
-    options.config.pullRequestTitle,
-    plans.map(plan => formatVersion(plan.version)),
-  );
+  const {files, entries} = await buildFiles(options, git, plans);
+  const tags = plans.map(plan => plan.tag);
+  const planVersions = plans.map(plan => formatVersion(plan.version));
+  const title = renderTitle(tags, config.pullRequestTitle, planVersions);
+  const message = config.releaseCommitMessage
+    ? renderTitle(tags, config.releaseCommitMessage, planVersions)
+    : title;
   const overrides: BodyOverride[] = plans.flatMap(plan => {
     const version = versions.get(componentKey(plan.pkg));
 
@@ -381,7 +609,10 @@ async function prepareReleaseRequest(
       ? [{component: componentKey(plan.pkg), version: formatVersion(version)}]
       : [];
   });
-  const body = renderBody(entries, baseSha, overrides);
+  const body = renderBody(entries, baseSha, overrides, {
+    template: config.pullRequestBody,
+    versions: planVersions,
+  });
 
   if (existing?.title === title && existing.body === body) {
     log(`Release request #${existing.id} is up to date: ${existing.url}`);
@@ -389,19 +620,21 @@ async function prepareReleaseRequest(
     return {id: existing.id, url: existing.url, action: 'unchanged'};
   }
 
-  await provider.ensureLabel(LABELS.pending);
-  await provider.commitFiles({
-    branch: sourceBranch,
-    baseSha,
-    message: title,
-    files,
-  });
+  await provider.ensureLabel(labels.pending);
+  await provider.commitFiles({branch: sourceBranch, baseSha, message, files});
 
   if (existing) {
-    await provider.updateReleaseRequest(existing.id, {title, body});
+    await provider.updateReleaseRequest(existing.id, {
+      title,
+      body,
+      draft: existing.draft,
+    });
 
-    if (!existing.labels.includes(LABEL_PENDING)) {
-      await provider.setLabels(existing.id, {add: [LABEL_PENDING], remove: []});
+    if (!existing.labels.includes(config.labels.pending)) {
+      await provider.setLabels(existing.id, {
+        add: [config.labels.pending],
+        remove: [],
+      });
     }
 
     log(`Updated release request #${existing.id}: ${existing.url}`);
@@ -414,7 +647,10 @@ async function prepareReleaseRequest(
     targetBranch: branch,
     title,
     body,
-    labels: [LABEL_PENDING],
+    labels: [config.labels.pending],
+    draft: config.draft,
+    assignees: config.assignees,
+    reviewers: config.reviewers,
   });
 
   log(`Created release request #${created.id}: ${created.url}`);

@@ -6,6 +6,9 @@ import {parseVersion, type Version} from './version.js';
 
 export const CONFIG_FILE = 'relwolf.yaml';
 
+/** Branch name segment of the package without a component when each package gets its own release request. */
+export const ROOT_KEY = 'root';
+
 export const UPDATER_TYPES = [
   'package-json',
   'pom-xml',
@@ -35,21 +38,126 @@ const packageSchema = z.strictObject({
   'initial-version': z.string().optional(),
 });
 
-const isTitlePlaceholder = (placeholder: string) =>
-  placeholder === '${tags}' || placeholder === '${version}';
+const placeholders = (
+  allowed: readonly string[],
+): ((value: string) => boolean) => {
+  return value =>
+    (value.match(/\$\{[^}]*\}/g) ?? []).every(item => allowed.includes(item));
+};
+
+const count = (value: string, needle: string): number =>
+  value.split(needle).length - 1;
+
+const TITLE_PLACEHOLDERS = ['${tags}', '${version}'] as const;
+const BODY_PLACEHOLDERS = [
+  '${tags}',
+  '${version}',
+  '${releases}',
+  '${hint}',
+  '${notes}',
+] as const;
+const RELEASE_NAME_PLACEHOLDERS = ['${tag}', '${version}', '${component}'];
+const TAG_PLACEHOLDERS = ['${component}', '${version}'];
+
+const commitType = z
+  .string()
+  .regex(/^[A-Za-z][A-Za-z0-9-]*$/, 'must be a commit type such as "feat"');
+
+const label = z
+  .string()
+  .min(1)
+  .regex(/^[^,\r\n]+$/, 'must be a single line without commas');
+
+const userNames = z.array(z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]*$/));
 
 const configSchema = z.strictObject({
   'branch': z.string().min(1).optional(),
+  'branch-prefix': z
+    .string()
+    .regex(
+      /^[A-Za-z0-9][A-Za-z0-9._/-]*$/,
+      'must only contain letters, digits and [._/-]',
+    )
+    .refine(
+      value => !value.includes('..') && !value.includes('//'),
+      'must not contain ".." or "//"',
+    )
+    .default('relwolf/'),
   'cliff-config': z.string().min(1).optional(),
   'pull-request-title': z
     .string()
     .min(1)
     .regex(/^[^\r\n]+$/, 'must be a single line')
     .refine(
-      title => (title.match(/\$\{[^}]*\}/g) ?? []).every(isTitlePlaceholder),
+      placeholders(TITLE_PLACEHOLDERS),
       'only ${tags} and ${version} are supported',
     )
     .optional(),
+  'pull-request-body': z
+    .string()
+    .min(1)
+    .refine(
+      placeholders(BODY_PLACEHOLDERS),
+      'only ${tags}, ${version}, ${releases}, ${hint} and ${notes} are supported',
+    )
+    .refine(
+      value => count(value, '${notes}') === 1,
+      'must contain ${notes} exactly once',
+    )
+    .optional(),
+  'release-commit-message': z
+    .string()
+    .min(1)
+    .refine(
+      placeholders(TITLE_PLACEHOLDERS),
+      'only ${tags} and ${version} are supported',
+    )
+    .optional(),
+  'release-name': z
+    .string()
+    .min(1)
+    .regex(/^[^\r\n]+$/, 'must be a single line')
+    .refine(
+      placeholders(RELEASE_NAME_PLACEHOLDERS),
+      'only ${tag}, ${version} and ${component} are supported',
+    )
+    .default('${tag}'),
+  'tag-template': z
+    .string()
+    .regex(
+      /^[A-Za-z0-9._/@${}-]+$/,
+      'must only contain letters, digits, ${component}, ${version} and [._/@-]',
+    )
+    .refine(
+      placeholders(TAG_PLACEHOLDERS),
+      'only ${component} and ${version} are supported',
+    )
+    .refine(
+      value => count(value, '${version}') === 1,
+      'must contain ${version} exactly once',
+    )
+    .refine(
+      value => count(value, '${component}') <= 1,
+      'must contain ${component} at most once',
+    )
+    .default('${component}-v${version}'),
+  'labels': z
+    .strictObject({pending: label.optional(), tagged: label.optional()})
+    .default({}),
+  'draft': z.boolean().default(false),
+  'assignees': userNames.default([]),
+  'reviewers': userNames.default([]),
+  'patch-types': z.array(commitType).default(['fix']),
+  'minor-types': z.array(commitType).default(['feat']),
+  'exclude-paths': z.array(z.string().min(1)).default([]),
+  'bootstrap-sha': z
+    .string()
+    .regex(/^[0-9a-fA-F]{7,40}$/, 'must be a commit sha (7 to 40 hex digits)')
+    .optional(),
+  'separate-pull-requests': z.boolean().default(false),
+  'linked-versions': z
+    .union([z.boolean(), z.array(z.array(z.string().min(1)).min(2))])
+    .default(false),
   'prerelease': prereleaseId.optional(),
   'bump-minor-pre-major': z.boolean().default(true),
   'packages': z
@@ -72,13 +180,39 @@ export interface PackageConfig {
   prerelease?: string;
   minorPreMajor: boolean;
   initialVersion?: Version;
+  /** Text of the release tag in front of and behind the version, derived from `tag-template`. */
+  tagPrefix: string;
+  tagSuffix: string;
 }
 
 export interface Config {
   branch?: string;
+  /** Prefix of the release branch, e.g. "relwolf/". */
+  branchPrefix: string;
   cliffConfig?: string;
   /** Template for the release request title, see `renderTitle`. */
   pullRequestTitle?: string;
+  /** Template for the release request body, see `renderBody`. */
+  pullRequestBody?: string;
+  /** Template for the release commit message; the release request title when omitted. */
+  releaseCommitMessage?: string;
+  /** Template for the title of the created releases, see `renderReleaseName`. */
+  releaseName: string;
+  labels: {pending: string; tagged: string};
+  draft: boolean;
+  assignees: string[];
+  reviewers: string[];
+  /** Commit types (lower case) that trigger a minor or patch release; breaking changes always trigger a major one. */
+  minorTypes: string[];
+  patchTypes: string[];
+  /** Globs (relative to the repository root) whose changes never count for any package. */
+  excludePaths: string[];
+  /** Commits up to and including this one are ignored for packages without a release tag. */
+  bootstrapSha?: string;
+  /** One release request per package (or group of linked packages). */
+  separatePullRequests: boolean;
+  /** Groups of package paths that always share one version. */
+  linkedGroups: string[][];
   packages: PackageConfig[];
 }
 
@@ -112,6 +246,23 @@ const DEFAULT_UPDATER_PATH: Record<Exclude<UpdaterType, 'generic'>, string> = {
   'pom-xml': 'pom.xml',
   'gradle': 'build.gradle',
 };
+
+/**
+ * Text before and after the version in the tags of a package. Without a component, `${component}` and the
+ * separator characters right behind it are dropped ("${component}-v${version}" becomes "v${version}").
+ */
+export function tagFormat(
+  template: string,
+  component: string | undefined,
+): {prefix: string; suffix: string} {
+  const resolved = template.replace(
+    /\$\{component\}([^A-Za-z0-9${]*)/,
+    (_, separator: string) => (component ? `${component}${separator}` : ''),
+  );
+  const [prefix = '', suffix = ''] = resolved.split('${version}');
+
+  return {prefix, suffix};
+}
 
 export function parseConfig(source: string | undefined): Config {
   let raw: unknown = {};
@@ -180,6 +331,7 @@ export function parseConfig(source: string | undefined): Config {
       }
 
       const prerelease = pkg.prerelease ?? parsed.prerelease;
+      const format = tagFormat(parsed['tag-template'], pkg.component);
 
       return {
         path: pkgPath,
@@ -193,6 +345,8 @@ export function parseConfig(source: string | undefined): Config {
         minorPreMajor:
           pkg['bump-minor-pre-major'] ?? parsed['bump-minor-pre-major'],
         ...(initialVersion ? {initialVersion} : {}),
+        tagPrefix: format.prefix,
+        tagSuffix: format.suffix,
       };
     },
   );
@@ -203,6 +357,7 @@ export function parseConfig(source: string | undefined): Config {
 
   const seenPaths = new Set<string>();
   const seenComponents = new Set<string | undefined>();
+  const seenTagFormats = new Set<string>();
 
   for (const pkg of packages) {
     if (seenPaths.has(pkg.path)) {
@@ -220,16 +375,112 @@ export function parseConfig(source: string | undefined): Config {
     }
 
     seenComponents.add(pkg.component);
+
+    const format = `${pkg.tagPrefix}\u0000${pkg.tagSuffix}`;
+
+    if (seenTagFormats.has(format)) {
+      throw new ConfigError(
+        'tag-template must contain ${component} when several packages are released, otherwise their tags collide',
+      );
+    }
+
+    seenTagFormats.add(format);
+  }
+
+  const patchTypes = parsed['patch-types'].map(type => type.toLowerCase());
+  const minorTypes = parsed['minor-types'].map(type => type.toLowerCase());
+  const both = minorTypes.filter(type => patchTypes.includes(type));
+
+  if (both.length > 0) {
+    throw new ConfigError(
+      `Commit type "${both[0]}" is listed in both "minor-types" and "patch-types"`,
+    );
+  }
+
+  const excludePaths = parsed['exclude-paths'].map(pattern => {
+    const normalized = pattern.replaceAll('\\', '/').replace(/^\.\//, '');
+
+    if (normalized.startsWith('/') || normalized.split('/').includes('..')) {
+      throw new ConfigError(
+        `exclude-paths: "${pattern}" must be a relative path inside the repository`,
+      );
+    }
+
+    return normalized;
+  });
+
+  const linked = parsed['linked-versions'];
+  const linkedGroups: string[][] =
+    linked === true
+      ? [packages.map(pkg => pkg.path)]
+      : linked === false
+        ? []
+        : linked.map(group =>
+            group.map(entry => normalizeRepoPath(entry, 'linked-versions')),
+          );
+  const grouped = new Set<string>();
+
+  for (const entry of linkedGroups.flat()) {
+    if (!seenPaths.has(entry)) {
+      throw new ConfigError(
+        `linked-versions: "${entry}" is not a configured package path`,
+      );
+    }
+
+    if (grouped.has(entry)) {
+      throw new ConfigError(
+        `linked-versions: package "${entry}" is part of more than one group`,
+      );
+    }
+
+    grouped.add(entry);
+  }
+
+  if (
+    parsed['separate-pull-requests'] &&
+    packages.some(pkg => !pkg.component) &&
+    packages.some(pkg => pkg.component === ROOT_KEY)
+  ) {
+    throw new ConfigError(
+      `separate-pull-requests: the component name "${ROOT_KEY}" is reserved for the package without a component`,
+    );
+  }
+
+  const labels = {
+    pending: parsed.labels.pending ?? 'relwolf: pending',
+    tagged: parsed.labels.tagged ?? 'relwolf: tagged',
+  };
+
+  if (labels.pending === labels.tagged) {
+    throw new ConfigError('labels: "pending" and "tagged" must differ');
   }
 
   return {
     ...(parsed.branch ? {branch: parsed.branch} : {}),
+    branchPrefix: parsed['branch-prefix'],
     ...(parsed['cliff-config']
       ? {cliffConfig: normalizeRepoPath(parsed['cliff-config'], 'cliff-config')}
       : {}),
     ...(parsed['pull-request-title']
       ? {pullRequestTitle: parsed['pull-request-title']}
       : {}),
+    ...(parsed['pull-request-body']
+      ? {pullRequestBody: parsed['pull-request-body']}
+      : {}),
+    ...(parsed['release-commit-message']
+      ? {releaseCommitMessage: parsed['release-commit-message']}
+      : {}),
+    releaseName: parsed['release-name'],
+    labels,
+    draft: parsed.draft,
+    assignees: parsed.assignees,
+    reviewers: parsed.reviewers,
+    minorTypes,
+    patchTypes,
+    excludePaths,
+    ...(parsed['bootstrap-sha'] ? {bootstrapSha: parsed['bootstrap-sha']} : {}),
+    separatePullRequests: parsed['separate-pull-requests'],
+    linkedGroups,
     packages,
   };
 }

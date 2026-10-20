@@ -1,3 +1,4 @@
+import type {PackageConfig} from './config.js';
 import {
   compareVersions,
   isPrerelease,
@@ -13,31 +14,36 @@ export interface ReleaseTag {
 const escapeRegex = (value: string): string =>
   value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-export function tagPrefix(component?: string): string {
-  return component ? `${component}-v` : 'v';
+type TagFormat = Pick<PackageConfig, 'tagPrefix' | 'tagSuffix'>;
+
+export function tagName(format: TagFormat, version: string): string {
+  return `${format.tagPrefix}${version}${format.tagSuffix}`;
 }
 
-export function tagName(
-  component: string | undefined,
-  version: string,
-): string {
-  return `${tagPrefix(component)}${version}`;
+/** The version a tag of the given format stands for, if any. */
+function versionOfTag(tag: string, format: TagFormat): Version | null {
+  if (
+    tag.length <= format.tagPrefix.length + format.tagSuffix.length ||
+    !tag.startsWith(format.tagPrefix) ||
+    !tag.endsWith(format.tagSuffix)
+  ) {
+    return null;
+  }
+
+  return parseVersion(
+    tag.slice(format.tagPrefix.length, tag.length - format.tagSuffix.length),
+  );
 }
 
 /** Valid release tags of one package, parsed from the list of all tags. */
 export function findReleaseTags(
   allTags: readonly string[],
-  component?: string,
+  format: TagFormat,
 ): ReleaseTag[] {
-  const prefix = tagPrefix(component);
   const result: ReleaseTag[] = [];
 
   for (const tag of allTags) {
-    if (!tag.startsWith(prefix)) {
-      continue;
-    }
-
-    const version = parseVersion(tag.slice(prefix.length));
+    const version = versionOfTag(tag, format);
 
     if (version) {
       result.push({tag, version});
@@ -65,7 +71,7 @@ export function highestStable(
 
 /** Regex (Rust/JS compatible) matching the tags of a package; with or without pre-releases. */
 export function tagPattern(
-  component: string | undefined,
+  format: TagFormat,
   includePrereleases: boolean,
 ): string {
   const core = '[0-9]+\\.[0-9]+\\.[0-9]+';
@@ -73,14 +79,34 @@ export function tagPattern(
     ? '(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?'
     : '';
 
-  return `^${escapeRegex(tagPrefix(component))}${core}${pre}$`;
+  return `^${escapeRegex(format.tagPrefix)}${core}${pre}${escapeRegex(format.tagSuffix)}$`;
+}
+
+/** The package and version a tag belongs to; `null` for anything that is not a release tag of the configuration. */
+export function parseReleaseTag(
+  tag: string,
+  packages: readonly PackageConfig[],
+): {pkg: PackageConfig; version: Version} | null {
+  // Several packages can match (e.g. "v1.0.0" and "api-v1.0.0" without separator); the longest prefix is the most specific.
+  const candidates = [...packages].sort(
+    (a, b) => b.tagPrefix.length - a.tagPrefix.length,
+  );
+
+  for (const pkg of candidates) {
+    const version = versionOfTag(tag, pkg);
+
+    if (version) {
+      return {pkg, version};
+    }
+  }
+
+  return null;
 }
 
 /** Validates a tag read from untrusted text (e.g. a merge request description). */
-export function isValidReleaseTag(tag: string): boolean {
-  const match = /^(?:[A-Za-z0-9][A-Za-z0-9._-]*?-)?v(\d+\.\d+\.\d+.*)$/.exec(
-    tag,
-  );
-
-  return match?.[1] !== undefined && parseVersion(match[1]) !== null;
+export function isValidReleaseTag(
+  tag: string,
+  packages: readonly PackageConfig[],
+): boolean {
+  return parseReleaseTag(tag, packages) !== null;
 }

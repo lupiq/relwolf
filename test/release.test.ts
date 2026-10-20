@@ -3,7 +3,7 @@ import {existsSync, mkdtempSync, readFileSync, rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {afterEach, beforeEach, describe, expect, it} from 'vitest';
-import {parseBody} from '../src/body.js';
+import {parseBody as parse} from '../src/body.js';
 import {parseConfig} from '../src/config.js';
 import {run, RunError} from '../src/release.js';
 import {FakeProvider, mergeLastRelease, TestRepo} from './helpers.js';
@@ -34,6 +34,8 @@ const exec = (
 const PACKAGE_JSON = '{\n  "name": "demo",\n  "version": "0.0.0"\n}\n';
 const NODE_CONFIG =
   'packages:\n  ".":\n    updaters:\n      - type: package-json\n';
+
+const parseBody = (body: string) => parse(body, () => true);
 
 describe('guards', () => {
   it('skips pipelines that are not for the release branch', async () => {
@@ -95,7 +97,7 @@ describe('release request', () => {
     repo.commit('docs: readme');
     const result = await exec();
 
-    expect(result.releaseRequest).toBeUndefined();
+    expect(result.releaseRequests[0]).toBeUndefined();
     expect(provider.requests).toHaveLength(0);
     expect(provider.commits).toHaveLength(0);
   });
@@ -115,7 +117,7 @@ describe('release request', () => {
     repo.commit(`Revert "feat: a"\n\nThis reverts commit ${sha}.`);
     const result = await exec();
 
-    expect(result.releaseRequest).toBeUndefined();
+    expect(result.releaseRequests[0]).toBeUndefined();
     expect(provider.requests[0]!.state).toBe('closed');
   });
 
@@ -152,7 +154,7 @@ describe('release request', () => {
 
     const result = await exec(NODE_CONFIG);
 
-    expect(result.releaseRequest).toMatchObject({id: 1, action: 'created'});
+    expect(result.releaseRequests[0]).toMatchObject({id: 1, action: 'created'});
     const [request] = provider.requests;
 
     expect(request).toMatchObject({
@@ -212,13 +214,19 @@ describe('release request', () => {
 
     const again = await exec(NODE_CONFIG);
 
-    expect(again.releaseRequest).toMatchObject({id: 1, action: 'unchanged'});
+    expect(again.releaseRequests[0]).toMatchObject({
+      id: 1,
+      action: 'unchanged',
+    });
     expect(provider.commits).toHaveLength(1);
 
     repo.commit('feat: second');
     const updated = await exec(NODE_CONFIG);
 
-    expect(updated.releaseRequest).toMatchObject({id: 1, action: 'updated'});
+    expect(updated.releaseRequests[0]).toMatchObject({
+      id: 1,
+      action: 'updated',
+    });
     expect(provider.requests).toHaveLength(1);
     expect(provider.requests[0]!.title).toBe(
       'chore(release): Create release v0.1.0',
@@ -285,7 +293,7 @@ describe('tagging merged release requests', () => {
     expect(provider.requests[0]!.labels).toEqual(['relwolf: tagged']);
     expect(provider.labels).toContain('relwolf: tagged');
     // the release commit itself is not releasable, so no new request is opened
-    expect(result.releaseRequest).toBeUndefined();
+    expect(result.releaseRequests[0]).toBeUndefined();
     expect(provider.requests).toHaveLength(1);
   });
 
@@ -330,7 +338,7 @@ describe('tagging merged release requests', () => {
     repo.commit('feat!: breaking thing');
     const result = await exec(NODE_CONFIG);
 
-    expect(result.releaseRequest).toMatchObject({action: 'created'});
+    expect(result.releaseRequests[0]).toMatchObject({action: 'created'});
     // 0.x: breaking change becomes a minor bump by default
     expect(provider.requests[1]!.title).toBe(
       'chore(release): Create release v0.2.0',
@@ -408,7 +416,7 @@ describe('pre-releases', () => {
     });
 
     // nothing releasable since the last pre-release: no new request
-    expect((await exec(config)).releaseRequest).toBeUndefined();
+    expect((await exec(config)).releaseRequests[0]).toBeUndefined();
 
     repo.commit('fix: two');
     await exec(config);
@@ -498,7 +506,7 @@ packages:
     repo.commit('fix: api fix', 'services/api/code.txt');
     const first = await exec(config);
 
-    expect(first.releaseRequest?.action).toBe('created');
+    expect(first.releaseRequests[0]?.action).toBe('created');
     expect(provider.requests[0]!.title).toBe(
       'chore(release): Create release api-v0.0.1',
     );
@@ -548,7 +556,7 @@ describe('RELWOLF_RELEASE_AS', () => {
 
     const result = await exec(undefined, {releaseAs: 'auto'});
 
-    expect(result.releaseRequest).toBeUndefined();
+    expect(result.releaseRequests[0]).toBeUndefined();
     expect(provider.requests[0]!.state).toBe('closed');
   });
 
@@ -578,7 +586,7 @@ describe('RELWOLF_RELEASE_AS', () => {
     await exec();
     const result = await exec(undefined, {releaseAs: '1.0.0'});
 
-    expect(result.releaseRequest).toBeUndefined();
+    expect(result.releaseRequests[0]).toBeUndefined();
   });
 
   it('applies to a single component in a monorepo', async () => {
@@ -590,5 +598,188 @@ describe('RELWOLF_RELEASE_AS', () => {
 
     await exec(config, {releaseAs: 'api=2.0.0'});
     expect(title()).toBe('chore(release): Create release api-v2.0.0');
+  });
+});
+
+describe('commit type rules', () => {
+  it('releases the configured patch and minor types', async () => {
+    repo.commit('feat: ignored now');
+
+    const result = await exec(
+      'patch-types: [fix, perf]\nminor-types: [improvement]',
+    );
+
+    expect(result.releaseRequests[0]).toBeUndefined();
+
+    repo.commit('perf: faster again');
+
+    await exec('patch-types: [fix, perf]\nminor-types: [improvement]');
+    expect(provider.requests[0]!.title).toMatch(/v0\.0\.1/);
+  });
+
+  it('releases breaking changes of any type', async () => {
+    repo.commit('chore!: drop node 18');
+    await exec();
+    expect(provider.requests[0]!.title).toMatch(/v0\.1\.0/);
+  });
+
+  it('ignores changes in excluded paths and before the bootstrap sha', async () => {
+    const first = repo.commit('feat: old');
+
+    repo.commit('feat: docs only', 'docs/page.md');
+    expect(
+      (await exec('exclude-paths: ["docs/**"]\nbootstrap-sha: ' + first))
+        .releaseRequests,
+    ).toEqual([]);
+
+    repo.commit('fix: real', 'src/code.txt');
+    await exec('exclude-paths: ["docs/**"]\nbootstrap-sha: ' + first);
+    expect(provider.requests[0]!.title).toMatch(/v0\.0\.1/);
+    expect(parseBody(provider.requests[0]!.body)[0]!.notes).not.toMatch(
+      /old|docs only/,
+    );
+  });
+});
+
+describe('release request settings', () => {
+  it('applies labels, branch prefix, draft, people, name and templates', async () => {
+    repo.commit('feat: a');
+    const yaml = `
+branch-prefix: bot/
+labels:
+  pending: waiting
+  tagged: done
+draft: true
+assignees: [alice]
+reviewers: [bob]
+release-name: "Release \${version}"
+release-commit-message: "chore: release \${tags}\\n\\nAutomated."
+pull-request-body: "Custom \${version}\\n\\n\${notes}\\n\\nFooter"
+`;
+
+    await exec(yaml);
+    const request = provider.requests[0]!;
+
+    expect(request.sourceBranch).toBe('bot/main');
+    expect(request.labels).toEqual(['waiting']);
+    expect(request.draft).toBe(true);
+    expect(request.assignees).toEqual(['alice']);
+    expect(request.reviewers).toEqual(['bob']);
+    expect(request.body).toMatch(/^Custom 0\.1\.0\n\n<!-- relwolf:notes/);
+    expect(request.body).toMatch(/Footer/);
+    expect(provider.commits[0]!.message).toBe(
+      'chore: release v0.1.0\n\nAutomated.',
+    );
+
+    mergeLastRelease(repo, provider, 1);
+    await exec(yaml);
+    expect(provider.releases[0]!.name).toBe('Release 0.1.0');
+    expect(request.labels).toEqual(['done']);
+  });
+});
+
+describe('tag template', () => {
+  it('uses the template for tags, discovery and releases', async () => {
+    repo.write('services/api/code.txt', 'x');
+    repo.commit('feat: init', 'services/api/code.txt');
+    const yaml =
+      'tag-template: "${component}/${version}"\npackages:\n  services/api:\n    component: api\n    updaters: []\n';
+
+    await exec(yaml);
+    mergeLastRelease(repo, provider, 1);
+    await exec(yaml);
+    expect([...provider.tags.keys()]).toEqual(['api/0.1.0']);
+
+    repo.commit('fix: later', 'services/api/code.txt');
+    await exec(yaml);
+    expect(provider.requests[1]!.title).toMatch(/api\/0\.1\.1/);
+  });
+});
+
+describe('globs in updater paths', () => {
+  it('updates every matching file and fails without a match', async () => {
+    repo.write('a/pkg.json', '{"version": "0.0.0"}\n');
+    repo.write('b/pkg.json', '{"version": "0.0.0"}\n');
+    repo.commit('feat: a');
+
+    await exec(
+      'packages:\n  ".":\n    updaters:\n      - type: package-json\n        path: "*/pkg.json"\n',
+    );
+    expect(provider.commits[0]!.files.map(f => f.path).sort()).toEqual([
+      'CHANGELOG.md',
+      'a/pkg.json',
+      'b/pkg.json',
+    ]);
+
+    await expect(
+      exec(
+        'packages:\n  ".":\n    updaters:\n      - type: package-json\n        path: "none/*.json"\n',
+      ),
+    ).rejects.toThrow(/matches no file/);
+  });
+});
+
+describe('linked versions and separate requests', () => {
+  const packages = `
+packages:
+  services/api:
+    component: api
+    updaters: []
+  services/web:
+    component: web
+    updaters: []
+`;
+
+  function setup() {
+    repo.write('services/api/a.txt', 'x');
+    repo.write('services/web/w.txt', 'x');
+    repo.commit('chore: scaffold');
+  }
+
+  it('gives linked packages one shared version, even if only one changed', async () => {
+    setup();
+    repo.commit('feat: api only', 'services/api/a.txt');
+    await exec(`linked-versions: true${packages}`);
+
+    expect(provider.requests).toHaveLength(1);
+    expect(provider.requests[0]!.title).toMatch(/api-v0\.1\.0/);
+    expect(provider.requests[0]!.title).toMatch(/web-v0\.1\.0/);
+
+    mergeLastRelease(repo, provider, 1);
+    await exec(`linked-versions: true${packages}`);
+    repo.commit('fix: web only', 'services/web/w.txt');
+    await exec(`linked-versions: true${packages}`);
+
+    expect(provider.requests[1]!.title).toMatch(/api-v0\.1\.1/);
+    expect(provider.requests[1]!.title).toMatch(/web-v0\.1\.1/);
+  });
+
+  it('links only the listed groups', async () => {
+    setup();
+    repo.commit('feat: api', 'services/api/a.txt');
+    await exec(`linked-versions:\n  - [services/api, services/web]${packages}`);
+    expect(provider.requests[0]!.title).toMatch(/web-v0\.1\.0/);
+  });
+
+  it('opens one request per package', async () => {
+    setup();
+    repo.commit('feat: api', 'services/api/a.txt');
+    repo.commit('fix: web', 'services/web/w.txt');
+    const result = await exec(`separate-pull-requests: true${packages}`);
+
+    expect(result.releaseRequests).toHaveLength(2);
+    expect(provider.requests.map(r => r.sourceBranch)).toEqual([
+      'relwolf/main/api',
+      'relwolf/main/web',
+    ]);
+    expect(provider.requests[0]!.title).toMatch(/api-v0\.1\.0/);
+    expect(provider.requests[1]!.title).toMatch(/web-v0\.0\.1/);
+
+    const again = await exec(`separate-pull-requests: true${packages}`);
+
+    expect(again.releaseRequests.map(r => r.action)).toEqual([
+      'unchanged',
+      'unchanged',
+    ]);
   });
 });

@@ -64,8 +64,12 @@ interface CommitCall {
 /** In-memory provider recording every call; merge requests live in a simple array. */
 export class FakeProvider implements Provider {
   readonly name = 'fake';
-  requests: (ReleaseRequest & {sourceBranch: string; targetBranch: string})[] =
-    [];
+  requests: (ReleaseRequest & {
+    sourceBranch: string;
+    targetBranch: string;
+    assignees?: string[];
+    reviewers?: string[];
+  })[] = [];
   commits: CommitCall[] = [];
   tags = new Map<string, string>();
   releases: {
@@ -107,6 +111,9 @@ export class FakeProvider implements Provider {
     title: string;
     body: string;
     labels: string[];
+    draft?: boolean;
+    assignees?: string[];
+    reviewers?: string[];
   }): Promise<ReleaseRequest> {
     const request = {
       id: this.nextId++,
@@ -115,6 +122,9 @@ export class FakeProvider implements Provider {
       url: `https://example.test/mr/${this.nextId - 1}`,
       state: 'open' as const,
       labels: [...options.labels],
+      draft: options.draft ?? false,
+      assignees: options.assignees ?? [],
+      reviewers: options.reviewers ?? [],
       sourceBranch: options.sourceBranch,
       targetBranch: options.targetBranch,
     };
@@ -126,9 +136,12 @@ export class FakeProvider implements Provider {
 
   async updateReleaseRequest(
     id: number,
-    options: {title: string; body: string},
+    options: {title: string; body: string; draft?: boolean},
   ): Promise<void> {
-    Object.assign(this.mustFind(id), options);
+    Object.assign(this.mustFind(id), {
+      title: options.title,
+      body: options.body,
+    });
   }
 
   async closeReleaseRequest(id: number): Promise<void> {

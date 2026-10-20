@@ -14,7 +14,7 @@ Updaters change the version in your project files in the release commit.
 | `gradle`       | a top-level `version = '…'` / `version "…"` (Groovy/Kotlin DSL) or `version=…` in `.properties` |
 | `generic`      | the first version on every line containing a marker (see below)                                 |
 
-Each updater takes an optional `path`, relative to the package. Defaults: `package.json`, `pom.xml`, `build.gradle`.
+Each updater takes an optional `path`, relative to the package. The path may be a glob (e.g. `charts/*/Chart.yaml`); every tracked file that matches is updated, and a glob without match fails the run. Defaults: `package.json`, `pom.xml`, `build.gradle`.
 
 ## Generic updater
 

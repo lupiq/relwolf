@@ -114,8 +114,73 @@ describe('GitLabProvider', () => {
       url: 'https://gl/mr/7',
       state: 'open',
       labels: ['relwolf: pending'],
+      draft: false,
       mergeSha: 'headsha',
     });
+  });
+
+  it('strips the draft prefix and keeps drafts on update', async () => {
+    const {provider, calls} = make(() => ({
+      json: [gitlabMr({title: 'Draft: t'})],
+    }));
+    const found = await provider.findOpenReleaseRequest({
+      sourceBranch: 'a',
+      targetBranch: 'b',
+    });
+
+    expect(found).toMatchObject({title: 't', draft: true});
+
+    await provider.updateReleaseRequest(7, {
+      title: 't2',
+      body: 'b',
+      draft: true,
+    });
+    expect(calls.at(-1)!.body).toMatchObject({title: 'Draft: t2'});
+  });
+
+  it('creates draft merge requests with assignees and reviewers by username', async () => {
+    const {provider, calls} = make(call =>
+      call.url.pathname.endsWith('/users')
+        ? {
+            json: [
+              {id: call.url.searchParams.get('username') === 'bob' ? 2 : 1},
+            ],
+          }
+        : {status: 201, json: gitlabMr()},
+    );
+
+    await provider.createReleaseRequest({
+      sourceBranch: 's',
+      targetBranch: 'main',
+      title: 'T',
+      body: 'B',
+      labels: [],
+      draft: true,
+      assignees: ['alice'],
+      reviewers: ['bob'],
+    });
+    expect(calls.at(-1)!.body).toMatchObject({
+      title: 'Draft: T',
+      assignee_ids: [1],
+      reviewer_ids: [2],
+    });
+  });
+
+  it('fails for unknown users', async () => {
+    const {provider} = make(() => ({json: []}));
+
+    await expect(
+      provider.createReleaseRequest({
+        sourceBranch: 's',
+        targetBranch: 'main',
+        title: 'T',
+        body: 'B',
+        labels: [],
+        draft: false,
+        assignees: ['ghost'],
+        reviewers: [],
+      }),
+    ).rejects.toThrow(/ghost/);
   });
 
   it('returns null when no merge request is open', async () => {
@@ -175,6 +240,9 @@ describe('GitLabProvider', () => {
       title: 'T',
       body: 'B',
       labels: ['relwolf: pending'],
+      draft: false,
+      assignees: [],
+      reviewers: [],
     });
 
     expect(created.id).toBe(7);
@@ -422,6 +490,9 @@ describe('GitHubProvider', () => {
       title: 'T',
       body: 'B',
       labels: ['relwolf: pending'],
+      draft: false,
+      assignees: [],
+      reviewers: [],
     });
 
     expect(created.labels).toEqual(['relwolf: pending']);
@@ -430,6 +501,7 @@ describe('GitHubProvider', () => {
       head: 'relwolf/main',
       base: 'main',
       body: 'B',
+      draft: false,
     });
     expect(calls[1]!.url.pathname).toBe('/repos/lupiq/relwolf/issues/3/labels');
     expect(calls[1]!.body).toEqual({labels: ['relwolf: pending']});

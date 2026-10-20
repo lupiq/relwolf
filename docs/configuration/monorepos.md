@@ -26,3 +26,20 @@ packages:
 
 With [`RELWOLF_RELEASE_AS`](/guide/release-as) use `component=version`, for example `api=2.0.0`. If every package has a
 component, a bare version is an error.
+
+## Linked versions
+
+`linked-versions: true` makes all packages share one version: the highest version any package needs. Packages without
+changes are released as well. Alternatively list groups of package paths:
+
+```yaml [relwolf.yaml]
+linked-versions:
+  - [services/api, services/web]
+```
+
+A package can be in one group only, and a group needs at least two packages.
+
+## Separate release requests
+
+With `separate-pull-requests: true` every package (or linked group) gets its own release request on the branch
+`<branch-prefix><branch>/<component>`. The package without a component uses `root`, so that name is reserved.

@@ -39,9 +39,9 @@ describe('GitLab release flow', () => {
 
     const created = await sandbox.runRelwolf(branch);
 
-    expect(created.releaseRequest?.action).toBe('created');
+    expect(created.releaseRequests[0]?.action).toBe('created');
 
-    const mr = await sandbox.mergeRequest(created.releaseRequest!.id);
+    const mr = await sandbox.mergeRequest(created.releaseRequests[0]!.id);
 
     expect(mr).toMatchObject({
       title: 'chore(release): Create release v0.1.0',
@@ -54,7 +54,7 @@ describe('GitLab release flow', () => {
       await sandbox.fileContent(`relwolf/${branch}`, 'CHANGELOG.md'),
     ).toContain('Add search');
 
-    expect((await sandbox.runRelwolf(branch)).releaseRequest?.action).toBe(
+    expect((await sandbox.runRelwolf(branch)).releaseRequests[0]?.action).toBe(
       'unchanged',
     );
 
@@ -63,11 +63,11 @@ describe('GitLab release flow', () => {
     });
     const updated = await sandbox.runRelwolf(branch);
 
-    expect(updated.releaseRequest).toMatchObject({
-      id: created.releaseRequest!.id,
+    expect(updated.releaseRequests[0]).toMatchObject({
+      id: created.releaseRequests[0]!.id,
       action: 'updated',
     });
-    const after = await sandbox.mergeRequest(created.releaseRequest!.id);
+    const after = await sandbox.mergeRequest(created.releaseRequests[0]!.id);
 
     expect(after.title).toBe('chore(release): Create release v0.1.0');
     expect(after.description).toContain('Handle empty input');
@@ -77,23 +77,23 @@ describe('GitLab release flow', () => {
     const branch = await newBranch();
 
     await sandbox.commit(branch, 'feat: Add search', {'src/search.txt': 'a'});
-    const {releaseRequest} = await sandbox.runRelwolf(branch);
+    const {releaseRequests} = await sandbox.runRelwolf(branch);
 
-    await sandbox.merge(releaseRequest!.id);
+    await sandbox.merge(releaseRequests[0]!.id);
 
     const result = await sandbox.runRelwolf(branch);
 
     expect(result.tagged).toEqual(['v0.1.0']);
     expect(await sandbox.tagExists('v0.1.0')).toBe(true);
     expect(await sandbox.releaseDescription('v0.1.0')).toContain('Add search');
-    expect((await sandbox.mergeRequest(releaseRequest!.id)).labels).toContain(
-      'relwolf: tagged',
-    );
+    expect(
+      (await sandbox.mergeRequest(releaseRequests[0]!.id)).labels,
+    ).toContain('relwolf: tagged');
 
     const again = await sandbox.runRelwolf(branch);
 
     expect(again.tagged).toEqual([]);
-    expect(again.releaseRequest).toBeUndefined();
+    expect(again.releaseRequests[0]).toBeUndefined();
   });
 
   it('releases the packages of a monorepo independently', async () => {
@@ -121,8 +121,8 @@ packages:
       'packages/web/layout.txt': 'a',
     });
 
-    const {releaseRequest} = await sandbox.runRelwolf(branch, config);
-    const mr = await sandbox.mergeRequest(releaseRequest!.id);
+    const {releaseRequests} = await sandbox.runRelwolf(branch, config);
+    const mr = await sandbox.mergeRequest(releaseRequests[0]!.id);
 
     expect(mr.title).toBe(
       'chore(release): Create release api-v0.1.0, web-v0.0.1',
@@ -142,7 +142,7 @@ packages:
       ),
     ).toContain('"version": "0.0.1"');
 
-    await sandbox.merge(releaseRequest!.id);
+    await sandbox.merge(releaseRequests[0]!.id);
     const result = await sandbox.runRelwolf(branch, config);
 
     expect(result.tagged.sort()).toEqual(['api-v0.1.0', 'web-v0.0.1']);
@@ -162,10 +162,10 @@ packages:
 
     const first = await sandbox.runRelwolf(branch, config);
 
-    expect((await sandbox.mergeRequest(first.releaseRequest!.id)).title).toBe(
-      'chore(release): Create release v0.1.0-beta.1',
-    );
-    await sandbox.merge(first.releaseRequest!.id);
+    expect(
+      (await sandbox.mergeRequest(first.releaseRequests[0]!.id)).title,
+    ).toBe('chore(release): Create release v0.1.0-beta.1');
+    await sandbox.merge(first.releaseRequests[0]!.id);
     expect((await sandbox.runRelwolf(branch, config)).tagged).toEqual([
       'v0.1.0-beta.1',
     ]);
@@ -178,9 +178,9 @@ packages:
     });
     const second = await sandbox.runRelwolf(branch, config);
 
-    expect((await sandbox.mergeRequest(second.releaseRequest!.id)).title).toBe(
-      'chore(release): Create release v0.1.0-beta.2',
-    );
+    expect(
+      (await sandbox.mergeRequest(second.releaseRequests[0]!.id)).title,
+    ).toBe('chore(release): Create release v0.1.0-beta.2');
   });
 
   it('closes the release merge request when its only commit is reverted', async () => {
@@ -188,9 +188,9 @@ packages:
     const sha = await sandbox.commit(branch, 'feat: Add search', {
       'src/search.txt': 'a',
     });
-    const {releaseRequest} = await sandbox.runRelwolf(branch);
+    const {releaseRequests} = await sandbox.runRelwolf(branch);
 
-    expect((await sandbox.mergeRequest(releaseRequest!.id)).state).toBe(
+    expect((await sandbox.mergeRequest(releaseRequests[0]!.id)).state).toBe(
       'opened',
     );
 
@@ -201,8 +201,8 @@ packages:
     );
     const result = await sandbox.runRelwolf(branch);
 
-    expect(result.releaseRequest).toBeUndefined();
-    expect((await sandbox.mergeRequest(releaseRequest!.id)).state).toBe(
+    expect(result.releaseRequests[0]).toBeUndefined();
+    expect((await sandbox.mergeRequest(releaseRequests[0]!.id)).state).toBe(
       'closed',
     );
   });

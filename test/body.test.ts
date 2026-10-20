@@ -1,5 +1,7 @@
 import {describe, expect, it} from 'vitest';
-import {parseBody, renderBody, renderTitle} from '../src/body.js';
+import {parseBody as parse, renderBody, renderTitle} from '../src/body.js';
+
+const parseBody = (body: string) => parse(body, () => true);
 
 describe('release request body', () => {
   const entries = [
@@ -49,7 +51,7 @@ describe('release request body', () => {
     const body =
       '<!-- relwolf:notes tag="main" prerelease="false" -->\nx\n<!-- /relwolf:notes -->';
 
-    expect(parseBody(body)).toEqual([]);
+    expect(parse(body, tag => /^v\d/.test(tag))).toEqual([]);
   });
 
   it('renders titles that the default git-cliff config skips', () => {
