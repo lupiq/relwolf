@@ -1,0 +1,34 @@
+name: E2E
+
+# Runs the real release flow against a sandbox project on gitlab.com (see e2e/).
+# Needs the secret GITLAB_E2E_TOKEN and GITLAB_E2E_PROJECT_ID (secret or variable).
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+# The scenarios share one GitLab project, so only one run may use it at a time.
+concurrency:
+  group: e2e
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  gitlab:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:e2e
+        env:
+          GITLAB_E2E_TOKEN: ${{ secrets.GITLAB_E2E_TOKEN }}
+          GITLAB_E2E_PROJECT_ID: ${{ secrets.GITLAB_E2E_PROJECT_ID || vars.GITLAB_E2E_PROJECT_ID }}
