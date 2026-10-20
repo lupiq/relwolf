@@ -1,3 +1,22 @@
+## [0.4.0](https://github.com/lupiq/relwolf/compare/v0.3.0...v0.4.0) - 2026-10-20
+
+### 🚀 Features
+
+- Add pagination and retries to different providers
+- Add more configuration options
+- Imrprove monorepo and synced version handling
+
+### 📚 Documentation
+
+- Remove `x-relwolf` markers from code snippets
+- Add MIT license
+
+### 🧪 Testing
+
+- Add automated E2E tests for GitLab.com integration
+- Add test reports, codecov.io and integrate badges in `README.md`
+- Improve overall test coverage
+
 ## [0.3.0](https://github.com/lupiq/relwolf/compare/v0.2.0...v0.3.0) - 2026-10-19
 
 ### 🚀 Features
