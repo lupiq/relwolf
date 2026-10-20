@@ -4,6 +4,18 @@
 
 # relwolf
 
+[![CI](https://github.com/lupiq/relwolf/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/lupiq/relwolf/actions/workflows/ci.yml)
+[![E2E (GitLab)](https://github.com/lupiq/relwolf/actions/workflows/e2e.yml/badge.svg?branch=main)](https://github.com/lupiq/relwolf/actions/workflows/e2e.yml)
+[![Coverage](https://codecov.io/gh/lupiq/relwolf/graph/badge.svg)](https://codecov.io/gh/lupiq/relwolf)
+[![Latest release](https://img.shields.io/github/v/release/lupiq/relwolf)](https://github.com/lupiq/relwolf/releases/latest)
+[![License: MIT](https://img.shields.io/github/license/lupiq/relwolf)](LICENSE)
+[![Docker image](https://img.shields.io/badge/ghcr.io-lupiq%2Frelwolf-2496ed?logo=docker&logoColor=white)](https://github.com/lupiq/relwolf/pkgs/container/relwolf)
+[![GitHub Marketplace](https://img.shields.io/badge/Marketplace-relwolf%20Release%20Bot-2088ff?logo=github)](https://github.com/marketplace/actions/relwolf-release-bot)
+[![Documentation](https://img.shields.io/badge/docs-relwolf.lupiq.io-2bb3a3)](https://relwolf.lupiq.io)
+[![Node.js](https://img.shields.io/badge/node-%E2%89%A5%2024-5fa04e?logo=nodedotjs&logoColor=white)](package.json)
+[![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-fe5196?logo=conventionalcommits&logoColor=white)](https://www.conventionalcommits.org/)
+[![Renovate](https://img.shields.io/badge/renovate-enabled-1a1f6c?logo=renovate&logoColor=white)](https://docs.renovatebot.com/)
+
 A release bot for **GitLab** and **GitHub** that follows the workflow of Google's
 [release-please](https://github.com/googleapis/release-please): it determines the next
 [SemVer](https://semver.org/) version from [Conventional Commits](https://www.conventionalcommits.org/), opens a

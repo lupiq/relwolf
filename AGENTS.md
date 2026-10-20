@@ -83,7 +83,8 @@ test in the matching file; `pnpm typecheck`, `pnpm lint`, `pnpm format:check` an
 (typescript-eslint `strictTypeChecked` + `stylisticTypeChecked`; `no-unsafe-*` relaxed for `src/providers` (untyped
 REST JSON) and several rules for `test/`). typescript-eslint does not support TS 7 yet, so `typescript` is aliased to
 `@typescript/typescript6` and TS 7 is installed as `@typescript/native` (provides `tsc`); drop the alias once
-typescript-eslint supports TS ≥ 7.1. ESLint loads the TS config via `--flag unstable_native_nodejs_ts_config`. Coverage: `pnpm test:coverage`.
+typescript-eslint supports TS ≥ 7.1. ESLint loads the TS config via `--flag unstable_native_nodejs_ts_config`. Coverage: `pnpm test:coverage` (CI renders `coverage/coverage-summary.json` as a job-summary table via
+`scripts/coverage-summary.ts`).
 
 `pnpm test:e2e` (`vitest.e2e.config.ts`, folder `e2e/`) runs the real release flow against the sandbox project
 `lupiq/relwolf-e2e-tests` on gitlab.com: `GitLabSandbox` (`e2e/gitlab-sandbox.ts`) creates a branch `e2e-<id>` per
@@ -91,7 +92,8 @@ scenario, commits through the API, runs `run()` on a fresh clone, merges the rel
 and `e2e-*` branches afterwards. Scenarios: MR create/update, tag + release, monorepo, pre-release, revert closes
 the MR. Needs `GITLAB_E2E_TOKEN` (service account, Developer, scope `api`) and `GITLAB_E2E_PROJECT_ID` (locally in
 the git-ignored `.env.e2e`; optional `GITLAB_E2E_API_URL`). `E2E_KEEP=1` skips the cleanup, `E2E_DEBUG=1` logs every
-request. Not part of `pnpm test`; CI: `.github/workflows/e2e.yml` (manual and on every push to `main`). The sandbox
+request. The run writes `e2e-report.json` (git-ignored); in CI `e2e/summary.ts` turns it into the job-summary table and
+the `github-actions` reporter adds failure annotations. Not part of `pnpm test`; CI: `.github/workflows/e2e.yml` (manual and on every push to `main`). The sandbox
 `main` needs one initial commit made by a human (Developers cannot push to the empty protected branch).
 
 Git hooks (Husky, `.husky/`, set up by the `prepare` script): `pre-commit` = lint-staged (`.lintstagedrc.json`,

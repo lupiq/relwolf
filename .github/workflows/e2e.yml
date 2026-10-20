@@ -28,7 +28,11 @@ jobs:
           node-version: lts/*
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm test:e2e
+      - name: Run E2E tests
+        run: pnpm test:e2e
         env:
           GITLAB_E2E_TOKEN: ${{ secrets.GITLAB_E2E_TOKEN }}
           GITLAB_E2E_PROJECT_ID: ${{ secrets.GITLAB_E2E_PROJECT_ID || vars.GITLAB_E2E_PROJECT_ID }}
+      - name: Job summary
+        if: always()
+        run: node e2e/summary.ts
