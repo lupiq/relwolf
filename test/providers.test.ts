@@ -478,6 +478,39 @@ describe('GitHubProvider', () => {
     });
   });
 
+  it('creates draft pull requests with assignees and reviewers', async () => {
+    const {provider, calls} = make(call =>
+      call.url.pathname.endsWith('/pulls')
+        ? {status: 201, json: ghPull({labels: [], draft: true})}
+        : {json: {}},
+    );
+    const created = await provider.createReleaseRequest({
+      sourceBranch: 's',
+      targetBranch: 'main',
+      title: 'T',
+      body: 'B',
+      labels: [],
+      draft: true,
+      assignees: ['alice'],
+      reviewers: ['bob'],
+    });
+
+    expect(created.draft).toBe(true);
+    expect(calls[0]!.body).toMatchObject({draft: true});
+    expect(calls.map(c => c.url.pathname)).toEqual(
+      expect.arrayContaining([
+        '/repos/lupiq/relwolf/issues/3/assignees',
+        '/repos/lupiq/relwolf/pulls/3/requested_reviewers',
+      ]),
+    );
+    expect(
+      calls.find(c => c.url.pathname.endsWith('/assignees'))!.body,
+    ).toEqual({assignees: ['alice']});
+    expect(
+      calls.find(c => c.url.pathname.endsWith('/requested_reviewers'))!.body,
+    ).toEqual({reviewers: ['bob']});
+  });
+
   it('creates pull requests and then attaches labels', async () => {
     const {provider, calls} = make(call =>
       call.url.pathname.endsWith('/pulls')

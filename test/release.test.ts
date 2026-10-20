@@ -910,3 +910,40 @@ packages:
     ).toMatch(/Nothing here\./);
   });
 });
+
+describe('release request details', () => {
+  it('restores a missing pending label and keeps the draft state', async () => {
+    repo.commit('fix: a');
+    await exec('draft: true');
+    provider.requests[0]!.labels = [];
+    repo.commit('feat: b');
+    await exec('draft: true');
+
+    expect(provider.requests[0]!.labels).toEqual(['relwolf: pending']);
+    expect(provider.requests[0]!.draft).toBe(true);
+  });
+
+  it('opens one request for a linked group in separate mode', async () => {
+    repo.write('a/x.txt', 'x');
+    repo.write('b/x.txt', 'x');
+    repo.write('c/x.txt', 'x');
+    repo.commit('chore: scaffold');
+    repo.commit('feat: a', 'a/x.txt');
+    repo.commit('fix: c', 'c/x.txt');
+    await exec(`
+separate-pull-requests: true
+linked-versions:
+  - [a, b]
+packages:
+  a: {component: a}
+  b: {component: b}
+  c: {component: c}
+`);
+
+    expect(provider.requests.map(r => r.sourceBranch)).toEqual([
+      'relwolf/main/a+b',
+      'relwolf/main/c',
+    ]);
+    expect(provider.requests[0]!.title).toMatch(/a-v0\.1\.0.*b-v0\.1\.0/);
+  });
+});

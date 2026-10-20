@@ -264,4 +264,16 @@ describe('new properties', () => {
 
     expect(config.linkedTags).toBe('single');
   });
+
+  it('rejects further invalid combinations', () => {
+    const bad = [
+      'packages:\n  a: {component: a}\n  ./a: {component: b}',
+      'linked-versions: [[a, b], [b, c]]\npackages:\n  a: {component: a}\n  b: {component: b}\n  c: {component: c}',
+      'separate-pull-requests: true\npackages:\n  ".": {}\n  x: {component: root}',
+    ];
+
+    for (const yaml of bad) {
+      expect(() => parseConfig(yaml), yaml).toThrow(ConfigError);
+    }
+  });
 });
