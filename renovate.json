@@ -32,11 +32,6 @@
       "enabled": false
     },
     {
-      "description": "Runtime dependencies end up in the image, so they trigger a patch release",
-      "matchDepTypes": ["dependencies"],
-      "semanticCommitType": "fix"
-    },
-    {
       "description": "Automerge minor and patch updates once the checks are green",
       "matchUpdateTypes": ["minor", "patch", "digest", "pin"],
       "automerge": true

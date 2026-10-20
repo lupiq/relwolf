@@ -1,5 +1,8 @@
 branch: main
 
+# Dependency updates (Renovate uses `build`) end up in the image and therefore trigger a patch release
+patch-types: [fix, build]
+
 packages:
   '.':
     updaters:
