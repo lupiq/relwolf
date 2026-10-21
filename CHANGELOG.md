@@ -1,3 +1,21 @@
+## [0.5.0](https://github.com/lupiq/relwolf/compare/v0.4.0...v0.5.0) - 2026-10-21
+
+### 🚀 Features
+
+- Add possibility to add influence the release title from the MR and add random emoji
+
+### 📚 Documentation
+
+- Improve docs about version rules
+- Add contribution and security docs
+- Reduce duplicates and add more reference links in docs
+
+### 👷 CI
+
+- Improve stability of Docker build
+- Configure relwolf and Renovate to use the `build` commit type and trigger patch releases
+- Trigger patch release for `docs` as well
+
 ## [0.4.0](https://github.com/lupiq/relwolf/compare/v0.3.0...v0.4.0) - 2026-10-20
 
 ### 🚀 Features
