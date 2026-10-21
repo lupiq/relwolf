@@ -15,12 +15,22 @@ packages:
       - type: pom-xml
 ```
 
-- Packages are versioned independently and listed together in **one** release merge request.
+- By default packages are versioned independently and listed together in **one** release merge request.
+  [Linked versions](#linked-versions) and [separate requests](#separate-release-requests) change that.
 - A package at `.` ignores changes inside other configured packages.
 - Only one package may omit `component`; every other package needs one. The component is the tag prefix
   (`api-v1.2.3`).
 - Only commits touching a package's path count for that package.
 - Updater and changelog paths are relative to the package path.
+
+## Choosing a setup
+
+| Goal                                    | Options                                        |
+| --------------------------------------- | ---------------------------------------------- |
+| Independent versions, one request       | default                                        |
+| Independent versions, one request each  | `separate-pull-requests: true`                 |
+| One shared version, one tag per package | `linked-versions: true`                        |
+| One shared version, one tag and release | `linked-versions: true`, `linked-tags: single` |
 
 ## Forcing versions per package
 
@@ -70,7 +80,8 @@ packages:
 
 - **No Gradle updater.** The version lives in the tags, not in `build.gradle`, so relwolf only writes changelogs.
 - Every module gets `CHANGELOG.md` in its own directory (`services/orders/CHANGELOG.md`). Only commits touching the module
-  appear there; a module without changes gets an empty entry.
+  appear there; a module without changes gets the
+  [`no-changes-text`](/configuration/#release-request) placeholder.
 - The root package (without `component`) produces the plain tag `v1.2.3` and a root `CHANGELOG.md` for changes outside
   the modules. axion-release ignores the component tags because they do not start with `v`.
 - To avoid one tag per module, add `linked-tags: single`: relwolf then creates only `v1.2.3` (one release with a

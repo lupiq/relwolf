@@ -20,8 +20,8 @@ commit types trigger a minor or patch release, e.g. `patch-types: [fix, build]`.
 - Before `1.0.0` a breaking change only bumps the minor version (`bump-minor-pre-major`, default `true`).
 - Without any tag the first release is calculated from `0.0.0` (`feat` → `0.1.0`, `fix` → `0.0.1`), unless
   `initial-version` is set.
-- Tags are `v1.2.3`; packages with a `component` use `<component>-v1.2.3`.
-- Only commits touching a package's path count for that package.
+- Tags are `v1.2.3` by default; the format is set by [`tag-template`](/configuration/#tags-and-release-names).
+- Only commits touching a package's path count for that package; `exclude-paths` can ignore further paths.
 - Reverted commits do not count: a `Revert "feat: a"` commit (or git's `This reverts commit <sha>` line) cancels the
   original commit since the last release. If nothing else is releasable, an open release merge request is closed.
   Both commits are also left out of the changelog.
@@ -37,5 +37,6 @@ commit types trigger a minor or patch release, e.g. `patch-types: [fix, build]`.
 | `v0.4.0` | `feat!: c` with `bump-minor-pre-major: false` | `1.0.0`      | breaking change bumps major |
 | none     | `feat: a`                                     | `0.1.0`      | computed from `0.0.0`       |
 | `v1.2.3` | `docs: a`, `chore: b`                         | none         | nothing releasable          |
+| `v1.2.3` | `build: a` with `patch-types: [fix, build]`   | `1.2.4`      | custom patch type           |
 
 Use [`RELWOLF_RELEASE_AS`](/guide/release-as) to override the computed version.

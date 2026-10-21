@@ -18,6 +18,7 @@ relwolf's hosting platform is an interface with two implementations. The provide
 | Prevent parallel runs | `resource_group: relwolf`                       | `concurrency: group: release`                        |
 | Merge method          | Fast-forward merge + Squash                     | Squash merging only                                  |
 | Force a version       | Run pipeline with variable `RELWOLF_RELEASE_AS` | Action input `release-as` (e.g. `workflow_dispatch`) |
+| Draft request         | Title prefix `Draft:`                           | Draft pull request                                   |
 | Pre-release flag      | Not available (hint ignored)                    | Releases are flagged as pre-release                  |
 | Self-managed          | Supported (`CI_API_V4_URL`)                     | GitHub Enterprise via `GITHUB_API_URL`               |
 

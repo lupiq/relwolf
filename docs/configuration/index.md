@@ -56,7 +56,7 @@ Paths of updaters and the changelog are relative to the package path. Unknown ke
 | ------------------------ | --------------- | --------------------------------------------- | ----------------------------------------------------------------------- |
 | `branch`                 | global          | CI default branch, then `main`                | Branch to release from                                                  |
 | `cliff-config`           | global          | git-cliff discovery                           | Path to a git-cliff config                                              |
-| `pull-request-title`     | global          | `chore(release): Create release ${tags}`      | Title template, see below                                               |
+| `pull-request-title`     | global          | `chore(release): Create release ${tags}`      | Title template, see [below](#title-and-commit-message)                  |
 | `patch-types`            | global          | `[fix]`                                       | Commit types that trigger a patch release                               |
 | `minor-types`            | global          | `[feat]`                                      | Commit types that trigger a minor release                               |
 | `exclude-paths`          | global          | none                                          | Globs (from the repo root) whose changes never count                    |
@@ -70,32 +70,16 @@ Paths of updaters and the changelog are relative to the package path. Unknown ke
 | `assignees`              | global          | none                                          | Usernames, set when the request is created                              |
 | `reviewers`              | global          | none                                          | Usernames, set when the request is created                              |
 | `release-commit-message` | global          | the title                                     | Commit message of the release commit                                    |
-| `pull-request-body`      | global          | built in                                      | Body template, see below                                                |
+| `pull-request-body`      | global          | built in                                      | Body template, see [Body](#body)                                        |
 | `separate-pull-requests` | global          | `false`                                       | One request per package, see [Monorepos](/configuration/monorepos)      |
 | `linked-versions`        | global          | `false`                                       | Packages sharing one version, see [Monorepos](/configuration/monorepos) |
+| `linked-tags`            | global          | `per-package`                                 | `single`: one tag and release per linked group                          |
 | `prerelease`             | global, package | none                                          | [Pre-release](/guide/pre-releases) identifier                           |
 | `bump-minor-pre-major`   | global, package | `true`                                        | Breaking changes only bump minor before `1.0.0`                         |
 | `component`              | package         | none                                          | Tag prefix, see [Monorepos](/configuration/monorepos)                   |
 | `changelog-path`         | package         | `CHANGELOG.md`                                | Changelog file, relative to the package                                 |
 | `initial-version`        | package         | computed from `0.0.0`                         | First stable version if no tag exists                                   |
 | `updaters`               | package         | none                                          | [Files to update](/configuration/updaters)                              |
-
-## Release request title
-
-`pull-request-title` sets the title of the release merge (pull) request. The title is also used as the message of the
-release commit.
-
-| Placeholder  | Replaced with                                                                               |
-| ------------ | ------------------------------------------------------------------------------------------- |
-| `${tags}`    | All tags of the release, comma separated, e.g. `v1.2.3` or `v1.2.3, api-v0.4.0`             |
-| `${version}` | The bare version (`1.2.3`) if a single package is released, otherwise the same as `${tags}` |
-
-```yaml [relwolf.yaml]
-pull-request-title: 'chore: release ${version}'
-```
-
-Unknown placeholders fail the run. Keep a type that does not bump the version (`chore`, `docs`, …); a `feat` or `fix`
-title would count as a releasable commit once the release is squash-merged.
 
 ## Commit types
 
@@ -121,7 +105,24 @@ Usernames are resolved by the provider; unknown users fail the run.
 `no-changes-text` is written below the changelog entry and into the release notes of a package that was only released
 to follow the version of linked packages. Set it to an empty string to leave such entries as git-cliff renders them.
 
-`release-commit-message` accepts the same placeholders as the title and may span several lines.
+### Title and commit message
+
+`pull-request-title` sets the title of the release request. It is also the message of the release commit, unless
+`release-commit-message` is set (same placeholders, may span several lines).
+
+| Placeholder  | Replaced with                                                                               |
+| ------------ | ------------------------------------------------------------------------------------------- |
+| `${tags}`    | All tags of the release, comma separated, e.g. `v1.2.3` or `v1.2.3, api-v0.4.0`             |
+| `${version}` | The bare version (`1.2.3`) if a single package is released, otherwise the same as `${tags}` |
+
+```yaml [relwolf.yaml]
+pull-request-title: 'chore: release ${version}'
+```
+
+Unknown placeholders fail the run. Keep a type that does not bump the version (`chore`, `docs`, …); a `feat` or `fix`
+title would count as a releasable commit once the release is squash-merged.
+
+### Body
 
 `pull-request-body` is a complete template with the placeholders `${tags}`, `${version}`, `${releases}` (bullet list),
 `${hint}` (note about `RELWOLF_RELEASE_AS`, otherwise empty) and `${notes}` (the release notes, required exactly once).

@@ -13,7 +13,9 @@ relwolf needs the full history and all tags. Set `GIT_DEPTH: 0` (GitLab) or `fet
 
 - The pipeline is not a branch pipeline for the default branch (merge request, tag or other branch pipelines are
   skipped).
-- No releasable commit (`feat`, `fix` or breaking change) since the last tag.
+- No releasable commit since the last tag. By default these are `feat`, `fix` and breaking changes; see
+  [commit types](/configuration/#commit-types) and [Version rules](/guide/version-rules).
+- The commits only touch paths in `exclude-paths` or another package.
 - A [version request](/guide/release-as) was set but there is no new commit since the last tag.
 
 ## The tag is missing after merging
@@ -31,4 +33,5 @@ Events created with `GITHUB_TOKEN` do not trigger workflows. Use a personal acce
 
 ## The release commit shows up in the changelog
 
-Make sure your `cliff.toml` skips `chore` commits, see [Changelog](/configuration/changelog).
+Make sure your `cliff.toml` skips `chore` commits (or whatever type your `pull-request-title` uses), see
+[Changelog](/configuration/changelog).

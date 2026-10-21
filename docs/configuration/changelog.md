@@ -13,10 +13,12 @@ purely git-cliff configuration.
   repository root on its own.
 - relwolf adds `--tag`, `--tag-pattern`, `--include-path`/`--exclude-path` and the commit range, and prepends the entry
   to the changelog file.
+- Packages that were only bumped to follow linked versions get the [`no-changes-text`](/configuration/#release-request)
+  placeholder instead of an empty entry.
 - Use `RELWOLF_GIT_CLIFF` to run your own git-cliff executable instead of the bundled one.
 
 ::: warning
-Release merge requests are titled `chore(release): Create release …`. Make sure your `cliff.toml` does not list that commit
+Release merge requests are titled `chore(release): Create release …` (see `pull-request-title`). Make sure your `cliff.toml` does not list that commit
 in the changelog (relwolf's own `cliff.toml` skips all `chore` commits).
 :::
 

@@ -25,6 +25,9 @@ relwolf
 - force-pushes a single commit to `relwolf/<branch>` through the API (the working tree is never modified),
 - creates or updates the merge request `chore(release): Create release v1.2.3` labelled `relwolf: pending`.
 
+Branch prefix, labels, title and body are [configurable](/configuration/#release-request). With several packages they
+share one request by default; see [Monorepos](/configuration/monorepos) for separate requests and linked versions.
+
 ## Skipped pipelines
 
 Pipelines that are not branch pipelines for the default branch (merge request pipelines, tag pipelines, other branches)

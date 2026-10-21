@@ -82,5 +82,7 @@ Add a [`relwolf.yaml`](/configuration/) to the repository root.
 
 ## What you will see
 
+With the default settings:
+
 - A pull request `chore(release): Create release v1.2.3` from `relwolf/main`, labelled `relwolf: pending`.
 - After the merge: the tag `v1.2.3`, a GitHub release with the changelog entry and the label `relwolf: tagged`.
