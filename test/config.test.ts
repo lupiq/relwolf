@@ -276,4 +276,17 @@ describe('new properties', () => {
       expect(() => parseConfig(yaml), yaml).toThrow(ConfigError);
     }
   });
+
+  it('enables release emojis only with a body that has the release block', () => {
+    expect(parseConfig(undefined).releaseEmoji).toBe(false);
+    expect(parseConfig('release-emoji: true').releaseEmoji).toBe(true);
+    expect(() =>
+      parseConfig('release-emoji: true\npull-request-body: "${notes}"'),
+    ).toThrow(/release-emoji requires/);
+    expect(
+      parseConfig(
+        'release-emoji: true\npull-request-body: "${release}${notes}"',
+      ).releaseEmoji,
+    ).toBe(true);
+  });
 });

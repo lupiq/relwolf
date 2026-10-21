@@ -54,6 +54,7 @@ const BODY_PLACEHOLDERS = [
   '${version}',
   '${releases}',
   '${hint}',
+  '${release}',
   '${notes}',
 ] as const;
 const RELEASE_NAME_PLACEHOLDERS = ['${tag}', '${version}', '${component}'];
@@ -98,7 +99,7 @@ const configSchema = z.strictObject({
     .min(1)
     .refine(
       placeholders(BODY_PLACEHOLDERS),
-      'only ${tags}, ${version}, ${releases}, ${hint} and ${notes} are supported',
+      'only ${tags}, ${version}, ${releases}, ${hint}, ${release} and ${notes} are supported',
     )
     .refine(
       value => count(value, '${notes}') === 1,
@@ -145,6 +146,7 @@ const configSchema = z.strictObject({
     .strictObject({pending: label.optional(), tagged: label.optional()})
     .default({}),
   'draft': z.boolean().default(false),
+  'release-emoji': z.boolean().default(false),
   'no-changes-text': z
     .string()
     .default('No changes, version bumped to stay in sync.'),
@@ -204,6 +206,8 @@ export interface Config {
   releaseName: string;
   labels: {pending: string; tagged: string};
   draft: boolean;
+  /** Prefix the default release title with a random emoji. */
+  releaseEmoji: boolean;
   /** Text for the changelog and release notes of a package without changes; empty to add nothing. */
   noChangesText: string;
   assignees: string[];
@@ -488,6 +492,16 @@ export function parseConfig(source: string | undefined): Config {
     throw new ConfigError('labels: "pending" and "tagged" must differ');
   }
 
+  if (
+    parsed['release-emoji'] &&
+    parsed['pull-request-body'] &&
+    !parsed['pull-request-body'].includes('${release}')
+  ) {
+    throw new ConfigError(
+      'release-emoji requires ${release} in pull-request-body',
+    );
+  }
+
   return {
     ...(parsed.branch ? {branch: parsed.branch} : {}),
     branchPrefix: parsed['branch-prefix'],
@@ -506,6 +520,7 @@ export function parseConfig(source: string | undefined): Config {
     releaseName: parsed['release-name'],
     labels,
     draft: parsed.draft,
+    releaseEmoji: parsed['release-emoji'],
     noChangesText: parsed['no-changes-text'],
     assignees: parsed.assignees,
     reviewers: parsed.reviewers,

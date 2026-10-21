@@ -42,6 +42,7 @@ export const DEFAULT_BODY_TEMPLATE = [
   '🐺 **relwolf** prepared the following release(s). Merging this request tags and publishes them.',
   '${releases}',
   '${hint}',
+  '${release}',
   '---',
   '${notes}',
   '---',
@@ -50,8 +51,58 @@ export const DEFAULT_BODY_TEMPLATE = [
 const HINT =
   'ℹ️ The version was set manually with `RELWOLF_RELEASE_AS`. Run relwolf with `RELWOLF_RELEASE_AS=auto` to return to automatic versioning.';
 
+/** Title and text for the created releases, editable in the release request. */
+export interface ReleaseDetails {
+  /** Release name template (`${tag}`, `${version}`, `${component}`), a single line. */
+  title: string;
+  /** Raw Markdown including HTML comments, see `releaseText`. */
+  text: string;
+}
+
+export const DEFAULT_RELEASE_TEXT =
+  '<!-- Optional Markdown text, added above the changelog of every release. -->';
+
+const TITLE_PATTERN =
+  /<!-- relwolf:title -->\r?\n([\s\S]*?)\r?\n<!-- \/relwolf:title -->/;
+
+const TEXT_PATTERN =
+  /<!-- relwolf:text -->\r?\n([\s\S]*?)\r?\n<!-- \/relwolf:text -->/;
+
+const COMMENT_PATTERN = /<!--[\s\S]*?-->/g;
+
+function releaseBlock(details: ReleaseDetails): string {
+  return [
+    '**Release title** (for every release; placeholders `${tag}`, `${version}` and `${component}`)',
+    `<!-- relwolf:title -->\n${details.title}\n<!-- /relwolf:title -->`,
+    '**Release text** (Markdown, added above the changelog of every release)',
+    `<!-- relwolf:text -->\n${details.text}\n<!-- /relwolf:text -->`,
+  ].join('\n\n');
+}
+
+/** Title and text as edited in the release request; a part is undefined if missing or blank. */
+export function parseDetails(body: string): Partial<ReleaseDetails> {
+  const title = TITLE_PATTERN.exec(body)?.[1]
+    ?.replace(COMMENT_PATTERN, '')
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .find(line => line !== '');
+  const text = TEXT_PATTERN.exec(body)?.[1]?.trim();
+
+  return {
+    ...(title ? {title} : {}),
+    ...(text !== undefined ? {text} : {}),
+  };
+}
+
+/** The visible part of the release text: without HTML comments. */
+export function releaseText(raw: string): string {
+  return raw.replace(COMMENT_PATTERN, '').trim();
+}
+
 export interface RenderBodyOptions {
-  /** Template with the placeholders `${tags}`, `${version}`, `${releases}`, `${hint}` and `${notes}`. */
+  /** Release title and text for the `${release}` placeholder. */
+  details?: ReleaseDetails | undefined;
+  /** Template with the placeholders `${tags}`, `${version}`, `${releases}`, `${hint}`, `${release}` and `${notes}`. */
   template?: string | undefined;
   /** Bare versions, for the `${version}` placeholder. */
   versions?: readonly string[] | undefined;
@@ -89,7 +140,10 @@ export function renderBody(
       .replaceAll('${version}', () => version)
       .replaceAll('${releases}', () => list)
       .replaceAll('${hint}', () => (overrides.length > 0 ? HINT : ''))
-      .replace(/\n{3,}/g, '\n\n');
+      .replace(/\n{3,}/g, '\n\n')
+      .replaceAll('${release}', () =>
+        options.details ? releaseBlock(options.details) : '',
+      );
   const [before = '', after = ''] = (
     options.template ?? DEFAULT_BODY_TEMPLATE
   ).split('${notes}');

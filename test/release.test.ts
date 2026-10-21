@@ -947,3 +947,81 @@ packages:
     expect(provider.requests[0]!.title).toMatch(/a-v0\.1\.0.*b-v0\.1\.0/);
   });
 });
+
+describe('release title and text', () => {
+  const edit = (title: string, text: string) => {
+    const request = provider.requests[0]!;
+
+    request.body = request.body
+      .replace(
+        /(<!-- relwolf:title -->\n)[\s\S]*?(\n<!-- \/relwolf:title -->)/,
+        (_, a: string, b: string) => `${a}${title}${b}`,
+      )
+      .replace(
+        /(<!-- relwolf:text -->\n)[\s\S]*?(\n<!-- \/relwolf:text -->)/,
+        (_, a: string, b: string) => `${a}${text}${b}`,
+      );
+  };
+
+  it('puts the default title and an empty text into the request', async () => {
+    repo.commit('feat: a');
+    await exec();
+
+    const {body} = provider.requests[0]!;
+
+    expect(body).toMatch(/<!-- relwolf:title -->\n\$\{tag\}\n/);
+    expect(body).toMatch(/<!-- relwolf:text -->\n<!--[^\n]*-->\n/);
+
+    mergeLastRelease(repo, provider, 1);
+    await exec();
+    expect(provider.releases[0]!.name).toBe('v0.1.0');
+    expect(provider.releases[0]!.body).not.toMatch(/Optional Markdown/);
+  });
+
+  it('uses the edited title and text and keeps them on updates', async () => {
+    repo.commit('feat: a');
+    await exec();
+    edit('Big ${version} 🎉', 'Some **intro**');
+    repo.commit('fix: b');
+    await exec();
+
+    const {body} = provider.requests[0]!;
+
+    expect(body).toMatch(/Big \$\{version\} 🎉/);
+    expect(body).toMatch(/Some \*\*intro\*\*/);
+    expect(body).toMatch(/- fix: b|B/);
+
+    mergeLastRelease(repo, provider, 1);
+    await exec();
+    expect(provider.releases[0]!.name).toBe('Big 0.1.0 🎉');
+    expect(provider.releases[0]!.body).toMatch(/^Some \*\*intro\*\*\n\n/);
+  });
+
+  it('adds a random emoji once and keeps it stable', async () => {
+    const yaml = 'release-emoji: true\nrelease-name: "Release ${tag}"';
+
+    repo.commit('feat: a');
+    await run({
+      cwd: repo.dir,
+      config: parseConfig(yaml),
+      provider,
+      currentBranch: 'main',
+      random: () => 0,
+    });
+    expect(provider.requests[0]!.body).toMatch(/\n🚀 Release \$\{tag\}\n/);
+
+    repo.commit('fix: b');
+    await run({
+      cwd: repo.dir,
+      config: parseConfig(yaml),
+      provider,
+      currentBranch: 'main',
+      random: () => 0.5,
+    });
+    expect(provider.requests[0]!.body).toMatch(/\n🚀 Release \$\{tag\}\n/);
+
+    mergeLastRelease(repo, provider, 1);
+    await exec(yaml);
+    expect(provider.releases[0]!.name).toBe('🚀 Release v0.1.0');
+  });
+});

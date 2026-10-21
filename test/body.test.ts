@@ -1,6 +1,8 @@
 import {describe, expect, it} from 'vitest';
 import {
   parseBody as parse,
+  parseDetails,
+  releaseText,
   renderBody,
   renderReleaseName,
   renderTitle,
@@ -122,5 +124,53 @@ describe('body template and release name', () => {
     expect(renderReleaseName('x${component}', {tag: 't', version: '1'})).toBe(
       'x',
     );
+  });
+});
+
+describe('release details', () => {
+  const entry = {tag: 'v1.0.0', prerelease: false, notes: 'n'};
+  const details = {title: '🚀 ${tag}', text: '<!-- hint -->'};
+
+  it('renders the editable block where ${release} is placed', () => {
+    const body = renderBody([entry], 'abc', [], {
+      template: 'A\n\n${release}\n\n${notes}',
+      details,
+    });
+
+    expect(body).toMatch(
+      /<!-- relwolf:title -->\n🚀 \$\{tag\}\n<!-- \/relwolf:title -->/,
+    );
+    expect(parseDetails(body)).toEqual({
+      title: '🚀 ${tag}',
+      text: '<!-- hint -->',
+    });
+  });
+
+  it('leaves the block out without details or placeholder', () => {
+    expect(
+      renderBody([entry], 'abc', [], {template: '${release}\n\n${notes}'}),
+    ).not.toMatch(/relwolf:title/);
+    expect(
+      renderBody([entry], 'abc', [], {template: '${notes}', details}),
+    ).not.toMatch(/relwolf:title/);
+  });
+
+  it('parses edited values', () => {
+    const body =
+      '<!-- relwolf:title -->\n<!-- c -->\n\nBig bang  \nsecond\n<!-- /relwolf:title -->\n\n<!-- relwolf:text -->\nHello **world**\n<!-- /relwolf:text -->';
+
+    expect(parseDetails(body)).toEqual({
+      title: 'Big bang',
+      text: 'Hello **world**',
+    });
+    expect(parseDetails('nothing here')).toEqual({});
+    expect(
+      parseDetails('<!-- relwolf:title -->\n \n<!-- /relwolf:title -->'),
+    ).toEqual({});
+  });
+
+  it('strips comments from the release text', () => {
+    expect(releaseText('<!-- a -->\nText <!-- b -->\n')).toBe('Text');
+    expect(releaseText('<!-- only a hint -->')).toBe('');
   });
 });

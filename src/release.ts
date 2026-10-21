@@ -1,8 +1,11 @@
 import {readFile} from 'node:fs/promises';
 import path from 'node:path';
 import {
+  DEFAULT_RELEASE_TEXT,
   parseBody,
+  parseDetails,
   parseOverrides,
+  releaseText,
   renderBody,
   renderReleaseName,
   renderTitle,
@@ -20,6 +23,7 @@ import {
   type Config,
   type PackageConfig,
 } from './config.js';
+import {randomEmoji} from './emoji.js';
 import {Git} from './git.js';
 import {
   maxLevel,
@@ -56,6 +60,8 @@ export interface RunOptions {
   /** Value of RELWOLF_RELEASE_AS: requests an explicit version for the next release. */
   releaseAs?: string | undefined;
   log?: (message: string) => void;
+  /** Random source for `release-emoji`, `Math.random` by default. */
+  random?: () => number;
 }
 
 export interface ReleaseRequestResult {
@@ -184,6 +190,9 @@ async function tagMergedReleases(
 
     await provider.ensureLabel(labels.tagged);
 
+    const details = parseDetails(request.body);
+    const intro = releaseText(details.text ?? '');
+
     for (const entry of entries) {
       const result = await provider.createTag(entry.tag, request.mergeSha);
 
@@ -204,12 +213,12 @@ async function tagMergedReleases(
 
         await provider.createRelease({
           tag: entry.tag,
-          name: renderReleaseName(config.releaseName, {
+          name: renderReleaseName(details.title ?? config.releaseName, {
             tag: entry.tag,
             version: parsed ? formatVersion(parsed.version) : entry.tag,
             component: parsed?.pkg.component,
           }),
-          body: entry.notes,
+          body: intro ? `${intro}\n\n${entry.notes}` : entry.notes,
           prerelease: entry.prerelease,
         });
         log(`Created release ${entry.tag}.`);
@@ -652,9 +661,18 @@ async function prepareReleaseRequest(
       ? [{component: componentKey(plan.pkg), version: formatVersion(version)}]
       : [];
   });
+  const previous = existing ? parseDetails(existing.body) : {};
   const body = renderBody(entries, baseSha, overrides, {
     template: config.pullRequestBody,
     versions: planVersions,
+    details: {
+      title:
+        previous.title ??
+        (config.releaseEmoji
+          ? `${randomEmoji(options.random)} ${config.releaseName}`
+          : config.releaseName),
+      text: previous.text ?? DEFAULT_RELEASE_TEXT,
+    },
   });
 
   if (existing?.title === title && existing.body === body) {

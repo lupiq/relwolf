@@ -21,6 +21,7 @@ exclude-paths: ['docs/**'] # changes in these globs never count
 bootstrap-sha: 1a2b3c4 # ignore history up to this commit if there is no tag yet
 tag-template: '${component}-v${version}'
 release-name: '${tag}'
+release-emoji: false # true: prefix the default release title with a random emoji
 branch-prefix: relwolf/
 labels: {pending: 'relwolf: pending', tagged: 'relwolf: tagged'}
 draft: false
@@ -52,34 +53,35 @@ Paths of updaters and the changelog are relative to the package path. Unknown ke
 
 ## Options
 
-| Key                      | Level           | Default                                       | Description                                                             |
-| ------------------------ | --------------- | --------------------------------------------- | ----------------------------------------------------------------------- |
-| `branch`                 | global          | CI default branch, then `main`                | Branch to release from                                                  |
-| `cliff-config`           | global          | git-cliff discovery                           | Path to a git-cliff config                                              |
-| `pull-request-title`     | global          | `chore(release): Create release ${tags}`      | Title template, see [below](#title-and-commit-message)                  |
-| `patch-types`            | global          | `[fix]`                                       | Commit types that trigger a patch release                               |
-| `minor-types`            | global          | `[feat]`                                      | Commit types that trigger a minor release                               |
-| `exclude-paths`          | global          | none                                          | Globs (from the repo root) whose changes never count                    |
-| `bootstrap-sha`          | global          | none                                          | Start of the history for packages without a tag                         |
-| `tag-template`           | global          | `${component}-v${version}`                    | Tag format, see below                                                   |
-| `release-name`           | global          | `${tag}`                                      | Title of the created releases                                           |
-| `branch-prefix`          | global          | `relwolf/`                                    | Prefix of the release branch                                            |
-| `labels`                 | global          | `relwolf: pending` / `relwolf: tagged`        | Labels `pending` and `tagged`                                           |
-| `draft`                  | global          | `false`                                       | Open the release request as draft                                       |
-| `no-changes-text`        | global          | `No changes, version bumped to stay in sync.` | Text for packages without changes (linked versions)                     |
-| `assignees`              | global          | none                                          | Usernames, set when the request is created                              |
-| `reviewers`              | global          | none                                          | Usernames, set when the request is created                              |
-| `release-commit-message` | global          | the title                                     | Commit message of the release commit                                    |
-| `pull-request-body`      | global          | built in                                      | Body template, see [Body](#body)                                        |
-| `separate-pull-requests` | global          | `false`                                       | One request per package, see [Monorepos](/configuration/monorepos)      |
-| `linked-versions`        | global          | `false`                                       | Packages sharing one version, see [Monorepos](/configuration/monorepos) |
-| `linked-tags`            | global          | `per-package`                                 | `single`: one tag and release per linked group                          |
-| `prerelease`             | global, package | none                                          | [Pre-release](/guide/pre-releases) identifier                           |
-| `bump-minor-pre-major`   | global, package | `true`                                        | Breaking changes only bump minor before `1.0.0`                         |
-| `component`              | package         | none                                          | Tag prefix, see [Monorepos](/configuration/monorepos)                   |
-| `changelog-path`         | package         | `CHANGELOG.md`                                | Changelog file, relative to the package                                 |
-| `initial-version`        | package         | computed from `0.0.0`                         | First stable version if no tag exists                                   |
-| `updaters`               | package         | none                                          | [Files to update](/configuration/updaters)                              |
+| Key                      | Level           | Default                                       | Description                                                                      |
+| ------------------------ | --------------- | --------------------------------------------- | -------------------------------------------------------------------------------- |
+| `branch`                 | global          | CI default branch, then `main`                | Branch to release from                                                           |
+| `cliff-config`           | global          | git-cliff discovery                           | Path to a git-cliff config                                                       |
+| `pull-request-title`     | global          | `chore(release): Create release ${tags}`      | Title template, see [below](#title-and-commit-message)                           |
+| `patch-types`            | global          | `[fix]`                                       | Commit types that trigger a patch release                                        |
+| `minor-types`            | global          | `[feat]`                                      | Commit types that trigger a minor release                                        |
+| `exclude-paths`          | global          | none                                          | Globs (from the repo root) whose changes never count                             |
+| `bootstrap-sha`          | global          | none                                          | Start of the history for packages without a tag                                  |
+| `tag-template`           | global          | `${component}-v${version}`                    | Tag format, see below                                                            |
+| `release-name`           | global          | `${tag}`                                      | Title of the created releases                                                    |
+| `release-emoji`          | global          | `false`                                       | Random emoji in front of the release title, see [below](#release-title-and-text) |
+| `branch-prefix`          | global          | `relwolf/`                                    | Prefix of the release branch                                                     |
+| `labels`                 | global          | `relwolf: pending` / `relwolf: tagged`        | Labels `pending` and `tagged`                                                    |
+| `draft`                  | global          | `false`                                       | Open the release request as draft                                                |
+| `no-changes-text`        | global          | `No changes, version bumped to stay in sync.` | Text for packages without changes (linked versions)                              |
+| `assignees`              | global          | none                                          | Usernames, set when the request is created                                       |
+| `reviewers`              | global          | none                                          | Usernames, set when the request is created                                       |
+| `release-commit-message` | global          | the title                                     | Commit message of the release commit                                             |
+| `pull-request-body`      | global          | built in                                      | Body template, see [Body](#body)                                                 |
+| `separate-pull-requests` | global          | `false`                                       | One request per package, see [Monorepos](/configuration/monorepos)               |
+| `linked-versions`        | global          | `false`                                       | Packages sharing one version, see [Monorepos](/configuration/monorepos)          |
+| `linked-tags`            | global          | `per-package`                                 | `single`: one tag and release per linked group                                   |
+| `prerelease`             | global, package | none                                          | [Pre-release](/guide/pre-releases) identifier                                    |
+| `bump-minor-pre-major`   | global, package | `true`                                        | Breaking changes only bump minor before `1.0.0`                                  |
+| `component`              | package         | none                                          | Tag prefix, see [Monorepos](/configuration/monorepos)                            |
+| `changelog-path`         | package         | `CHANGELOG.md`                                | Changelog file, relative to the package                                          |
+| `initial-version`        | package         | computed from `0.0.0`                         | First stable version if no tag exists                                            |
+| `updaters`               | package         | none                                          | [Files to update](/configuration/updaters)                                       |
 
 ## Commit types
 
@@ -105,6 +107,22 @@ Usernames are resolved by the provider; unknown users fail the run.
 `no-changes-text` is written below the changelog entry and into the release notes of a package that was only released
 to follow the version of linked packages. Set it to an empty string to leave such entries as git-cliff renders them.
 
+### Release title and text
+
+The default body contains two editable blocks, **Release title** and **Release text**. Edit them in the description
+of the release request to individualise the releases:
+
+- The title is a template with `${tag}`, `${version}` and `${component}` and applies to every release in the request.
+  It starts as your `release-name`. With `release-emoji: true` it is prefixed with a random emoji (only objects, nature
+  and food, no people or animals), for example `🚀 ${tag}`. The emoji is chosen once when the request is created; later
+  updates keep whatever the block contains.
+- The text is Markdown and is added above the changelog notes of every release. HTML comments are ignored, so the
+  initial hint adds nothing. Leave the block as it is to add no text.
+- Your edits survive updates of the request; only the changelog notes are regenerated.
+
+Custom `pull-request-body` templates need the `${release}` placeholder to offer these blocks, and `release-emoji`
+requires it.
+
 ### Title and commit message
 
 `pull-request-title` sets the title of the release request. It is also the message of the release commit, unless
@@ -125,7 +143,8 @@ title would count as a releasable commit once the release is squash-merged.
 ### Body
 
 `pull-request-body` is a complete template with the placeholders `${tags}`, `${version}`, `${releases}` (bullet list),
-`${hint}` (note about `RELWOLF_RELEASE_AS`, otherwise empty) and `${notes}` (the release notes, required exactly once).
+`${hint}` (note about `RELWOLF_RELEASE_AS`, otherwise empty), `${release}` (the editable release title and text, see
+[above](#release-title-and-text)) and `${notes}` (the release notes, required exactly once).
 The markers relwolf needs to track the release are always appended.
 
 ## Typical setups
