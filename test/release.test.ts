@@ -192,6 +192,39 @@ describe('release request', () => {
     expect(entries[0]!.notes).toMatch(/initial feature/i);
   });
 
+  it('updates an existing package-lock.json, unless lockfiles are disabled', async () => {
+    const lock = (version: string) =>
+      `{\n  "name": "demo",\n  "version": "${version}",\n  "packages": {\n    "": {\n      "version": "${version}"\n    }\n  }\n}\n`;
+
+    repo.write('package.json', PACKAGE_JSON);
+    repo.write('package-lock.json', lock('0.0.0'));
+    repo.commit('feat: a');
+    await exec(NODE_CONFIG);
+    const files = Object.fromEntries(
+      provider.commits[0]!.files.map(f => [f.path, f.content]),
+    );
+
+    expect(Object.keys(files).sort()).toEqual([
+      'CHANGELOG.md',
+      'package-lock.json',
+      'package.json',
+    ]);
+    expect(files['package-lock.json']).toBe(lock('0.1.0'));
+  });
+
+  it('leaves lockfiles alone with lockfiles: false', async () => {
+    repo.write('package.json', PACKAGE_JSON);
+    repo.write('package-lock.json', '{"version":"0.0.0"}\n');
+    repo.commit('feat: a');
+    await exec(
+      'packages:\n  ".":\n    updaters:\n      - type: package-json\n        lockfiles: false\n',
+    );
+    expect(provider.commits[0]!.files.map(f => f.path).sort()).toEqual([
+      'CHANGELOG.md',
+      'package.json',
+    ]);
+  });
+
   it('does not touch the working tree', async () => {
     repo.write('package.json', PACKAGE_JSON);
     repo.commit('feat: a');

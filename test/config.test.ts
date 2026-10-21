@@ -52,10 +52,10 @@ packages:
     });
     expect(formatVersion(pkg!.initialVersion!)).toBe('1.0.0');
     expect(pkg!.updaters).toEqual([
-      {type: 'package-json', path: 'package.json'},
-      {type: 'pom-xml', path: 'pom.xml'},
-      {type: 'gradle', path: 'gradle.properties'},
-      {type: 'generic', path: 'docs/version.txt'},
+      {type: 'package-json', path: 'package.json', lockfiles: true},
+      {type: 'pom-xml', path: 'pom.xml', lockfiles: true},
+      {type: 'gradle', path: 'gradle.properties', lockfiles: true},
+      {type: 'generic', path: 'docs/version.txt', lockfiles: true},
     ]);
   });
 
@@ -88,8 +88,8 @@ packages:
       changelogPath: 'services/api/docs/CHANGES.md',
     });
     expect(api!.updaters).toEqual([
-      {type: 'pom-xml', path: 'services/api/pom.xml'},
-      {type: 'generic', path: 'services/api/version.txt'},
+      {type: 'pom-xml', path: 'services/api/pom.xml', lockfiles: true},
+      {type: 'generic', path: 'services/api/version.txt', lockfiles: true},
     ]);
   });
 
@@ -110,6 +110,21 @@ packages:
     [
       'generic without path',
       'packages:\n  ".":\n    updaters: [{ type: generic }]',
+      /requires a "path"/,
+    ],
+    [
+      'json without key',
+      'packages:\n  ".":\n    updaters: [{ type: json, path: a.json }]',
+      /requires a "key"/,
+    ],
+    [
+      'key on a fixed updater',
+      'packages:\n  ".":\n    updaters: [{ type: cargo, key: a.b }]',
+      /only supported by/,
+    ],
+    [
+      'dotnet without path',
+      'packages:\n  ".":\n    updaters: [{ type: dotnet }]',
       /requires a "path"/,
     ],
     ['invalid prerelease', "prerelease: 'be ta'", /prerelease/],

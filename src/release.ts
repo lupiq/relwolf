@@ -40,7 +40,7 @@ import {
   type ReleaseAs,
 } from './release-as.js';
 import {isValidReleaseTag, parseReleaseTag} from './tags.js';
-import {applyUpdater} from './updaters/index.js';
+import {applyUpdater, companions} from './updaters/index.js';
 import {
   compareVersions,
   formatVersion,
@@ -372,7 +372,24 @@ async function buildFiles(
           target.current,
           version,
           file,
+          updater.key,
         );
+
+        if (!updater.lockfiles) {
+          continue;
+        }
+
+        for (const companion of companions(
+          updater.type,
+          file,
+          target.current,
+        )) {
+          const lock = await load(companion.path, false);
+
+          if (lock.original !== undefined) {
+            lock.current = companion.update(lock.current, version);
+          }
+        }
       }
     }
   }
@@ -400,7 +417,8 @@ async function buildFiles(
   const files: FileChange[] = [];
 
   for (const [filePath, {original, current}] of contents) {
-    if (original === current) {
+    // Optional companion files that do not exist are loaded as empty and never written.
+    if (original === current || (original === undefined && current === '')) {
       continue;
     }
 

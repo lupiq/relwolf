@@ -25,7 +25,7 @@ Flow: Conventional Commits → next SemVer → release MR (changelog + version f
   (`prerelease: beta` → `1.3.0-beta.1`).
 - Changelog is produced by **git-cliff** (npm package, bundled); users control the format with their own `cliff.toml`.
   Which commit types appear is purely git-cliff configuration. relwolf's own `cliff.toml` lists all types except `chore`.
-- Updaters: `package-json`, `pom-xml`, `gradle`, `generic` (line markers `x-relwolf-version`, `x-relwolf-minor`, `x-relwolf-major`; the partial ones leave
+- Updaters: `package-json`, `pom-xml`, `gradle`, `pyproject`, `cargo`, `dotnet`, `helm`, `json`/`yaml`/`toml` (with `key`, line-based without dependencies), `generic` (line markers `x-relwolf-version`, `x-relwolf-minor`, `x-relwolf-major`; the partial ones leave
   pre-releases unchanged). The README and the docs pages with `@v1`/`:1` examples are kept current this way (`generic` updaters in `relwolf.yaml`; each file with a marker must be listed there). The docs build strips `# x-relwolf-*` comments from code fences (`markdown.config` in `config.mts`, except on `configuration/updaters.md`), so copied snippets stay clean.
 - GitLab project settings assumed: squash + fast-forward-only, no merge commits. MRs are labelled
   `relwolf: pending` / `relwolf: tagged`; source branch of the release MR `relwolf/<branch>`.
@@ -39,22 +39,22 @@ Flow: Conventional Commits → next SemVer → release MR (changelog + version f
 
 ## Architecture (`src/`)
 
-| File                               | Responsibility                                                                                                                                                                                                                  |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `cli.ts`                           | Entry point: load config, build provider from env, call `run`                                                                                                                                                                   |
-| `app-version.ts`                   | `RELWOLF_VERSION`, printed by the CLI; bumped by the generic updater (`x-relwolf-version`) in relwolf's own release (not `version.ts`, which is the SemVer logic)                                                               |
-| `config.ts`                        | `relwolf.yaml` schema (zod, strict; incl. all template/label/type/linking options), path normalisation/validation, `Config`/`PackageConfig`                                                                                     |
-| `release.ts`                       | Orchestration: `run()` → skip guards, shallow check, `tagMergedReleases`, `prepareReleaseRequest`                                                                                                                               |
-| `plan.ts`                          | Per-package plan: last tags, commits since, next version, changelog range                                                                                                                                                       |
-| `version.ts`                       | SemVer parse/compare/bump, `nextVersion` incl. pre-release logic                                                                                                                                                                |
-| `commits.ts`                       | Conventional commit parsing and bump level                                                                                                                                                                                      |
-| `tags.ts`                          | Tag naming, discovery, tag regex for git-cliff, validation of untrusted tags                                                                                                                                                    |
-| `changelog.ts`                     | git-cliff invocation (`generateNotes`, `prependToChangelog` via temp file)                                                                                                                                                      |
-| `body.ts`                          | MR title/body rendering and parsing (hidden `relwolf:notes` markers, sanitised)                                                                                                                                                 |
-| `git.ts`                           | Thin git wrapper (`execFile`), `run()` helper for subprocesses                                                                                                                                                                  |
-| `updaters/*`                       | Pure `(content, version, file) => content` functions + registry in `index.ts`                                                                                                                                                   |
-| `providers/types.ts`               | `Provider` interface – the only place providers must satisfy                                                                                                                                                                    |
-| `providers/gitlab.ts`, `github.ts` | REST implementations; `http.ts` shared fetch client (retries 429/403+Retry-After for all methods, 502-504 and network errors for idempotent ones only; `requestAll` follows pagination, max 10 pages); `index.ts` env detection |
+| File                               | Responsibility                                                                                                                                                                                                                                         |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `cli.ts`                           | Entry point: load config, build provider from env, call `run`                                                                                                                                                                                          |
+| `app-version.ts`                   | `RELWOLF_VERSION`, printed by the CLI; bumped by the generic updater (`x-relwolf-version`) in relwolf's own release (not `version.ts`, which is the SemVer logic)                                                                                      |
+| `config.ts`                        | `relwolf.yaml` schema (zod, strict; incl. all template/label/type/linking options), path normalisation/validation, `Config`/`PackageConfig`                                                                                                            |
+| `release.ts`                       | Orchestration: `run()` → skip guards, shallow check, `tagMergedReleases`, `prepareReleaseRequest`                                                                                                                                                      |
+| `plan.ts`                          | Per-package plan: last tags, commits since, next version, changelog range                                                                                                                                                                              |
+| `version.ts`                       | SemVer parse/compare/bump, `nextVersion` incl. pre-release logic                                                                                                                                                                                       |
+| `commits.ts`                       | Conventional commit parsing and bump level                                                                                                                                                                                                             |
+| `tags.ts`                          | Tag naming, discovery, tag regex for git-cliff, validation of untrusted tags                                                                                                                                                                           |
+| `changelog.ts`                     | git-cliff invocation (`generateNotes`, `prependToChangelog` via temp file)                                                                                                                                                                             |
+| `body.ts`                          | MR title/body rendering and parsing (hidden `relwolf:notes` markers, sanitised)                                                                                                                                                                        |
+| `git.ts`                           | Thin git wrapper (`execFile`), `run()` helper for subprocesses                                                                                                                                                                                         |
+| `updaters/*`                       | Pure `(content, version, file, key) => content` functions + registry in `index.ts`; `companions()` names lockfiles updated with a manifest (`package-lock.json`, `npm-shrinkwrap.json`, `Cargo.lock`; skipped if missing, `lockfiles: false` disables) |
+| `providers/types.ts`               | `Provider` interface – the only place providers must satisfy                                                                                                                                                                                           |
+| `providers/gitlab.ts`, `github.ts` | REST implementations; `http.ts` shared fetch client (retries 429/403+Retry-After for all methods, 502-504 and network errors for idempotent ones only; `requestAll` follows pagination, max 10 pages); `index.ts` env detection                        |
 
 Key mechanics worth knowing:
 
@@ -148,7 +148,7 @@ Enforced by ESLint (`curly: all`, `padding-line-between-statements`); `pnpm lint
 
 ## Ideas / not implemented
 
-- Extra updaters (pyproject.toml, Cargo.toml, …), lockfile updates.
+- More updaters on request (Gemfile/gemspec, `mix.exs`, … work today via `generic`).
 - Draft/pre-release handling for GitLab, signing.
 - Providers for other platforms: implement `Provider` and extend `providers/index.ts`.
 

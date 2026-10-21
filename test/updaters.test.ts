@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {applyUpdater, UpdaterError} from '../src/updaters/index.js';
+import {applyUpdater, companions, UpdaterError} from '../src/updaters/index.js';
 
 describe('package-json updater', () => {
   it('updates the version and preserves indentation and trailing newline', () => {
@@ -235,5 +235,177 @@ describe('generic updater', () => {
         'f',
       ),
     ).toBe('a: 1.0.1 # x-relwolf-version\r\nb: 2\r\n');
+  });
+});
+
+describe('pyproject updater', () => {
+  it('updates the PEP 621 version and keeps everything else', () => {
+    const input =
+      '[build-system]\nrequires = ["x"]\n\n[project]\nname = "demo"\nversion = "1.0.0"  # keep\ndependencies = ["a==1.0.0"]\n\n[tool.other]\nversion = "9"\n';
+    const output = applyUpdater('pyproject', input, '1.1.0', 'pyproject.toml');
+
+    expect(output).toBe(input.replace('"1.0.0"  # keep', '"1.1.0"  # keep'));
+  });
+
+  it('supports Poetry', () => {
+    const input = "[tool.poetry]\nname = 'demo'\nversion = '1.0.0'\n";
+
+    expect(applyUpdater('pyproject', input, '2.0.0', 'pyproject.toml')).toBe(
+      "[tool.poetry]\nname = 'demo'\nversion = '2.0.0'\n",
+    );
+  });
+
+  it('fails for dynamic versions', () => {
+    expect(() =>
+      applyUpdater(
+        'pyproject',
+        '[project]\ndynamic = ["version"]\n',
+        '1.0.0',
+        'pyproject.toml',
+      ),
+    ).toThrow(/dynamic version/);
+  });
+});
+
+describe('cargo updater', () => {
+  const manifest =
+    '[package]\nname = "demo"\nversion = "0.1.0"\n\n[dependencies]\nserde = { version = "1.0.0" }\n';
+
+  it('updates the package version only', () => {
+    expect(applyUpdater('cargo', manifest, '0.2.0', 'Cargo.toml')).toBe(
+      manifest.replace('"0.1.0"', '"0.2.0"'),
+    );
+  });
+
+  it('supports workspace.package', () => {
+    expect(
+      applyUpdater(
+        'cargo',
+        '[workspace.package]\nversion = "1.0.0"\n',
+        '1.1.0',
+        'Cargo.toml',
+      ),
+    ).toBe('[workspace.package]\nversion = "1.1.0"\n');
+  });
+
+  it('fails without a version', () => {
+    expect(() =>
+      applyUpdater('cargo', '[package]\nname = "x"\n', '1.0.0', 'Cargo.toml'),
+    ).toThrow(UpdaterError);
+  });
+
+  it('updates the own entry in Cargo.lock', () => {
+    const lock =
+      '[[package]]\nname = "demo"\nversion = "0.1.0"\n\n[[package]]\nname = "serde"\nversion = "0.1.0"\n';
+    const [companion] = companions('cargo', 'sub/Cargo.toml', manifest);
+
+    expect(companion!.path).toBe('sub/Cargo.lock');
+    expect(companion!.update(lock, '0.2.0')).toBe(
+      lock.replace('demo"\nversion = "0.1.0', 'demo"\nversion = "0.2.0'),
+    );
+    expect(() => companion!.update('', '0.2.0')).toThrow(/entry for "demo"/);
+  });
+
+  it('has no lockfile companion without a package name', () => {
+    expect(companions('cargo', 'Cargo.toml', '[workspace]\n')).toEqual([]);
+  });
+});
+
+describe('dotnet updater', () => {
+  it('updates the first <Version>', () => {
+    const input =
+      '<Project>\n  <PropertyGroup>\n    <Version>1.0.0</Version>\n  </PropertyGroup>\n</Project>\n';
+
+    expect(applyUpdater('dotnet', input, '1.1.0', 'a.csproj')).toBe(
+      input.replace('1.0.0', '1.1.0'),
+    );
+  });
+
+  it('fails without a <Version>', () => {
+    expect(() =>
+      applyUpdater('dotnet', '<Project/>', '1.0.0', 'a.csproj'),
+    ).toThrow(UpdaterError);
+  });
+});
+
+describe('helm updater', () => {
+  it('updates version and appVersion, keeping quotes and comments', () => {
+    const input =
+      'apiVersion: v2\nname: demo\nversion: 0.1.0 # chart\nappVersion: "0.1.0"\n';
+
+    expect(applyUpdater('helm', input, '0.2.0', 'Chart.yaml')).toBe(
+      'apiVersion: v2\nname: demo\nversion: 0.2.0 # chart\nappVersion: "0.2.0"\n',
+    );
+  });
+
+  it('works without appVersion', () => {
+    expect(
+      applyUpdater('helm', 'version: 1.0.0\n', '1.1.0', 'Chart.yaml'),
+    ).toBe('version: 1.1.0\n');
+  });
+});
+
+describe('structured updaters', () => {
+  it('updates a nested JSON key', () => {
+    const output = applyUpdater(
+      'json',
+      '{"a":{"b":"1.0.0"}}\n',
+      '2.0.0',
+      'x.json',
+      'a.b',
+    );
+
+    expect(JSON.parse(output)).toEqual({a: {b: '2.0.0'}});
+    expect(() =>
+      applyUpdater('json', '{"a":1}', '2.0.0', 'x.json', 'a.b'),
+    ).toThrow(/no "a.b" field/);
+  });
+
+  it('updates a nested YAML key without touching similar keys', () => {
+    const input =
+      'name: x\nversion: 1.0.0\nflutter:\n  sdk:\n    version: "3.0.0"\n  other: 1\n';
+
+    expect(
+      applyUpdater('yaml', input, '2.0.0', 'p.yaml', 'flutter.sdk.version'),
+    ).toBe(input.replace('"3.0.0"', '"2.0.0"'));
+    expect(applyUpdater('yaml', input, '2.0.0', 'p.yaml', 'version')).toBe(
+      input.replace('version: 1.0.0', 'version: 2.0.0'),
+    );
+    expect(() =>
+      applyUpdater('yaml', input, '2.0.0', 'p.yaml', 'flutter.version'),
+    ).toThrow(/no scalar value/);
+  });
+
+  it('updates a TOML key path and fails on a missing one', () => {
+    const input = 'version = "1.0.0"\n[tool]\nversion = "2.0.0"\n';
+
+    expect(applyUpdater('toml', input, '3.0.0', 'x.toml', 'tool.version')).toBe(
+      'version = "1.0.0"\n[tool]\nversion = "3.0.0"\n',
+    );
+    expect(applyUpdater('toml', input, '3.0.0', 'x.toml', 'version')).toBe(
+      'version = "3.0.0"\n[tool]\nversion = "2.0.0"\n',
+    );
+    expect(() =>
+      applyUpdater('toml', input, '3.0.0', 'x.toml', 'nope.version'),
+    ).toThrow(UpdaterError);
+  });
+});
+
+describe('package-lock companions', () => {
+  it('updates both root version fields', () => {
+    const lock =
+      '{\n  "name": "x",\n  "version": "1.0.0",\n  "packages": {\n    "": {\n      "name": "x",\n      "version": "1.0.0"\n    },\n    "node_modules/y": {\n      "version": "1.0.0"\n    }\n  }\n}\n';
+    const [companion] = companions('package-json', 'package.json', '{}');
+    const output = JSON.parse(companion!.update(lock, '2.0.0'));
+
+    expect(companion!.path).toBe('package-lock.json');
+    expect(output.version).toBe('2.0.0');
+    expect(output.packages[''].version).toBe('2.0.0');
+    expect(output.packages['node_modules/y'].version).toBe('1.0.0');
+    expect(() => companion!.update('{}', '2.0.0')).toThrow(UpdaterError);
+  });
+
+  it('has no companions for other updaters', () => {
+    expect(companions('pom-xml', 'pom.xml', '')).toEqual([]);
   });
 });

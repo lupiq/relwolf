@@ -13,6 +13,13 @@ export const UPDATER_TYPES = [
   'package-json',
   'pom-xml',
   'gradle',
+  'pyproject',
+  'cargo',
+  'dotnet',
+  'helm',
+  'json',
+  'yaml',
+  'toml',
   'generic',
 ] as const;
 export type UpdaterType = (typeof UPDATER_TYPES)[number];
@@ -24,6 +31,8 @@ const prereleaseId = z
 const updaterSchema = z.strictObject({
   type: z.enum(UPDATER_TYPES),
   path: z.string().min(1).optional(),
+  key: z.string().min(1).optional(),
+  lockfiles: z.boolean().optional(),
 });
 
 const packageSchema = z.strictObject({
@@ -175,6 +184,10 @@ export interface UpdaterConfig {
   type: UpdaterType;
   /** Repository-relative POSIX path. */
   path: string;
+  /** Dotted key path of the json/yaml/toml updaters. */
+  key?: string;
+  /** Whether lockfiles next to the manifest are updated too. */
+  lockfiles: boolean;
 }
 
 export interface PackageConfig {
@@ -253,11 +266,16 @@ function normalizeRepoPath(value: string, what: string): string {
   return normalized;
 }
 
-const DEFAULT_UPDATER_PATH: Record<Exclude<UpdaterType, 'generic'>, string> = {
+const DEFAULT_UPDATER_PATH: Partial<Record<UpdaterType, string>> = {
   'package-json': 'package.json',
   'pom-xml': 'pom.xml',
   'gradle': 'build.gradle',
+  'pyproject': 'pyproject.toml',
+  'cargo': 'Cargo.toml',
+  'helm': 'Chart.yaml',
 };
+
+const KEY_TYPES: UpdaterType[] = ['json', 'yaml', 'toml'];
 
 /**
  * Text before and after the version in the tags of a package. Without a component, `${component}` and the
@@ -316,22 +334,33 @@ export function parseConfig(source: string | undefined): Config {
         );
 
       const updaters = pkg.updaters.map((updater): UpdaterConfig => {
-        if (updater.type === 'generic') {
-          if (!updater.path) {
-            throw new ConfigError(
-              `Package "${rawPath}": updater "generic" requires a "path"`,
-            );
-          }
+        const configured = updater.path ?? DEFAULT_UPDATER_PATH[updater.type];
 
-          return {type: 'generic', path: join(updater.path, 'Updater path')};
+        if (!configured) {
+          throw new ConfigError(
+            `Package "${rawPath}": updater "${updater.type}" requires a "path"`,
+          );
+        }
+
+        const needsKey = KEY_TYPES.includes(updater.type);
+
+        if (needsKey && !updater.key) {
+          throw new ConfigError(
+            `Package "${rawPath}": updater "${updater.type}" requires a "key" (e.g. "version")`,
+          );
+        }
+
+        if (!needsKey && updater.key) {
+          throw new ConfigError(
+            `Package "${rawPath}": "key" is only supported by the json, yaml and toml updaters`,
+          );
         }
 
         return {
           type: updater.type,
-          path: join(
-            updater.path ?? DEFAULT_UPDATER_PATH[updater.type],
-            'Updater path',
-          ),
+          path: join(configured, 'Updater path'),
+          ...(updater.key ? {key: updater.key} : {}),
+          lockfiles: updater.lockfiles ?? true,
         };
       });
 
