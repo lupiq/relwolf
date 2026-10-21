@@ -14,7 +14,11 @@ function required(env: NodeJS.ProcessEnv, name: string): string {
   const value = env[name];
 
   if (!value) {
-    throw new Error(`Missing required environment variable ${name}`);
+    throw new Error(
+      name === 'RELWOLF_TOKEN'
+        ? 'Missing required environment variable RELWOLF_TOKEN. Create an access token and provide it as a masked CI/CD variable (GitLab) or as the "token" input of the action (GitHub), see https://relwolf.lupiq.io/guide/gitlab and https://relwolf.lupiq.io/guide/github.'
+        : `Missing required environment variable ${name}. It is set by the CI platform; is relwolf running inside a CI job?`,
+    );
   }
 
   return value;

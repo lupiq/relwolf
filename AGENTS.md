@@ -42,6 +42,7 @@ Flow: Conventional Commits → next SemVer → release MR (changelog + version f
 | File                               | Responsibility                                                                                                                                                                                                                  |
 | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `cli.ts`                           | Entry point: load config, build provider from env, call `run`                                                                                                                                                                   |
+| `app-version.ts`                   | `RELWOLF_VERSION`, printed by the CLI; bumped by the generic updater (`x-relwolf-version`) in relwolf's own release (not `version.ts`, which is the SemVer logic)                                                               |
 | `config.ts`                        | `relwolf.yaml` schema (zod, strict; incl. all template/label/type/linking options), path normalisation/validation, `Config`/`PackageConfig`                                                                                     |
 | `release.ts`                       | Orchestration: `run()` → skip guards, shallow check, `tagMergedReleases`, `prepareReleaseRequest`                                                                                                                               |
 | `plan.ts`                          | Per-package plan: last tags, commits since, next version, changelog range                                                                                                                                                       |
@@ -56,6 +57,8 @@ Flow: Conventional Commits → next SemVer → release MR (changelog + version f
 | `providers/gitlab.ts`, `github.ts` | REST implementations; `http.ts` shared fetch client (retries 429/403+Retry-After for all methods, 502-504 and network errors for idempotent ones only; `requestAll` follows pagination, max 10 pages); `index.ts` env detection |
 
 Key mechanics worth knowing:
+
+- The log explains decisions: `plan.ts` logs the analysed commits and `Found … bumping …: old -> new` (only the deciding `planPackage` call gets `log`); HTTP errors carry a `Hint:` from the provider (`gitlabHint`/`githubHint` via `HttpClient`'s `hint` option).
 
 - `RELWOLF_RELEASE_AS` (`release-as.ts`): forces the next version per component. `prepareReleaseRequest` reads the
   open MR first, merges stored `relwolf:release-as` markers with the env request (env wins, `auto` deletes) and

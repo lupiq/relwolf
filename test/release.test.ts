@@ -1025,3 +1025,77 @@ describe('release title and text', () => {
     expect(provider.releases[0]!.name).toBe('🚀 Release v0.1.0');
   });
 });
+
+describe('explanations in the log', () => {
+  const logs = async (yaml?: string) => {
+    const lines: string[] = [];
+
+    await run({
+      cwd: repo.dir,
+      config: parseConfig(yaml),
+      provider,
+      currentBranch: 'main',
+      log: message => lines.push(message),
+    });
+
+    return lines.join('\n');
+  };
+
+  it('explains the bump for a first release', async () => {
+    repo.commit('feat: a');
+    repo.commit('fix: b');
+    repo.commit('chore: c');
+    repo.commit('not conventional');
+
+    const output = await logs();
+
+    expect(output).toMatch(/Release branch "main" on fake; 1 package: root/);
+    expect(output).toMatch(/No previous release tag found/);
+    expect(output).toMatch(
+      /Analysed 4 commits: 1 chore, 1 feat, 1 fix; 1 not following/,
+    );
+    expect(output).toMatch(
+      /Found 1 feat commit, bumping minor: no release -> v0\.1\.0/,
+    );
+    expect(output).toMatch(/Done: nothing tagged; #1 created\./);
+  });
+
+  it('explains breaking changes, pre-major handling and nothing to release', async () => {
+    repo.commit('feat: a');
+    await logs();
+    mergeLastRelease(repo, provider, 1);
+    await logs();
+    repo.commit('feat!: b');
+
+    const breaking = await logs();
+
+    expect(breaking).toMatch(/Last stable release: v0\.1\.0/);
+    expect(breaking).toMatch(
+      /Found 1 breaking change, bumping major \(breaking changes only bump minor before 1\.0\.0.*\): v0\.1\.0 -> v0\.2\.0/,
+    );
+  });
+
+  it('lists the releasable types when there is nothing to release', async () => {
+    repo.commit('feat: a');
+    await logs();
+    mergeLastRelease(repo, provider, 1);
+    await logs();
+    repo.commit('chore: x');
+
+    expect(await logs()).toMatch(
+      /No releasable commits since v0\.1\.0\. Releasable types: feat \(minor\), fix \(patch\)/,
+    );
+  });
+
+  it('prefixes the lines with the package in a monorepo', async () => {
+    repo.write('services/api/x.txt', 'x');
+    repo.commit('feat: a', 'services/api/x.txt');
+
+    const output = await logs(
+      'packages:\n  services/api:\n    component: api\n    updaters: []\n  services/web:\n    component: web\n    updaters: []\n',
+    );
+
+    expect(output).toMatch(/\[api\] Found 1 feat commit, bumping minor/);
+    expect(output).toMatch(/\[web\] No (releasable commits|commits touch)/);
+  });
+});

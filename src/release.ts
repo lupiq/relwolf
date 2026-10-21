@@ -126,7 +126,16 @@ export async function run(options: RunOptions): Promise<RunResult> {
 
   const requested = parseReleaseAs(options.releaseAs, options.config.packages);
 
+  log(
+    `Release branch "${branch}" on ${options.provider.name}; ${options.config.packages.length === 1 ? '1 package' : `${options.config.packages.length} packages`}: ${options.config.packages.map(packageKey).join(', ')}.`,
+  );
+
+  log('Phase 1: tag merged release requests.');
+
   const tagged = await tagMergedReleases(options, git, branch, log);
+
+  log('Phase 2: prepare the next release.');
+
   const releaseRequests: ReleaseRequestResult[] = [];
   const units = releaseUnits(options.config);
 
@@ -146,6 +155,13 @@ export async function run(options: RunOptions): Promise<RunResult> {
     }
   }
 
+  log(
+    `Done: ${tagged.length === 0 ? 'nothing tagged' : `tagged ${tagged.join(', ')}`}; ` +
+      (releaseRequests.length === 0
+        ? 'no release request open.'
+        : `${releaseRequests.map(request => `#${request.id} ${request.action}`).join(', ')}.`),
+  );
+
   return {tagged, releaseRequests};
 }
 
@@ -163,6 +179,12 @@ async function tagMergedReleases(
   const {config} = options;
   const labels = labelDefinitions(config);
   const created: string[] = [];
+
+  log(
+    merged.length === 0
+      ? `No merged release requests labelled "${config.labels.pending}".`
+      : `Found ${merged.length} merged release request(s) labelled "${config.labels.pending}".`,
+  );
 
   for (const request of merged) {
     const entries = parseBody(request.body, tag =>
@@ -495,7 +517,7 @@ async function planGroup(
         git,
         pkg,
         config.packages,
-        {releaseAs: versions.get(componentKey(pkg)), tagsOf},
+        {releaseAs: versions.get(componentKey(pkg)), tagsOf, log},
         settings,
       ),
     );
@@ -584,7 +606,7 @@ async function planUnit(
       git,
       pkg,
       config.packages,
-      {releaseAs},
+      {releaseAs, log},
       settings,
     );
 
@@ -645,6 +667,10 @@ async function prepareReleaseRequest(
 
   const baseSha = await git.head();
   const {files, entries} = await buildFiles(options, git, plans);
+
+  log(
+    `Release commit changes ${files.length} file(s): ${files.map(file => file.path).join(', ')}.`,
+  );
   const unique = plans.filter(
     (plan, index) => plans.findIndex(other => other.tag === plan.tag) === index,
   );

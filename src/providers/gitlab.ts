@@ -55,6 +55,37 @@ function toReleaseRequest(mr: GitLabMergeRequest): ReleaseRequest {
   };
 }
 
+const GITLAB_TOKEN_HELP =
+  'RELWOLF_TOKEN needs the "api" scope and the role Developer or higher';
+
+export function gitlabHint(
+  status: number,
+  _method: string,
+  path: string,
+): string | undefined {
+  if (status === 401) {
+    return `GitLab rejected RELWOLF_TOKEN. Check that it is valid, not expired or revoked, and belongs to this GitLab instance. ${GITLAB_TOKEN_HELP}.`;
+  }
+
+  if (status === 403) {
+    if (path.includes('/repository/commits')) {
+      return `The token may not push the release branch. ${GITLAB_TOKEN_HELP}; also check that the branch "relwolf/*" is not a protected branch that forbids pushes.`;
+    }
+
+    if (path.includes('/repository/tags')) {
+      return `The token may not create tags. ${GITLAB_TOKEN_HELP}; also check Settings > Repository > Protected tags.`;
+    }
+
+    return `The token is not allowed to do this. ${GITLAB_TOKEN_HELP}.`;
+  }
+
+  if (status === 404) {
+    return `The project or resource was not found. GitLab also answers 404 if the token cannot access the project; check CI_PROJECT_ID and that ${GITLAB_TOKEN_HELP}.`;
+  }
+
+  return undefined;
+}
+
 export class GitLabProvider implements Provider {
   readonly name = 'gitlab';
   private readonly http: HttpClient;
@@ -65,6 +96,7 @@ export class GitLabProvider implements Provider {
       options.apiUrl,
       {'PRIVATE-TOKEN': options.token, 'Accept': 'application/json'},
       options.fetch,
+      {hint: gitlabHint},
     );
     this.project = `/projects/${encodeURIComponent(options.projectId)}`;
   }

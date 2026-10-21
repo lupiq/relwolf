@@ -869,3 +869,86 @@ describe('createProviderFromEnv', () => {
     expect(() => createProviderFromEnv(env)).toThrow(/Could not detect/);
   });
 });
+
+describe('error messages', () => {
+  const gitlab = (status: number, fetch?: typeof globalThis.fetch) =>
+    new GitLabProvider({
+      apiUrl: 'https://gl.example.com/api/v4',
+      projectId: '42',
+      token: 'secret',
+      fetch:
+        fetch ?? mockFetch(() => ({status, json: {message: 'nope'}})).fetch,
+    });
+  const github = (status: number) =>
+    new GitHubProvider({
+      apiUrl: 'https://api.github.com',
+      repository: 'lupiq/relwolf',
+      token: 'secret',
+      fetch: mockFetch(() => ({status, json: {message: 'nope'}})).fetch,
+    });
+  const message = async (promise: Promise<unknown>) =>
+    ((await promise.catch((e: unknown) => e)) as Error).message;
+
+  it('explains missing GitLab token permissions', async () => {
+    expect(await message(gitlab(401).ensureLabel(label))).toMatch(
+      /rejected RELWOLF_TOKEN.*"api" scope/s,
+    );
+    expect(await message(gitlab(403).ensureLabel(label))).toMatch(
+      /Developer or higher/,
+    );
+    expect(await message(gitlab(404).ensureLabel(label))).toMatch(
+      /CI_PROJECT_ID/,
+    );
+    expect(
+      await message(
+        gitlab(403).commitFiles({
+          branch: 'relwolf/main',
+          baseSha: 'a',
+          message: 'm',
+          files: [{path: 'a', content: 'b', exists: false}],
+        }),
+      ),
+    ).toMatch(/protected branch/);
+    expect(await message(gitlab(403).createTag('v1', 'sha'))).toMatch(
+      /Protected tags/,
+    );
+  });
+
+  it('explains missing GitHub token permissions', async () => {
+    expect(await message(github(401).ensureLabel(label))).toMatch(
+      /rejected the token/,
+    );
+    expect(await message(github(403).ensureLabel(label))).toMatch(
+      /pull requests.*GITHUB_TOKEN/s,
+    );
+    expect(await message(github(404).ensureLabel(label))).toMatch(
+      /cannot access the repository/,
+    );
+    expect(await message(github(500).ensureLabel(label))).not.toMatch(/Hint/);
+  });
+
+  it('reports unreachable servers', async () => {
+    const provider = gitlab(
+      0,
+      vi.fn(async () => {
+        throw new TypeError('fetch failed', {cause: new Error('ENOTFOUND')});
+      }),
+    );
+    const text = await message(provider.releaseExists('v1'));
+
+    expect(text).toMatch(/could not reach https:\/\/gl\.example\.com/);
+    expect(text).toMatch(/ENOTFOUND/);
+    expect(text).not.toMatch(/secret/);
+  });
+
+  it('explains missing environment variables', () => {
+    expect(() => createProviderFromEnv({GITLAB_CI: 'true'})).toThrow(
+      /RELWOLF_TOKEN.*masked CI\/CD variable/s,
+    );
+    expect(() =>
+      createProviderFromEnv({GITLAB_CI: 'true', RELWOLF_TOKEN: 't'}),
+    ).toThrow(/set by the CI platform/);
+  });
+});
+
+const label = {name: 'l', color: '000000', description: 'd'};

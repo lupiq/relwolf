@@ -83,14 +83,70 @@ export function pathspecsFor(
   ];
 }
 
+interface AnalysedCommits {
+  commits: ConventionalCommit[];
+  /** Commits in the range, before reverts and non-conventional messages were removed. */
+  total: number;
+  reverted: number;
+}
+
+async function analyseCommits(
+  git: Git,
+  range: string | undefined,
+  pathspecs: string[],
+): Promise<AnalysedCommits> {
+  const all = await git.log(range, pathspecs);
+  const kept = withoutReverted(all);
+
+  return {
+    commits: kept.flatMap(
+      commit => parseCommit(commit.sha, commit.message) ?? [],
+    ),
+    total: all.length,
+    reverted: all.length - kept.length,
+  };
+}
+
 async function conventionalCommits(
   git: Git,
   range: string | undefined,
   pathspecs: string[],
 ): Promise<ConventionalCommit[]> {
-  const raw = withoutReverted(await git.log(range, pathspecs));
+  return (await analyseCommits(git, range, pathspecs)).commits;
+}
 
-  return raw.flatMap(commit => parseCommit(commit.sha, commit.message) ?? []);
+const plural = (count: number, word: string): string =>
+  `${count} ${word}${count === 1 ? '' : 's'}`;
+
+/** E.g. "2 feat, 1 fix, 3 chore"; breaking commits are counted separately by the caller. */
+function countTypes(commits: readonly ConventionalCommit[]): string {
+  const counts = new Map<string, number>();
+
+  for (const commit of commits) {
+    counts.set(commit.type, (counts.get(commit.type) ?? 0) + 1);
+  }
+
+  return [...counts]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .map(([type, count]) => `${count} ${type}`)
+    .join(', ');
+}
+
+function describeLevel(
+  commits: readonly ConventionalCommit[],
+  rules: BumpRules,
+  level: BumpLevel,
+): string {
+  if (level === 'major') {
+    const breaking = commits.filter(commit => commit.breaking);
+
+    return `Found ${plural(breaking.length, 'breaking change')}`;
+  }
+
+  const types = level === 'minor' ? rules.minor : rules.patch;
+  const matching = commits.filter(commit => types.includes(commit.type));
+
+  return `Found ${countTypes(matching)} ${matching.length === 1 ? 'commit' : 'commits'}`;
 }
 
 export interface PlanOptions {
@@ -101,6 +157,8 @@ export interface PlanOptions {
   force?: boolean | undefined;
   /** Package whose tags are used instead of the package's own (single tag of a linked group). */
   tagsOf?: PackageConfig | undefined;
+  /** Explains how the version was determined; only the call that decides should pass it. */
+  log?: ((message: string) => void) | undefined;
 }
 
 const LEVELS: readonly BumpLevel[] = ['patch', 'minor', 'major'];
@@ -123,6 +181,9 @@ export async function planPackage(
   settings: PlanSettings = DEFAULT_PLAN_SETTINGS,
 ): Promise<PackagePlan | null> {
   const {releaseAs, force = false} = options;
+  const prefix = all.length > 1 ? `[${pkg.component ?? pkg.path}] ` : '';
+  const log =
+    options.log && ((message: string) => options.log?.(prefix + message));
   const tagged = options.tagsOf ?? pkg;
   const releaseTags = findReleaseTags(await git.tagsMergedIntoHead(), tagged);
   const lastAny = highest(releaseTags);
@@ -130,11 +191,36 @@ export async function planPackage(
   const pathspecs = pathspecsFor(pkg, all, settings.excludePaths);
   const bootstrap = settings.bootstrapSha && `${settings.bootstrapSha}..HEAD`;
 
-  const sinceStable = await conventionalCommits(
+  const analysed = await analyseCommits(
     git,
     (lastStable && `${lastStable.tag}..HEAD`) ?? bootstrap,
     pathspecs,
   );
+  const sinceStable = analysed.commits;
+
+  if (log) {
+    log(
+      lastStable
+        ? `Last stable release: ${lastStable.tag}.`
+        : `No previous release tag found${bootstrap ? `, counting from bootstrap-sha ${settings.bootstrapSha}` : ', counting the whole history'}.`,
+    );
+    const unparsed = analysed.total - analysed.reverted - sinceStable.length;
+    const notes = [
+      ...(unparsed > 0
+        ? [`${unparsed} not following Conventional Commits`]
+        : []),
+      ...(analysed.reverted > 0
+        ? [`${plural(analysed.reverted, 'reverted commit')} ignored`]
+        : []),
+    ];
+
+    log(
+      analysed.total === 0
+        ? 'No commits touch this package since then.'
+        : `Analysed ${plural(analysed.total, 'commit')}: ${countTypes(sinceStable) || 'none follow Conventional Commits'}${notes.map(note => `; ${note}`).join('')}.`,
+    );
+  }
+
   const level = maxLevel(
     bumpLevel(sinceStable, settings.bumpRules),
     options.minLevel,
@@ -148,6 +234,10 @@ export async function planPackage(
   if (releaseAs && level === null && !force) {
     // A requested version needs at least one change to release, but not necessarily a releasable one.
     if ((await git.log(range, pathspecs)).length === 0) {
+      log?.(
+        'A version was requested, but nothing changed since the last release.',
+      );
+
       return null;
     }
   }
@@ -161,6 +251,10 @@ export async function planPackage(
     );
 
     if (bumpLevel(sinceLast, settings.bumpRules) === null) {
+      log?.(
+        `No releasable commits since the last pre-release ${lastAny.tag}; not publishing another one.`,
+      );
+
       return null;
     }
   }
@@ -176,6 +270,11 @@ export async function planPackage(
   });
 
   if (!version) {
+    log?.(
+      `No releasable commits since ${lastStable?.tag ?? 'the start of the history'}. ` +
+        `Releasable types: ${[...settings.bumpRules.minor.map(type => `${type} (minor)`), ...settings.bumpRules.patch.map(type => `${type} (patch)`)].join(', ')}; breaking changes always release.`,
+    );
+
     return null;
   }
 
@@ -187,11 +286,29 @@ export async function planPackage(
   }
 
   const touching = await git.log(range, pathspecs);
+  const tag = tagName(tagged, formatVersion(version));
+
+  if (log && !releaseAs && level) {
+    const demoted =
+      level === 'major' && version.major === lastStable?.version.major
+        ? ' (breaking changes only bump minor before 1.0.0, see bump-minor-pre-major)'
+        : '';
+    const bump =
+      lastStable && !pkg.prerelease
+        ? `${level}${demoted}`
+        : lastStable
+          ? `${level}${demoted}, pre-release "${pkg.prerelease}"`
+          : level;
+
+    log(
+      `${describeLevel(sinceStable, settings.bumpRules, level)}, bumping ${bump}: ${lastStable?.tag ?? 'no release'} -> ${tag}`,
+    );
+  }
 
   return {
     pkg,
     version,
-    tag: tagName(tagged, formatVersion(version)),
+    tag,
     prerelease: isPrerelease(version),
     range,
     tagPattern: tagPattern(tagged, Boolean(pkg.prerelease)),

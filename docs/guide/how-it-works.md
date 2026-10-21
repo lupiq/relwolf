@@ -34,6 +34,27 @@ The description of the release request contains a **release title** and a **rele
 to name the release and add a short Markdown introduction above the changelog. See
 [Release title and text](/configuration/#release-title-and-text), including the optional random emoji.
 
+## Reading the job log
+
+The log starts with the relwolf version and explains how the next version was determined:
+
+```text
+[relwolf] Version 0.4.0
+[relwolf] Loaded relwolf.yaml.
+[relwolf] Release branch "main" on gitlab; 1 package: root.
+[relwolf] Phase 1: tag merged release requests.
+[relwolf] No merged release requests labelled "relwolf: pending".
+[relwolf] Phase 2: prepare the next release.
+[relwolf] Last stable release: v1.2.3.
+[relwolf] Analysed 5 commits: 2 chore, 2 fix, 1 feat.
+[relwolf] Found 1 feat commit, bumping minor: v1.2.3 -> v1.3.0
+[relwolf] Release commit changes 2 file(s): CHANGELOG.md, package.json.
+[relwolf] Created release request #12: https://gitlab.example.com/group/project/-/merge_requests/12
+[relwolf] Done: nothing tagged; #12 created.
+```
+
+With several packages every line of the version analysis is prefixed with the package, e.g. `[api]`.
+
 ## Skipped pipelines
 
 Pipelines that are not branch pipelines for the default branch (merge request pipelines, tag pipelines, other branches)

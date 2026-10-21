@@ -50,6 +50,27 @@ function toReleaseRequest(pull: GitHubPull): ReleaseRequest {
   };
 }
 
+const GITHUB_TOKEN_HELP =
+  'A personal access token needs "contents" and "pull requests" write access. ' +
+  'With GITHUB_TOKEN set "permissions: contents: write, pull-requests: write" in the workflow and enable ' +
+  '"Allow GitHub Actions to create and approve pull requests" in the repository settings';
+
+export function githubHint(status: number): string | undefined {
+  if (status === 401) {
+    return 'GitHub rejected the token. Check that it is valid, not expired or revoked.';
+  }
+
+  if (status === 403) {
+    return `The token is not allowed to do this. ${GITHUB_TOKEN_HELP}. Branch protection and rulesets can also block the request.`;
+  }
+
+  if (status === 404) {
+    return `The repository or resource was not found. GitHub also answers 404 if the token cannot access the repository. ${GITHUB_TOKEN_HELP}.`;
+  }
+
+  return undefined;
+}
+
 export class GitHubProvider implements Provider {
   readonly name = 'github';
   private readonly http: HttpClient;
@@ -75,6 +96,7 @@ export class GitHubProvider implements Provider {
         'X-GitHub-Api-Version': '2022-11-28',
       },
       options.fetch,
+      {hint: githubHint},
     );
   }
 

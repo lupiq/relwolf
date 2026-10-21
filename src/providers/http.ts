@@ -17,6 +17,8 @@ export interface RetryOptions {
   /** Delay before the first retry; doubles with every further one. */
   baseDelayMs?: number;
   sleep?: (ms: number) => Promise<void>;
+  /** Advice appended to the error message of a failed request, e.g. which token permissions are missing. */
+  hint?: (status: number, method: string, path: string) => string | undefined;
 }
 
 const MAX_RETRY_DELAY_MS = 60_000;
@@ -48,6 +50,7 @@ export class HttpClient {
   private readonly retries: number;
   private readonly baseDelayMs: number;
   private readonly sleep: (ms: number) => Promise<void>;
+  private readonly hint: NonNullable<RetryOptions['hint']>;
 
   constructor(
     private readonly baseUrl: string,
@@ -57,6 +60,7 @@ export class HttpClient {
   ) {
     this.retries = retry.retries ?? 3;
     this.baseDelayMs = retry.baseDelayMs ?? 1000;
+    this.hint = retry.hint ?? (() => undefined);
     this.sleep =
       retry.sleep ?? (ms => new Promise(resolve => setTimeout(resolve, ms)));
   }
@@ -154,18 +158,29 @@ export class HttpClient {
       url.searchParams.set(key, value);
     }
 
-    const response = await this.send(method, url.toString(), {
-      method,
-      headers: {
-        ...this.headers,
+    let response: Response;
+
+    try {
+      response = await this.send(method, url.toString(), {
+        method,
+        headers: {
+          ...this.headers,
+          ...(options.body !== undefined
+            ? {'Content-Type': 'application/json'}
+            : {}),
+        },
         ...(options.body !== undefined
-          ? {'Content-Type': 'application/json'}
+          ? {body: JSON.stringify(options.body)}
           : {}),
-      },
-      ...(options.body !== undefined
-        ? {body: JSON.stringify(options.body)}
-        : {}),
-    });
+      });
+    } catch (error) {
+      const cause = (error as {cause?: {message?: string}}).cause?.message;
+
+      throw new ProviderError(
+        `${method} ${url.pathname} could not reach ${url.origin}: ${error instanceof Error ? error.message : String(error)}${cause ? ` (${cause})` : ''}\n` +
+          'Hint: check the network of the job and the API URL (CI_API_V4_URL / GITHUB_API_URL).',
+      );
+    }
 
     const text = await response.text();
     let data: any = null;
@@ -181,8 +196,11 @@ export class HttpClient {
     if (!response.ok && !(options.allow ?? []).includes(response.status)) {
       const detail = typeof data === 'string' ? data : JSON.stringify(data);
 
+      const hint = this.hint(response.status, method, url.pathname);
+
       throw new ProviderError(
-        `${method} ${url.pathname} failed with ${response.status}: ${detail.slice(0, 500)}`,
+        `${method} ${url.pathname} failed with ${response.status}: ${detail.slice(0, 500)}` +
+          (hint ? `\nHint: ${hint}` : ''),
         response.status,
       );
     }

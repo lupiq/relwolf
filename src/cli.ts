@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import {RELWOLF_VERSION} from './app-version.js';
 import {loadConfig} from './config.js';
 import {createProviderFromEnv} from './providers/index.js';
 import {run} from './release.js';
@@ -9,9 +10,13 @@ async function main(): Promise<void> {
     console.log(`[relwolf] ${message}`);
   };
 
+  log(`Version ${RELWOLF_VERSION}`);
+
   const {config, found} = await loadConfig(cwd);
 
-  if (!found) {
+  if (found) {
+    log('Loaded relwolf.yaml.');
+  } else {
     log(
       'No relwolf.yaml found, using defaults (single root package, no file updaters).',
     );
