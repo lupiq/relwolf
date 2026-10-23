@@ -1,3 +1,7 @@
 {
-  "*": "prettier --write --ignore-unknown"
+  "*.{ts,mts,js,mjs}": [
+    "eslint --flag unstable_native_nodejs_ts_config --no-warn-ignored --fix",
+    "prettier --write"
+  ],
+  "!(*.{ts,mts,js,mjs})": "prettier --write --ignore-unknown"
 }
