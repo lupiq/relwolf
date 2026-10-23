@@ -25,18 +25,27 @@ body = """
             {{ commit.message | upper_first }}\
     {% endfor %}
 {% endfor %}
-{# Maintainers (by e-mail) and bots are not thanked #}\
+{# Maintainers (by e-mail) and bots are not thanked; GitHub usernames come from git-cliff's GitHub integration #}\
 {% set maintainers = ["nicolas@lupiq.com"] %}\
 {% set_global contributors = [] %}\
+{% set_global seen = [] %}\
 {% for commit in commits %}\
-    {% if commit.author.email not in maintainers and "[bot]" not in commit.author.name and commit.author.name not in contributors %}\
-        {% set_global contributors = contributors | concat(with=commit.author.name) %}\
+    {% set user = commit.remote.username | default(value="") %}\
+    {% set key = commit.author.name %}\
+    {% if user != "" %}{% set key = user %}{% endif %}\
+    {% if commit.author.email not in maintainers and "[bot]" not in commit.author.name and "[bot]" not in user and key not in seen %}\
+        {% set_global seen = seen | concat(with=key) %}\
+        {% if user != "" %}\
+            {% set_global contributors = contributors | concat(with="<a href='https://github.com/" ~ user ~ "'><img src='https://github.com/" ~ user ~ ".png?size=40' width='20' height='20' alt=''> @" ~ user ~ "</a>") %}\
+        {% else %}\
+            {% set_global contributors = contributors | concat(with=commit.author.name) %}\
+        {% endif %}\
     {% endif %}\
 {% endfor %}\
 {% if contributors | length > 0 %}\
     ### ❤️ Special thanks to
-    {% for name in contributors %}
-        - {{ name }}\
+    {% for contributor in contributors %}
+        - {{ contributor }}\
     {% endfor %}
 {% endif %}
 """
@@ -53,6 +62,10 @@ postprocessors = [
 # render_always = true
 # output file path
 # output = "test.md"
+
+[remote.github]
+owner = "lupiq"
+repo = "relwolf"
 
 [git]
 # Parse commits according to the conventional commits specification.

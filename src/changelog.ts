@@ -3,6 +3,7 @@ import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {run} from './git.js';
+import {detectProvider} from './providers/index.js';
 
 export interface CliffInvocation {
   /** Repository working directory. */
@@ -64,6 +65,30 @@ function baseArgs(options: CliffInvocation): string[] {
   return args;
 }
 
+/**
+ * Environment for git-cliff: lets its GitLab/GitHub integration (`remote` context) reuse RELWOLF_TOKEN.
+ * Variables set by the user take precedence.
+ */
+export function cliffEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  const token = env.RELWOLF_TOKEN;
+
+  if (!token) {
+    return env;
+  }
+
+  if (detectProvider(env) === 'gitlab') {
+    return {
+      ...env,
+      GITLAB_TOKEN: env.GITLAB_TOKEN ?? token,
+      ...(env.CI_API_V4_URL && !env.GITLAB_API_URL
+        ? {GITLAB_API_URL: env.CI_API_V4_URL}
+        : {}),
+    };
+  }
+
+  return {...env, GITHUB_TOKEN: env.GITHUB_TOKEN ?? token};
+}
+
 async function cliff(
   options: CliffInvocation,
   extra: string[],
@@ -71,7 +96,12 @@ async function cliff(
 ): Promise<string> {
   const {command, prefix} = resolveCliffCommand(env);
 
-  return run(command, [...prefix, ...baseArgs(options), ...extra], options.cwd);
+  return run(
+    command,
+    [...prefix, ...baseArgs(options), ...extra],
+    options.cwd,
+    cliffEnv(env),
+  );
 }
 
 /** Release notes for a single release (without header and footer). */

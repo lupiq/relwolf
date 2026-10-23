@@ -24,7 +24,7 @@ function required(env: NodeJS.ProcessEnv, name: string): string {
   return value;
 }
 
-function detectProvider(env: NodeJS.ProcessEnv): 'gitlab' | 'github' {
+export function detectProvider(env: NodeJS.ProcessEnv): 'gitlab' | 'github' {
   const explicit = env.RELWOLF_PROVIDER;
 
   if (explicit) {

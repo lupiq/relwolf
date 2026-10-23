@@ -15,6 +15,11 @@ purely git-cliff configuration.
   to the changelog file.
 - Packages that were only bumped to follow linked versions get the [`no-changes-text`](/configuration/#release-request)
   placeholder instead of an empty entry.
+- git-cliff's [GitLab](https://git-cliff.org/docs/integration/gitlab) and
+  [GitHub](https://git-cliff.org/docs/integration/github) integrations (`remote` context such as PR/MR numbers and
+  usernames) work out of the box: relwolf passes `RELWOLF_TOKEN` to git-cliff as `GITLAB_TOKEN` or `GITHUB_TOKEN`
+  (depending on the provider) and, on GitLab, `CI_API_V4_URL` as `GITLAB_API_URL`. Variables you set yourself take
+  precedence. The token is only used when your `cliff.toml` uses the integration.
 - Use `RELWOLF_GIT_CLIFF` to run your own git-cliff executable instead of the bundled one.
 
 ::: warning

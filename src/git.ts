@@ -18,10 +18,12 @@ export async function run(
   command: string,
   args: string[],
   cwd: string,
+  env?: NodeJS.ProcessEnv,
 ): Promise<string> {
   try {
     const {stdout} = await execFileAsync(command, args, {
       cwd,
+      ...(env ? {env} : {}),
       maxBuffer: 256 * 1024 * 1024,
     });
 
