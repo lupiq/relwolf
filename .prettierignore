@@ -4,3 +4,4 @@ node_modules
 pnpm-lock.yaml
 docs/.vitepress/cache
 docs/.vitepress/dist
+docs/public/schema.json

@@ -29,22 +29,55 @@ const prereleaseId = z
   .regex(/^[0-9A-Za-z-]+$/, 'must only contain [0-9A-Za-z-]');
 
 const updaterSchema = z.strictObject({
-  type: z.enum(UPDATER_TYPES),
-  path: z.string().min(1).optional(),
-  key: z.string().min(1).optional(),
-  lockfiles: z.boolean().optional(),
+  type: z.enum(UPDATER_TYPES).describe('Kind of file to update.'),
+  path: z
+    .string()
+    .min(1)
+    .optional()
+    .describe(
+      'File to update, relative to the package path. Defaults to the usual file of the type; required for json, yaml, toml and generic.',
+    ),
+  key: z
+    .string()
+    .min(1)
+    .optional()
+    .describe('Dotted key path of the version (json, yaml and toml updaters).'),
+  lockfiles: z
+    .boolean()
+    .optional()
+    .describe('Also update the lockfiles next to the manifest.'),
 });
 
 const packageSchema = z.strictObject({
   'component': z
     .string()
     .regex(/^[A-Za-z0-9][A-Za-z0-9._-]*$/, 'invalid component name')
-    .optional(),
-  'changelog-path': z.string().min(1).optional(),
-  'updaters': z.array(updaterSchema).default([]),
-  'prerelease': prereleaseId.optional(),
-  'bump-minor-pre-major': z.boolean().optional(),
-  'initial-version': z.string().optional(),
+    .optional()
+    .describe(
+      'Tag prefix of the package. Optional for a single package, required for every other package.',
+    ),
+  'changelog-path': z
+    .string()
+    .min(1)
+    .optional()
+    .describe('Changelog file, relative to the package path.'),
+  'updaters': z
+    .array(updaterSchema)
+    .default([])
+    .describe('Files in which the version is updated.'),
+  'prerelease': prereleaseId
+    .optional()
+    .describe('Pre-release identifier of this package, e.g. "beta".'),
+  'bump-minor-pre-major': z
+    .boolean()
+    .optional()
+    .describe(
+      'Breaking changes only bump the minor version before 1.0.0 (overrides the global value).',
+    ),
+  'initial-version': z
+    .string()
+    .optional()
+    .describe('First stable version if the package has no release tag yet.'),
 });
 
 const placeholders = (
@@ -80,8 +113,14 @@ const label = z
 
 const userNames = z.array(z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]*$/));
 
-const configSchema = z.strictObject({
-  'branch': z.string().min(1).optional(),
+export const configSchema = z.strictObject({
+  'branch': z
+    .string()
+    .min(1)
+    .optional()
+    .describe(
+      'Branch to release from. Defaults to the CI default branch, then "main".',
+    ),
   'branch-prefix': z
     .string()
     .regex(
@@ -92,8 +131,15 @@ const configSchema = z.strictObject({
       value => !value.includes('..') && !value.includes('//'),
       'must not contain ".." or "//"',
     )
-    .default('relwolf/'),
-  'cliff-config': z.string().min(1).optional(),
+    .default('relwolf/')
+    .describe('Prefix of the release branch.'),
+  'cliff-config': z
+    .string()
+    .min(1)
+    .optional()
+    .describe(
+      "Path to the git-cliff config. Defaults to git-cliff's own discovery.",
+    ),
   'pull-request-title': z
     .string()
     .min(1)
@@ -102,7 +148,10 @@ const configSchema = z.strictObject({
       placeholders(TITLE_PLACEHOLDERS),
       'only ${tags} and ${version} are supported',
     )
-    .optional(),
+    .optional()
+    .describe(
+      'Title of the release request (single line). Placeholders: ${tags}, ${version}.',
+    ),
   'pull-request-body': z
     .string()
     .min(1)
@@ -114,7 +163,10 @@ const configSchema = z.strictObject({
       value => count(value, '${notes}') === 1,
       'must contain ${notes} exactly once',
     )
-    .optional(),
+    .optional()
+    .describe(
+      'Body template of the release request; must contain ${notes} exactly once. Placeholders: ${tags}, ${version}, ${releases}, ${hint}, ${release}, ${notes}.',
+    ),
   'release-commit-message': z
     .string()
     .min(1)
@@ -122,7 +174,10 @@ const configSchema = z.strictObject({
       placeholders(TITLE_PLACEHOLDERS),
       'only ${tags} and ${version} are supported',
     )
-    .optional(),
+    .optional()
+    .describe(
+      'Message of the release commit (may span several lines). Defaults to the request title. Placeholders: ${tags}, ${version}.',
+    ),
   'release-name': z
     .string()
     .min(1)
@@ -131,7 +186,10 @@ const configSchema = z.strictObject({
       placeholders(RELEASE_NAME_PLACEHOLDERS),
       'only ${tag}, ${version} and ${component} are supported',
     )
-    .default('${tag}'),
+    .default('${tag}')
+    .describe(
+      'Title template of the created releases. Placeholders: ${tag}, ${version}, ${component}.',
+    ),
   'tag-template': z
     .string()
     .regex(
@@ -150,35 +208,105 @@ const configSchema = z.strictObject({
       value => count(value, '${component}') <= 1,
       'must contain ${component} at most once',
     )
-    .default('${component}-v${version}'),
+    .default('${component}-v${version}')
+    .describe(
+      'Tag format. Must contain ${version} exactly once and may contain ${component} once.',
+    ),
   'labels': z
-    .strictObject({pending: label.optional(), tagged: label.optional()})
-    .default({}),
-  'draft': z.boolean().default(false),
-  'release-emoji': z.boolean().default(false),
+    .strictObject({
+      pending: label
+        .optional()
+        .describe('Label of open release requests ("relwolf: pending").'),
+      tagged: label
+        .optional()
+        .describe(
+          'Label of merged and tagged release requests ("relwolf: tagged").',
+        ),
+    })
+    .default({})
+    .describe('Labels used to track release requests.'),
+  'draft': z
+    .boolean()
+    .default(false)
+    .describe('Open the release request as draft.'),
+  'release-emoji': z
+    .boolean()
+    .default(false)
+    .describe('Prefix the default release title with a random emoji.'),
   'no-changes-text': z
     .string()
-    .default('No changes, version bumped to stay in sync.'),
-  'assignees': userNames.default([]),
-  'reviewers': userNames.default([]),
-  'patch-types': z.array(commitType).default(['fix']),
-  'minor-types': z.array(commitType).default(['feat']),
-  'exclude-paths': z.array(z.string().min(1)).default([]),
+    .default('No changes, version bumped to stay in sync.')
+    .describe(
+      'Text for packages that were only released to follow linked packages; empty to add nothing.',
+    ),
+  'assignees': userNames
+    .default([])
+    .describe('Usernames assigned when the release request is created.'),
+  'reviewers': userNames
+    .default([])
+    .describe('Usernames requested as reviewers when the request is created.'),
+  'patch-types': z
+    .array(commitType)
+    .default(['fix'])
+    .describe('Commit types that trigger a patch release.'),
+  'minor-types': z
+    .array(commitType)
+    .default(['feat'])
+    .describe(
+      'Commit types that trigger a minor release. Breaking changes always trigger a major release.',
+    ),
+  'exclude-paths': z
+    .array(z.string().min(1))
+    .default([])
+    .describe('Globs from the repository root whose changes never count.'),
   'bootstrap-sha': z
     .string()
     .regex(/^[0-9a-fA-F]{7,40}$/, 'must be a commit sha (7 to 40 hex digits)')
-    .optional(),
-  'separate-pull-requests': z.boolean().default(false),
+    .optional()
+    .describe(
+      'History up to and including this commit is ignored for packages without a release tag.',
+    ),
+  'separate-pull-requests': z
+    .boolean()
+    .default(false)
+    .describe('Create one release request per package or linked group.'),
   'linked-versions': z
     .union([z.boolean(), z.array(z.array(z.string().min(1)).min(2))])
-    .default(false),
-  'linked-tags': z.enum(['per-package', 'single']).default('per-package'),
-  'prerelease': prereleaseId.optional(),
-  'bump-minor-pre-major': z.boolean().default(true),
+    .default(false)
+    .describe(
+      'true: all packages share one version; or a list of groups of package paths that share one.',
+    ),
+  'linked-tags': z
+    .enum(['per-package', 'single'])
+    .default('per-package')
+    .describe(
+      'per-package: every package gets its own tag; single: one tag and release per linked group.',
+    ),
+  'prerelease': prereleaseId
+    .optional()
+    .describe('Pre-release identifier for all packages, e.g. "beta".'),
+  'bump-minor-pre-major': z
+    .boolean()
+    .default(true)
+    .describe(
+      'Breaking changes only bump the minor version before 1.0.0 (default for all packages).',
+    ),
   'packages': z
     .record(z.string(), packageSchema)
-    .default({'.': {updaters: []}}),
+    .default({'.': {updaters: []}})
+    .describe(
+      'Packages by path relative to the repository root ("." for the root).',
+    ),
 });
+
+/** JSON Schema of `relwolf.yaml` for editor completion, published at `docs/public/schema.json`. */
+export function configJsonSchema(): Record<string, unknown> {
+  return {
+    ...z.toJSONSchema(configSchema, {target: 'draft-7', io: 'input'}),
+    title: CONFIG_FILE,
+    description: 'Configuration of relwolf.',
+  };
+}
 
 export interface UpdaterConfig {
   type: UpdaterType;

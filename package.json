@@ -20,6 +20,7 @@
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "schema": "UPDATE_SCHEMA=1 vitest run test/schema.test.ts",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "vitest run --config vitest.e2e.config.ts",
     "start": "node dist/cli.js",

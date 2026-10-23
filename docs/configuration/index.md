@@ -51,6 +51,16 @@ packages:
 
 Paths of updaters and the changelog are relative to the package path. Unknown keys are rejected.
 
+## Editor completion
+
+A JSON Schema of the file is published at `https://relwolf.lupiq.io/schema.json`. Editors with the YAML language server
+(VS Code with the Red Hat YAML extension, IntelliJ, …) offer completion, descriptions and validation when the first line
+of the file is:
+
+```yaml [relwolf.yaml]
+# yaml-language-server: $schema=https://relwolf.lupiq.io/schema.json
+```
+
 ## Options
 
 | Key                      | Level           | Default                                       | Description                                                                      |

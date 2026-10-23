@@ -11,6 +11,7 @@ pnpm typecheck
 pnpm lint           # ESLint + typescript-eslint (strict, type-checked)
 pnpm format:check   # Prettier (use `pnpm format` to fix)
 pnpm test           # unit + integration tests (real git repositories and git-cliff)
+pnpm schema         # regenerate docs/public/schema.json after changing the config schema (src/config.ts)
 pnpm build
 pnpm docs:dev       # this documentation, with live reload
 pnpm docs:build

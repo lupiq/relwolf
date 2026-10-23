@@ -1,0 +1,273 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "branch": {
+      "description": "Branch to release from. Defaults to the CI default branch, then \"main\".",
+      "type": "string",
+      "minLength": 1
+    },
+    "branch-prefix": {
+      "default": "relwolf/",
+      "description": "Prefix of the release branch.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]*$"
+    },
+    "cliff-config": {
+      "description": "Path to the git-cliff config. Defaults to git-cliff's own discovery.",
+      "type": "string",
+      "minLength": 1
+    },
+    "pull-request-title": {
+      "description": "Title of the release request (single line). Placeholders: ${tags}, ${version}.",
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^\\r\\n]+$"
+    },
+    "pull-request-body": {
+      "description": "Body template of the release request; must contain ${notes} exactly once. Placeholders: ${tags}, ${version}, ${releases}, ${hint}, ${release}, ${notes}.",
+      "type": "string",
+      "minLength": 1
+    },
+    "release-commit-message": {
+      "description": "Message of the release commit (may span several lines). Defaults to the request title. Placeholders: ${tags}, ${version}.",
+      "type": "string",
+      "minLength": 1
+    },
+    "release-name": {
+      "default": "${tag}",
+      "description": "Title template of the created releases. Placeholders: ${tag}, ${version}, ${component}.",
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^\\r\\n]+$"
+    },
+    "tag-template": {
+      "default": "${component}-v${version}",
+      "description": "Tag format. Must contain ${version} exactly once and may contain ${component} once.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._/@${}-]+$"
+    },
+    "labels": {
+      "default": {},
+      "description": "Labels used to track release requests.",
+      "type": "object",
+      "properties": {
+        "pending": {
+          "description": "Label of open release requests (\"relwolf: pending\").",
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[^,\\r\\n]+$"
+        },
+        "tagged": {
+          "description": "Label of merged and tagged release requests (\"relwolf: tagged\").",
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[^,\\r\\n]+$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "draft": {
+      "default": false,
+      "description": "Open the release request as draft.",
+      "type": "boolean"
+    },
+    "release-emoji": {
+      "default": false,
+      "description": "Prefix the default release title with a random emoji.",
+      "type": "boolean"
+    },
+    "no-changes-text": {
+      "default": "No changes, version bumped to stay in sync.",
+      "description": "Text for packages that were only released to follow linked packages; empty to add nothing.",
+      "type": "string"
+    },
+    "assignees": {
+      "default": [],
+      "description": "Usernames assigned when the release request is created.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+      }
+    },
+    "reviewers": {
+      "default": [],
+      "description": "Usernames requested as reviewers when the request is created.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+      }
+    },
+    "patch-types": {
+      "default": [
+        "fix"
+      ],
+      "description": "Commit types that trigger a patch release.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9-]*$"
+      }
+    },
+    "minor-types": {
+      "default": [
+        "feat"
+      ],
+      "description": "Commit types that trigger a minor release. Breaking changes always trigger a major release.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9-]*$"
+      }
+    },
+    "exclude-paths": {
+      "default": [],
+      "description": "Globs from the repository root whose changes never count.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "bootstrap-sha": {
+      "description": "History up to and including this commit is ignored for packages without a release tag.",
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{7,40}$"
+    },
+    "separate-pull-requests": {
+      "default": false,
+      "description": "Create one release request per package or linked group.",
+      "type": "boolean"
+    },
+    "linked-versions": {
+      "default": false,
+      "description": "true: all packages share one version; or a list of groups of package paths that share one.",
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "array",
+          "items": {
+            "minItems": 2,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      ]
+    },
+    "linked-tags": {
+      "default": "per-package",
+      "description": "per-package: every package gets its own tag; single: one tag and release per linked group.",
+      "type": "string",
+      "enum": [
+        "per-package",
+        "single"
+      ]
+    },
+    "prerelease": {
+      "description": "Pre-release identifier for all packages, e.g. \"beta\".",
+      "type": "string",
+      "pattern": "^[0-9A-Za-z-]+$"
+    },
+    "bump-minor-pre-major": {
+      "default": true,
+      "description": "Breaking changes only bump the minor version before 1.0.0 (default for all packages).",
+      "type": "boolean"
+    },
+    "packages": {
+      "default": {
+        ".": {
+          "updaters": []
+        }
+      },
+      "description": "Packages by path relative to the repository root (\".\" for the root).",
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "component": {
+            "description": "Tag prefix of the package. Optional for a single package, required for every other package.",
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+          },
+          "changelog-path": {
+            "description": "Changelog file, relative to the package path.",
+            "type": "string",
+            "minLength": 1
+          },
+          "updaters": {
+            "default": [],
+            "description": "Files in which the version is updated.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "package-json",
+                    "pom-xml",
+                    "gradle",
+                    "pyproject",
+                    "cargo",
+                    "dotnet",
+                    "helm",
+                    "json",
+                    "yaml",
+                    "toml",
+                    "generic"
+                  ],
+                  "description": "Kind of file to update."
+                },
+                "path": {
+                  "description": "File to update, relative to the package path. Defaults to the usual file of the type; required for json, yaml, toml and generic.",
+                  "type": "string",
+                  "minLength": 1
+                },
+                "key": {
+                  "description": "Dotted key path of the version (json, yaml and toml updaters).",
+                  "type": "string",
+                  "minLength": 1
+                },
+                "lockfiles": {
+                  "description": "Also update the lockfiles next to the manifest.",
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "type"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "prerelease": {
+            "description": "Pre-release identifier of this package, e.g. \"beta\".",
+            "type": "string",
+            "pattern": "^[0-9A-Za-z-]+$"
+          },
+          "bump-minor-pre-major": {
+            "description": "Breaking changes only bump the minor version before 1.0.0 (overrides the global value).",
+            "type": "boolean"
+          },
+          "initial-version": {
+            "description": "First stable version if the package has no release tag yet.",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false,
+  "title": "relwolf.yaml",
+  "description": "Configuration of relwolf."
+}
