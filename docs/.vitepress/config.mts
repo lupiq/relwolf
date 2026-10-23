@@ -166,10 +166,7 @@ export default defineConfig({
       },
       {
         text: 'Development',
-        items: [
-          {text: 'Contributing', link: '/development/'},
-          {text: 'Releasing relwolf', link: '/development/releasing'},
-        ],
+        items: [{text: 'Contributing', link: '/development/'}],
       },
       {text: 'About lupiq', link: '/about'},
     ],
