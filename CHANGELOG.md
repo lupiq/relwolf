@@ -1,3 +1,10 @@
+## [0.6.1](https://github.com/lupiq/relwolf/compare/v0.6.0...v0.6.1) - 2026-10-23
+
+### 📚 Documentation
+
+- Remove docs about how to release relwolf itself since it is irrelevant for users
+- Improve Google result listing by adding more favicons
+
 ## [0.6.0](https://github.com/lupiq/relwolf/compare/v0.5.0...v0.6.0) - 2026-10-21
 
 ### 🚀 Features
