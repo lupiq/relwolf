@@ -1,3 +1,13 @@
+## [0.6.2](https://github.com/lupiq/relwolf/compare/v0.6.1...v0.6.2) - 2026-10-23
+
+### 🐛 Bug Fixes
+
+- Improve emoji list (remove negatively associated entries)
+
+### 📚 Documentation
+
+- Remove dead link from navigation
+
 ## [0.6.1](https://github.com/lupiq/relwolf/compare/v0.6.0...v0.6.1) - 2026-10-23
 
 ### 📚 Documentation
