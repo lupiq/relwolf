@@ -3,7 +3,7 @@
   "version": "0.6.0",
   "description": "Release bot for GitLab (and GitHub) driven by Conventional Commits, inspired by release-please",
   "type": "module",
-  "packageManager": "pnpm@12.14.0",
+  "packageManager": "pnpm@12.15.0",
   "repository": "https://github.com/lupiq/relwolf",
   "license": "MIT",
   "author": "lupiq",
