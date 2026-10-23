@@ -1,4 +1,4 @@
-FROM node:24-slim AS base
+FROM node:24.22.1-slim AS base
 # The arm64 build runs under emulation; the npm registry occasionally resets connections, so retry more often
 ENV npm_config_fetch_retries=6 \
     npm_config_fetch_retry_mintimeout=5000 \
@@ -16,7 +16,7 @@ RUN pnpm build
 FROM base AS deps
 RUN pnpm install --frozen-lockfile --prod
 
-FROM node:24-slim
+FROM node:24.22.1-slim
 RUN apt-get update \
     && apt-get install --yes --no-install-recommends git ca-certificates \
     && rm -rf /var/lib/apt/lists/* \
