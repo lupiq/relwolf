@@ -29,8 +29,39 @@ export default defineConfig({
     },
   },
   head: [
-    ['link', {rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg'}],
-    ['link', {rel: 'icon', type: 'image/png', href: '/favicon.png'}],
+    // Google needs a favicon whose size is a multiple of 48 px
+    ['link', {rel: 'icon', href: '/favicon.ico', sizes: '48x48'}],
+    [
+      'link',
+      {
+        rel: 'icon',
+        type: 'image/png',
+        href: '/favicon-48x48.png',
+        sizes: '48x48',
+      },
+    ],
+    [
+      'link',
+      {
+        rel: 'icon',
+        type: 'image/png',
+        href: '/favicon-96x96.png',
+        sizes: '96x96',
+      },
+    ],
+    [
+      'link',
+      {
+        rel: 'icon',
+        type: 'image/png',
+        href: '/favicon-192x192.png',
+        sizes: '192x192',
+      },
+    ],
+    [
+      'link',
+      {rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg', sizes: 'any'},
+    ],
     ['link', {rel: 'apple-touch-icon', href: '/apple-touch-icon.png'}],
     ['meta', {name: 'theme-color', content: '#3a2e5e'}],
     ['meta', {property: 'og:type', content: 'website'}],

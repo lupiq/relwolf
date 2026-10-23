@@ -1,6 +1,6 @@
 ---
 layout: home
-title: relwolf - Release bot for GitLab and GitHub
+title: relwolf - Semantic releases, on autopilot.
 titleTemplate: false
 description: relwolf automates releases from Conventional Commits. It opens a release merge request with changelog and version bump, tags merged releases and publishes them. For GitLab CI and GitHub Actions.
 
