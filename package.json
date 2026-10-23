@@ -37,8 +37,8 @@
     "zod": "4.6.7"
   },
   "devDependencies": {
-    "@commitlint/cli": "21.2.3",
-    "@commitlint/config-conventional": "21.2.3",
+    "@commitlint/cli": "21.2.4",
+    "@commitlint/config-conventional": "21.2.4",
     "@commitlint/types": "21.2.3",
     "@eslint/js": "10.0.1",
     "@types/node": "26.6.5",
@@ -50,7 +50,7 @@
     "prettier": "3.9.10",
     "prettier-plugin-organize-imports": "4.3.0",
     "typescript": "npm:@typescript/typescript6@6.0.2",
-    "typescript-eslint": "8.71.2",
+    "typescript-eslint": "8.72.0",
     "vitepress": "1.6.4",
     "vitest": "5.0.5"
   }
