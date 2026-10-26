@@ -101,6 +101,16 @@ export class HttpClient {
       : undefined;
   }
 
+  /** Whether a received response should be retried instead of returned. */
+  private isRetryable(method: string, response: Response): boolean {
+    const rateLimited =
+      response.status === 429 ||
+      (response.status === 403 && response.headers.has('retry-after'));
+    const unavailable = [502, 503, 504].includes(response.status);
+
+    return rateLimited || (unavailable && IDEMPOTENT.has(method));
+  }
+
   /**
    * Retries rate limiting (429, or 403 with `Retry-After`) for every method. Server errors and network
    * failures are only retried for idempotent methods, because a POST may have been processed already.
@@ -111,31 +121,20 @@ export class HttpClient {
     init: RequestInit,
   ): Promise<Response> {
     for (let attempt = 0; ; attempt++) {
-      let response: Response | undefined;
       let delay: number | undefined;
 
       try {
-        response = await this.fetchImpl(url, init);
-      } catch (error) {
-        if (attempt >= this.retries || !IDEMPOTENT.has(method)) {
-          throw error;
-        }
-      }
+        const response = await this.fetchImpl(url, init);
 
-      if (response) {
-        const rateLimited =
-          response.status === 429 ||
-          (response.status === 403 && response.headers.has('retry-after'));
-        const unavailable = [502, 503, 504].includes(response.status);
-
-        if (
-          attempt >= this.retries ||
-          !(rateLimited || (unavailable && IDEMPOTENT.has(method)))
-        ) {
+        if (attempt >= this.retries || !this.isRetryable(method, response)) {
           return response;
         }
 
         delay = this.retryAfterMs(response);
+      } catch (error) {
+        if (attempt >= this.retries || !IDEMPOTENT.has(method)) {
+          throw error;
+        }
       }
 
       await this.sleep(delay ?? this.baseDelayMs * 2 ** attempt);
@@ -158,44 +157,11 @@ export class HttpClient {
       url.searchParams.set(key, value);
     }
 
-    let response: Response;
-
-    try {
-      response = await this.send(method, url.toString(), {
-        method,
-        headers: {
-          ...this.headers,
-          ...(options.body !== undefined
-            ? {'Content-Type': 'application/json'}
-            : {}),
-        },
-        ...(options.body !== undefined
-          ? {body: JSON.stringify(options.body)}
-          : {}),
-      });
-    } catch (error) {
-      const cause = (error as {cause?: {message?: string}}).cause?.message;
-
-      throw new ProviderError(
-        `${method} ${url.pathname} could not reach ${url.origin}: ${error instanceof Error ? error.message : String(error)}${cause ? ` (${cause})` : ''}\n` +
-          'Hint: check the network of the job and the API URL (CI_API_V4_URL / GITHUB_API_URL).',
-      );
-    }
-
-    const text = await response.text();
-    let data: any = null;
-
-    if (text) {
-      try {
-        data = JSON.parse(text);
-      } catch {
-        data = text;
-      }
-    }
+    const response = await this.sendOrExplain(method, url, options.body);
+    const data = parseBody(await response.text());
 
     if (!response.ok && !(options.allow ?? []).includes(response.status)) {
       const detail = typeof data === 'string' ? data : JSON.stringify(data);
-
       const hint = this.hint(response.status, method, url.pathname);
 
       throw new ProviderError(
@@ -206,5 +172,44 @@ export class HttpClient {
     }
 
     return {status: response.status, data, headers: response.headers};
+  }
+
+  /** Sends the request and turns network failures into a ProviderError with a hint. */
+  private async sendOrExplain(
+    method: string,
+    url: URL,
+    body: unknown,
+  ): Promise<Response> {
+    const hasBody = body !== undefined;
+
+    try {
+      return await this.send(method, url.toString(), {
+        method,
+        headers: {
+          ...this.headers,
+          ...(hasBody ? {'Content-Type': 'application/json'} : {}),
+        },
+        ...(hasBody ? {body: JSON.stringify(body)} : {}),
+      });
+    } catch (error) {
+      const cause = (error as {cause?: {message?: string}}).cause?.message;
+
+      throw new ProviderError(
+        `${method} ${url.pathname} could not reach ${url.origin}: ${error instanceof Error ? error.message : String(error)}${cause ? ` (${cause})` : ''}\n` +
+          'Hint: check the network of the job and the API URL (CI_API_V4_URL / GITHUB_API_URL).',
+      );
+    }
+  }
+}
+
+function parseBody(text: string): any {
+  if (!text) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
   }
 }

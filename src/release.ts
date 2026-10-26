@@ -32,7 +32,7 @@ import {
   type PackagePlan,
   type PlanSettings,
 } from './plan.js';
-import type {FileChange, Provider} from './providers/types.js';
+import type {FileChange, Provider, ReleaseRequest} from './providers/types.js';
 import {
   componentKey,
   describeRequest,
@@ -127,7 +127,7 @@ export async function run(options: RunOptions): Promise<RunResult> {
   const requested = parseReleaseAs(options.releaseAs, options.config.packages);
 
   log(
-    `Release branch "${branch}" on ${options.provider.name}; ${options.config.packages.length === 1 ? '1 package' : `${options.config.packages.length} packages`}: ${options.config.packages.map(packageKey).join(', ')}.`,
+    `Release branch "${branch}" on ${options.provider.name}; ${describePackages(options.config)}.`,
   );
 
   log('Phase 1: tag merged release requests.');
@@ -155,14 +155,27 @@ export async function run(options: RunOptions): Promise<RunResult> {
     }
   }
 
-  log(
-    `Done: ${tagged.length === 0 ? 'nothing tagged' : `tagged ${tagged.join(', ')}`}; ` +
-      (releaseRequests.length === 0
-        ? 'no release request open.'
-        : `${releaseRequests.map(request => `#${request.id} ${request.action}`).join(', ')}.`),
-  );
+  log(describeOutcome(tagged, releaseRequests));
 
   return {tagged, releaseRequests};
+}
+
+function describeOutcome(
+  tagged: Array<string>,
+  releaseRequests: Array<ReleaseRequestResult>,
+): string {
+  return (
+    `Done: ${tagged.length === 0 ? 'nothing tagged' : `tagged ${tagged.join(', ')}`}; ` +
+    (releaseRequests.length === 0
+      ? 'no release request open.'
+      : `${releaseRequests.map(request => `#${request.id} ${request.action}`).join(', ')}.`)
+  );
+}
+
+function describePackages(config: Config): string {
+  const count = config.packages.length;
+
+  return `${count === 1 ? '1 package' : `${count} packages`}: ${config.packages.map(packageKey).join(', ')}`;
 }
 
 async function tagMergedReleases(
@@ -171,13 +184,11 @@ async function tagMergedReleases(
   branch: string,
   log: (message: string) => void,
 ): Promise<Array<string>> {
-  const {provider} = options;
-  const merged = await provider.listMergedReleaseRequests({
-    targetBranch: branch,
-    label: options.config.labels.pending,
-  });
   const {config} = options;
-  const labels = labelDefinitions(config);
+  const merged = await options.provider.listMergedReleaseRequests({
+    targetBranch: branch,
+    label: config.labels.pending,
+  });
   const created: Array<string> = [];
 
   log(
@@ -187,75 +198,112 @@ async function tagMergedReleases(
   );
 
   for (const request of merged) {
-    const entries = parseBody(request.body, tag =>
-      isValidReleaseTag(tag, config.packages),
-    );
-
-    if (entries.length === 0) {
-      throw new RunError(
-        `Merged release request #${request.id} (${request.url}) contains no release information.`,
-      );
-    }
-
-    if (!request.mergeSha) {
-      throw new RunError(
-        `Cannot determine the merge commit of release request #${request.id} (${request.url}).`,
-      );
-    }
-
-    if (!(await git.isAncestorOfHead(request.mergeSha))) {
-      log(
-        `Release request #${request.id} was merged in ${request.mergeSha}, which is not part of this checkout yet; a later run will handle it.`,
-      );
-      continue;
-    }
-
-    await provider.ensureLabel(labels.tagged);
-
-    const details = parseDetails(request.body);
-    const intro = releaseText(details.text ?? '');
-
-    for (const entry of entries) {
-      const result = await provider.createTag(entry.tag, request.mergeSha);
-
-      log(
-        result === 'created'
-          ? `Created tag ${entry.tag}.`
-          : `Tag ${entry.tag} already exists.`,
-      );
-
-      if (!(await git.hasTag(entry.tag))) {
-        await git.createLightweightTag(entry.tag, request.mergeSha);
-      }
-
-      if (await provider.releaseExists(entry.tag)) {
-        log(`Release ${entry.tag} already exists.`);
-      } else {
-        const parsed = parseReleaseTag(entry.tag, config.packages);
-
-        await provider.createRelease({
-          tag: entry.tag,
-          name: renderReleaseName(details.title ?? config.releaseName, {
-            tag: entry.tag,
-            version: parsed ? formatVersion(parsed.version) : entry.tag,
-            component: parsed?.pkg.component,
-          }),
-          body: intro ? `${intro}\n\n${entry.notes}` : entry.notes,
-          prerelease: entry.prerelease,
-        });
-        log(`Created release ${entry.tag}.`);
-      }
-
-      created.push(entry.tag);
-    }
-
-    await provider.setLabels(request.id, {
-      add: [config.labels.tagged],
-      remove: [config.labels.pending],
-    });
+    created.push(...(await tagMergedRequest(options, git, request, log)));
   }
 
   return created;
+}
+
+/** Tags and releases one merged release request; returns no tags if its merge commit is not checked out yet. */
+async function tagMergedRequest(
+  options: RunOptions,
+  git: Git,
+  request: ReleaseRequest,
+  log: (message: string) => void,
+): Promise<Array<string>> {
+  const {provider, config} = options;
+  const entries = parseBody(request.body, tag =>
+    isValidReleaseTag(tag, config.packages),
+  );
+
+  if (entries.length === 0) {
+    throw new RunError(
+      `Merged release request #${request.id} (${request.url}) contains no release information.`,
+    );
+  }
+
+  if (!request.mergeSha) {
+    throw new RunError(
+      `Cannot determine the merge commit of release request #${request.id} (${request.url}).`,
+    );
+  }
+
+  if (!(await git.isAncestorOfHead(request.mergeSha))) {
+    log(
+      `Release request #${request.id} was merged in ${request.mergeSha}, which is not part of this checkout yet; a later run will handle it.`,
+    );
+
+    return [];
+  }
+
+  await provider.ensureLabel(labelDefinitions(config).tagged);
+
+  const details = parseDetails(request.body);
+  const intro = releaseText(details.text ?? '');
+  const created: Array<string> = [];
+
+  for (const entry of entries) {
+    await tagAndRelease(
+      options,
+      git,
+      entry,
+      request.mergeSha,
+      details,
+      intro,
+      log,
+    );
+    created.push(entry.tag);
+  }
+
+  await provider.setLabels(request.id, {
+    add: [config.labels.tagged],
+    remove: [config.labels.pending],
+  });
+
+  return created;
+}
+
+async function tagAndRelease(
+  options: RunOptions,
+  git: Git,
+  entry: BodyEntry,
+  mergeSha: string,
+  details: ReturnType<typeof parseDetails>,
+  intro: string,
+  log: (message: string) => void,
+): Promise<void> {
+  const {provider, config} = options;
+  const result = await provider.createTag(entry.tag, mergeSha);
+
+  log(
+    result === 'created'
+      ? `Created tag ${entry.tag}.`
+      : `Tag ${entry.tag} already exists.`,
+  );
+
+  if (!(await git.hasTag(entry.tag))) {
+    await git.createLightweightTag(entry.tag, mergeSha);
+  }
+
+  if (await provider.releaseExists(entry.tag)) {
+    log(`Release ${entry.tag} already exists.`);
+
+    return;
+  }
+
+  const parsed = parseReleaseTag(entry.tag, config.packages);
+
+  await provider.createRelease({
+    tag: entry.tag,
+    name: renderReleaseName(details.title ?? config.releaseName, {
+      tag: entry.tag,
+      version: parsed ? formatVersion(parsed.version) : entry.tag,
+      component: parsed?.pkg.component,
+    }),
+    body: intro ? `${intro}\n\n${entry.notes}` : entry.notes,
+    prerelease: entry.prerelease,
+  });
+  log(`Created release ${entry.tag}.`);
 }
 
 async function readIfExists(file: string): Promise<string | undefined> {
@@ -325,49 +373,11 @@ async function applyPreCommitScript(
   }
 
   try {
-    for (const file of files) {
-      const target = path.join(options.cwd, file.path);
-
-      await mkdir(path.dirname(target), {recursive: true});
-      await writeFile(target, file.content);
-    }
-
+    await writeFiles(options.cwd, files);
     options.log?.(`Running pre-commit-script ${script}.`);
+    await runPreCommitScript(options, script, scriptPath);
 
-    try {
-      await runCommand(scriptPath, [], options.cwd, options.env);
-    } catch (error) {
-      const hint =
-        error instanceof CommandError && error.stderr.includes('EACCES')
-          ? ' Make it executable (chmod +x) and give it a shebang line.'
-          : '';
-
-      throw new RunError(
-        `The pre-commit-script "${script}" failed: ${(error as Error).message}${hint}`,
-      );
-    }
-
-    const changed = (await git.status()).filter(
-      entry => !dirty.has(entry.path),
-    );
-
-    const result: Array<FileChange> = [];
-
-    for (const entry of changed) {
-      if (entry.deleted) {
-        throw new RunError(
-          `The pre-commit-script deleted or renamed "${entry.path}", which a release commit cannot express.`,
-        );
-      }
-
-      result.push({
-        path: entry.path,
-        content: await readFile(path.join(options.cwd, entry.path), 'utf8'),
-        exists: entry.tracked,
-      });
-    }
-
-    return result;
+    return await collectChanges(options.cwd, git, dirty);
   } finally {
     const leftovers = (await git.status()).filter(
       entry => !dirty.has(entry.path),
@@ -377,27 +387,85 @@ async function applyPreCommitScript(
   }
 }
 
-async function buildFiles(
-  options: RunOptions,
-  git: Git,
-  plans: Array<PackagePlan>,
-): Promise<{files: Array<FileChange>; entries: Array<BodyEntry>}> {
-  const contents = new Map<
-    string,
-    {original: string | undefined; current: string}
-  >();
+async function writeFiles(
+  cwd: string,
+  files: Array<FileChange>,
+): Promise<void> {
+  for (const file of files) {
+    const target = path.join(cwd, file.path);
 
-  const load = async (
-    repoPath: string,
-    required: boolean,
-  ): Promise<{original: string | undefined; current: string}> => {
+    await mkdir(path.dirname(target), {recursive: true});
+    await writeFile(target, file.content);
+  }
+}
+
+async function runPreCommitScript(
+  options: RunOptions,
+  script: string,
+  scriptPath: string,
+): Promise<void> {
+  try {
+    await runCommand(scriptPath, [], options.cwd, options.env);
+  } catch (error) {
+    const hint =
+      error instanceof CommandError && error.stderr.includes('EACCES')
+        ? ' Make it executable (chmod +x) and give it a shebang line.'
+        : '';
+
+    throw new RunError(
+      `The pre-commit-script "${script}" failed: ${(error as Error).message}${hint}`,
+    );
+  }
+}
+
+/** Files changed by the script, excluding those that were already dirty before. */
+async function collectChanges(
+  cwd: string,
+  git: Git,
+  dirty: ReadonlySet<string>,
+): Promise<Array<FileChange>> {
+  const changed = (await git.status()).filter(entry => !dirty.has(entry.path));
+  const result: Array<FileChange> = [];
+
+  for (const entry of changed) {
+    if (entry.deleted) {
+      throw new RunError(
+        `The pre-commit-script deleted or renamed "${entry.path}", which a release commit cannot express.`,
+      );
+    }
+
+    result.push({
+      path: entry.path,
+      content: await readFile(path.join(cwd, entry.path), 'utf8'),
+      exists: entry.tracked,
+    });
+  }
+
+  return result;
+}
+
+interface FileState {
+  original: string | undefined;
+  current: string;
+}
+
+type FileLoader = (repoPath: string, required: boolean) => Promise<FileState>;
+
+type NotesByTag = Map<string, Array<{pkg: PackageConfig; notes: string}>>;
+
+/** Loads each file once, so that several updaters work on the same content. */
+function createLoader(
+  cwd: string,
+  contents: Map<string, FileState>,
+): FileLoader {
+  return async (repoPath, required) => {
     const known = contents.get(repoPath);
 
     if (known) {
       return known;
     }
 
-    const original = await readIfExists(path.join(options.cwd, repoPath));
+    const original = await readIfExists(path.join(cwd, repoPath));
 
     if (original === undefined && required) {
       throw new RunError(
@@ -411,80 +479,111 @@ async function buildFiles(
 
     return entry;
   };
+}
 
-  const allPackages = options.config.packages;
-  const notesByTag = new Map<
-    string,
-    Array<{pkg: PackageConfig; notes: string}>
-  >();
+async function buildFiles(
+  options: RunOptions,
+  git: Git,
+  plans: Array<PackagePlan>,
+): Promise<{files: Array<FileChange>; entries: Array<BodyEntry>}> {
+  const contents = new Map<string, FileState>();
+  const load = createLoader(options.cwd, contents);
+  const notesByTag: NotesByTag = new Map();
 
   for (const plan of plans) {
-    const {pkg} = plan;
-    const version = formatVersion(plan.version);
-    const nested = nestedPackagePaths(pkg, allPackages);
-    const cliff: CliffInvocation = {
-      cwd: options.cwd,
-      configPath: options.config.cliffConfig,
-      range: plan.range,
-      tag: plan.tag,
-      tagPattern: plan.tagPattern,
-      includePath: pkg.path === '.' ? undefined : `${pkg.path}/**`,
-      excludePaths: [
-        ...nested.map(nestedPath => `${nestedPath}/**`),
-        ...options.config.excludePaths,
-      ],
-      skipCommits: plan.revertedCommits,
-    };
-    const env = options.env ?? process.env;
-
-    const placeholder = plan.empty ? options.config.noChangesText : '';
-    const notes = placeholder || (await generateNotes(cliff, env));
-
-    const sections = notesByTag.get(plan.tag) ?? [];
-
-    sections.push({pkg, notes});
-    notesByTag.set(plan.tag, sections);
-
-    const changelog = await load(pkg.changelogPath, false);
-
-    changelog.current = await prependToChangelog(
-      cliff,
-      changelog.current,
-      env,
-      placeholder,
-    );
-
-    for (const updater of pkg.updaters) {
-      for (const file of await expandPath(git, updater.path)) {
-        const target = await load(file, true);
-
-        target.current = applyUpdater(
-          updater.type,
-          target.current,
-          version,
-          file,
-          updater.key,
-        );
-
-        if (!updater.lockfiles) {
-          continue;
-        }
-
-        for (const companion of companions(
-          updater.type,
-          file,
-          target.current,
-        )) {
-          const lock = await load(companion.path, false);
-
-          if (lock.original !== undefined) {
-            lock.current = companion.update(lock.current, version);
-          }
-        }
-      }
-    }
+    await applyPlan(options, git, plan, load, notesByTag);
   }
 
+  const entries = buildEntries(notesByTag, plans);
+  const files = changedFiles(contents);
+
+  return {files: await applyPreCommitScript(options, git, files), entries};
+}
+
+/** Generates the notes of a plan, prepends them to the changelog and runs the updaters. */
+async function applyPlan(
+  options: RunOptions,
+  git: Git,
+  plan: PackagePlan,
+  load: FileLoader,
+  notesByTag: NotesByTag,
+): Promise<void> {
+  const {pkg} = plan;
+  const nested = nestedPackagePaths(pkg, options.config.packages);
+  const cliff: CliffInvocation = {
+    cwd: options.cwd,
+    configPath: options.config.cliffConfig,
+    range: plan.range,
+    tag: plan.tag,
+    tagPattern: plan.tagPattern,
+    includePath: pkg.path === '.' ? undefined : `${pkg.path}/**`,
+    excludePaths: [
+      ...nested.map(nestedPath => `${nestedPath}/**`),
+      ...options.config.excludePaths,
+    ],
+    skipCommits: plan.revertedCommits,
+  };
+  const env = options.env ?? process.env;
+
+  const placeholder = plan.empty ? options.config.noChangesText : '';
+  const notes = placeholder || (await generateNotes(cliff, env));
+
+  const sections = notesByTag.get(plan.tag) ?? [];
+
+  sections.push({pkg, notes});
+  notesByTag.set(plan.tag, sections);
+
+  const changelog = await load(pkg.changelogPath, false);
+
+  changelog.current = await prependToChangelog(
+    cliff,
+    changelog.current,
+    env,
+    placeholder,
+  );
+
+  const version = formatVersion(plan.version);
+
+  for (const updater of pkg.updaters) {
+    for (const file of await expandPath(git, updater.path)) {
+      await updateFile(updater, file, version, load);
+    }
+  }
+}
+
+async function updateFile(
+  updater: PackageConfig['updaters'][number],
+  file: string,
+  version: string,
+  load: FileLoader,
+): Promise<void> {
+  const target = await load(file, true);
+
+  target.current = applyUpdater(
+    updater.type,
+    target.current,
+    version,
+    file,
+    updater.key,
+  );
+
+  if (!updater.lockfiles) {
+    return;
+  }
+
+  for (const companion of companions(updater.type, file, target.current)) {
+    const lock = await load(companion.path, false);
+
+    if (lock.original !== undefined) {
+      lock.current = companion.update(lock.current, version);
+    }
+  }
+}
+
+function buildEntries(
+  notesByTag: NotesByTag,
+  plans: Array<PackagePlan>,
+): Array<BodyEntry> {
   const entries: Array<BodyEntry> = [];
 
   for (const [tag, sections] of notesByTag) {
@@ -505,6 +604,10 @@ async function buildFiles(
     entries.push({tag, prerelease: Boolean(plan?.prerelease), notes});
   }
 
+  return entries;
+}
+
+function changedFiles(contents: Map<string, FileState>): Array<FileChange> {
   const files: Array<FileChange> = [];
 
   for (const [filePath, {original, current}] of contents) {
@@ -520,7 +623,7 @@ async function buildFiles(
     });
   }
 
-  return {files: await applyPreCommitScript(options, git, files), entries};
+  return files;
 }
 
 /** Requests stored in the open release request, updated by the ones given for this run. */
@@ -603,6 +706,35 @@ function planSettings(config: Config): PlanSettings {
   };
 }
 
+type PlanOptions = Parameters<typeof planPackage>[3];
+
+/** Plans every package of a group with its own options; packages without changes are left out. */
+async function planMembers(
+  git: Git,
+  config: Config,
+  group: ReadonlyArray<PackageConfig>,
+  optionsFor: (pkg: PackageConfig) => PlanOptions,
+): Promise<Array<PackagePlan>> {
+  const settings = planSettings(config);
+  const plans: Array<PackagePlan> = [];
+
+  for (const pkg of group) {
+    const plan = await planPackage(
+      git,
+      pkg,
+      config.packages,
+      optionsFor(pkg),
+      settings,
+    );
+
+    if (plan) {
+      plans.push(plan);
+    }
+  }
+
+  return plans;
+}
+
 /** Plans the packages of a linked group: all of them get the highest version any member needs. */
 async function planGroup(
   git: Git,
@@ -611,28 +743,17 @@ async function planGroup(
   versions: Map<string, Version>,
   log: (message: string) => void,
 ): Promise<Array<PackagePlan>> {
-  const settings = planSettings(config);
   const tagsOf =
     config.linkedTags === 'single'
       ? group.find(
           pkg => pkg.path === tagPackagePath(group.map(member => member.path)),
         )
       : undefined;
-  const own = [];
-
-  for (const pkg of group) {
-    own.push(
-      await planPackage(
-        git,
-        pkg,
-        config.packages,
-        {releaseAs: versions.get(componentKey(pkg)), tagsOf, log},
-        settings,
-      ),
-    );
-  }
-
-  const changed = own.flatMap(plan => plan ?? []);
+  const changed = await planMembers(git, config, group, pkg => ({
+    releaseAs: versions.get(componentKey(pkg)),
+    tagsOf,
+    log,
+  }));
 
   if (changed.length === 0) {
     return [];
@@ -645,20 +766,13 @@ async function planGroup(
   const candidates: Array<Version> = group.flatMap(
     pkg => versions.get(componentKey(pkg)) ?? [],
   );
+  const leveled = await planMembers(git, config, group, () => ({
+    minLevel: level,
+    force: true,
+    tagsOf,
+  }));
 
-  for (const pkg of group) {
-    const plan = await planPackage(
-      git,
-      pkg,
-      config.packages,
-      {minLevel: level, force: true, tagsOf},
-      settings,
-    );
-
-    if (plan) {
-      candidates.push(plan.version);
-    }
-  }
+  candidates.push(...leveled.map(plan => plan.version));
 
   const [first, ...others] = candidates;
 
@@ -671,21 +785,11 @@ async function planGroup(
       compareVersions(version, highest) > 0 ? version : highest,
     first,
   );
-  const plans: Array<PackagePlan> = [];
-
-  for (const pkg of group) {
-    const plan = await planPackage(
-      git,
-      pkg,
-      config.packages,
-      {releaseAs: shared, force: true, tagsOf},
-      settings,
-    );
-
-    if (plan) {
-      plans.push(plan);
-    }
-  }
+  const plans = await planMembers(git, config, group, () => ({
+    releaseAs: shared,
+    force: true,
+    tagsOf,
+  }));
 
   log(
     `Linked packages (${group.map(packageKey).join(', ')}) share the version ${formatVersion(shared)}.`,
@@ -749,7 +853,6 @@ async function prepareReleaseRequest(
   log: (message: string) => void,
 ): Promise<ReleaseRequestResult | undefined> {
   const {provider, config} = options;
-  const labels = labelDefinitions(config);
   const sourceBranch = `${config.branchPrefix}${branch}${separate ? `/${unit.key}` : ''}`;
   const existing = await provider.findOpenReleaseRequest({
     sourceBranch,
@@ -760,16 +863,12 @@ async function prepareReleaseRequest(
   const plans = await planUnit(git, config, unit, versions, log);
 
   if (plans.length === 0) {
-    log(
-      `No releasable changes found${separate ? ` for ${unit.key}` : ''} (see "patch-types" and "minor-types"; breaking commits always release).`,
+    await closeObsolete(
+      provider,
+      existing,
+      separate ? unit.key : undefined,
+      log,
     );
-
-    if (existing) {
-      await provider.closeReleaseRequest(existing.id);
-      log(
-        `Closed release request #${existing.id} because there is nothing to release anymore.`,
-      );
-    }
 
     return undefined;
   }
@@ -780,6 +879,85 @@ async function prepareReleaseRequest(
   log(
     `Release commit changes ${files.length} file(s): ${files.map(file => file.path).join(', ')}.`,
   );
+
+  const {title, message, body} = renderRequest(
+    options,
+    plans,
+    entries,
+    versions,
+    baseSha,
+    existing,
+  );
+
+  if (existing?.title === title && existing.body === body) {
+    log(`Release request #${existing.id} is up to date: ${existing.url}`);
+
+    return {id: existing.id, url: existing.url, action: 'unchanged'};
+  }
+
+  await provider.ensureLabel(labelDefinitions(config).pending);
+  await provider.commitFiles({branch: sourceBranch, baseSha, message, files});
+
+  if (existing) {
+    return updateRequest(options, existing, title, body, log);
+  }
+
+  return createRequest(options, branch, sourceBranch, title, body, log);
+}
+
+async function createRequest(
+  options: RunOptions,
+  branch: string,
+  sourceBranch: string,
+  title: string,
+  body: string,
+  log: (message: string) => void,
+): Promise<ReleaseRequestResult> {
+  const {config} = options;
+  const created = await options.provider.createReleaseRequest({
+    sourceBranch,
+    targetBranch: branch,
+    title,
+    body,
+    labels: [config.labels.pending],
+    draft: config.draft,
+    assignees: config.assignees,
+    reviewers: config.reviewers,
+  });
+
+  log(`Created release request #${created.id}: ${created.url}`);
+
+  return {id: created.id, url: created.url, action: 'created'};
+}
+
+/** Logs that there is nothing to release and closes the release request that is still open. */
+async function closeObsolete(
+  provider: Provider,
+  existing: ReleaseRequest | null,
+  unitKey: string | undefined,
+  log: (message: string) => void,
+): Promise<void> {
+  log(
+    `No releasable changes found${unitKey === undefined ? '' : ` for ${unitKey}`} (see "patch-types" and "minor-types"; breaking commits always release).`,
+  );
+
+  if (existing) {
+    await provider.closeReleaseRequest(existing.id);
+    log(
+      `Closed release request #${existing.id} because there is nothing to release anymore.`,
+    );
+  }
+}
+
+function renderRequest(
+  options: RunOptions,
+  plans: Array<PackagePlan>,
+  entries: Array<BodyEntry>,
+  versions: Map<string, Version>,
+  baseSha: string,
+  existing: ReleaseRequest | null,
+): {title: string; message: string; body: string} {
+  const {config} = options;
   const unique = plans.filter(
     (plan, index) => plans.findIndex(other => other.tag === plan.tag) === index,
   );
@@ -810,46 +988,32 @@ async function prepareReleaseRequest(
     },
   });
 
-  if (existing?.title === title && existing.body === body) {
-    log(`Release request #${existing.id} is up to date: ${existing.url}`);
+  return {title, message, body};
+}
 
-    return {id: existing.id, url: existing.url, action: 'unchanged'};
-  }
+async function updateRequest(
+  options: RunOptions,
+  existing: ReleaseRequest,
+  title: string,
+  body: string,
+  log: (message: string) => void,
+): Promise<ReleaseRequestResult> {
+  const {provider, config} = options;
 
-  await provider.ensureLabel(labels.pending);
-  await provider.commitFiles({branch: sourceBranch, baseSha, message, files});
-
-  if (existing) {
-    await provider.updateReleaseRequest(existing.id, {
-      title,
-      body,
-      draft: existing.draft,
-    });
-
-    if (!existing.labels.includes(config.labels.pending)) {
-      await provider.setLabels(existing.id, {
-        add: [config.labels.pending],
-        remove: [],
-      });
-    }
-
-    log(`Updated release request #${existing.id}: ${existing.url}`);
-
-    return {id: existing.id, url: existing.url, action: 'updated'};
-  }
-
-  const created = await provider.createReleaseRequest({
-    sourceBranch,
-    targetBranch: branch,
+  await provider.updateReleaseRequest(existing.id, {
     title,
     body,
-    labels: [config.labels.pending],
-    draft: config.draft,
-    assignees: config.assignees,
-    reviewers: config.reviewers,
+    draft: existing.draft,
   });
 
-  log(`Created release request #${created.id}: ${created.url}`);
+  if (!existing.labels.includes(config.labels.pending)) {
+    await provider.setLabels(existing.id, {
+      add: [config.labels.pending],
+      remove: [],
+    });
+  }
 
-  return {id: created.id, url: created.url, action: 'created'};
+  log(`Updated release request #${existing.id}: ${existing.url}`);
+
+  return {id: existing.id, url: existing.url, action: 'updated'};
 }

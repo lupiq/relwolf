@@ -436,19 +436,24 @@ export function tagPackagePath(group: ReadonlyArray<string>): string {
   return group.includes('.') ? '.' : (group[0] ?? '.');
 }
 
-export function parseConfig(source: string | undefined): Config {
-  let raw: unknown = {};
+type ParsedConfig = z.infer<typeof configSchema>;
+type ParsedPackage = ParsedConfig['packages'][string];
 
-  if (source !== undefined && source.trim() !== '') {
-    try {
-      raw = parse(source);
-    } catch (error) {
-      throw new ConfigError(
-        `Invalid YAML in ${CONFIG_FILE}: ${(error as Error).message}`,
-      );
-    }
+function parseYaml(source: string | undefined): unknown {
+  if (source === undefined || source.trim() === '') {
+    return {};
   }
 
+  try {
+    return parse(source);
+  } catch (error) {
+    throw new ConfigError(
+      `Invalid YAML in ${CONFIG_FILE}: ${(error as Error).message}`,
+    );
+  }
+}
+
+function validateSchema(raw: unknown): ParsedConfig {
   const result = configSchema.safeParse(raw ?? {});
 
   if (!result.success) {
@@ -459,85 +464,99 @@ export function parseConfig(source: string | undefined): Config {
     throw new ConfigError(`Invalid ${CONFIG_FILE}:\n${details}`);
   }
 
-  const parsed = result.data;
+  return result.data;
+}
 
-  const packages: Array<PackageConfig> = Object.entries(parsed.packages).map(
-    ([rawPath, pkg]) => {
-      const pkgPath = normalizeRepoPath(rawPath, 'Package path');
-      const join = (relative: string, what: string): string =>
-        normalizeRepoPath(
-          path.posix.join(pkgPath, normalizeRepoPath(relative, what)),
-          what,
-        );
+function buildUpdater(
+  updater: ParsedPackage['updaters'][number],
+  rawPath: string,
+  join: (relative: string, what: string) => string,
+): UpdaterConfig {
+  const configured = updater.path ?? DEFAULT_UPDATER_PATH[updater.type];
 
-      const updaters = pkg.updaters.map((updater): UpdaterConfig => {
-        const configured = updater.path ?? DEFAULT_UPDATER_PATH[updater.type];
-
-        if (!configured) {
-          throw new ConfigError(
-            `Package "${rawPath}": updater "${updater.type}" requires a "path"`,
-          );
-        }
-
-        const needsKey = KEY_TYPES.has(updater.type);
-
-        if (needsKey && !updater.key) {
-          throw new ConfigError(
-            `Package "${rawPath}": updater "${updater.type}" requires a "key" (e.g. "version")`,
-          );
-        }
-
-        if (!needsKey && updater.key) {
-          throw new ConfigError(
-            `Package "${rawPath}": "key" is only supported by the json, yaml and toml updaters`,
-          );
-        }
-
-        return {
-          type: updater.type,
-          path: join(configured, 'Updater path'),
-          ...(updater.key ? {key: updater.key} : {}),
-          lockfiles: updater.lockfiles ?? true,
-        };
-      });
-
-      let initialVersion: Version | undefined;
-
-      if (pkg['initial-version'] !== undefined) {
-        initialVersion = parseVersion(pkg['initial-version']) ?? undefined;
-
-        if (!initialVersion || initialVersion.prerelease.length > 0) {
-          throw new ConfigError(
-            `Package "${rawPath}": "initial-version" must be a stable semantic version, got "${pkg['initial-version']}"`,
-          );
-        }
-      }
-
-      const prerelease = pkg.prerelease ?? parsed.prerelease;
-      const format = tagFormat(parsed['tag-template'], pkg.component);
-
-      return {
-        path: pkgPath,
-        ...(pkg.component ? {component: pkg.component} : {}),
-        changelogPath: join(
-          pkg['changelog-path'] ?? 'CHANGELOG.md',
-          'changelog-path',
-        ),
-        updaters,
-        ...(prerelease ? {prerelease} : {}),
-        minorPreMajor:
-          pkg['bump-minor-pre-major'] ?? parsed['bump-minor-pre-major'],
-        ...(initialVersion ? {initialVersion} : {}),
-        tagPrefix: format.prefix,
-        tagSuffix: format.suffix,
-      };
-    },
-  );
-
-  if (packages.length === 0) {
-    throw new ConfigError(`${CONFIG_FILE} must define at least one package`);
+  if (!configured) {
+    throw new ConfigError(
+      `Package "${rawPath}": updater "${updater.type}" requires a "path"`,
+    );
   }
 
+  const needsKey = KEY_TYPES.has(updater.type);
+
+  if (needsKey && !updater.key) {
+    throw new ConfigError(
+      `Package "${rawPath}": updater "${updater.type}" requires a "key" (e.g. "version")`,
+    );
+  }
+
+  if (!needsKey && updater.key) {
+    throw new ConfigError(
+      `Package "${rawPath}": "key" is only supported by the json, yaml and toml updaters`,
+    );
+  }
+
+  return {
+    type: updater.type,
+    path: join(configured, 'Updater path'),
+    ...(updater.key ? {key: updater.key} : {}),
+    lockfiles: updater.lockfiles ?? true,
+  };
+}
+
+function parseInitialVersion(
+  value: string | undefined,
+  rawPath: string,
+): Version | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  const initialVersion = parseVersion(value) ?? undefined;
+
+  if (!initialVersion || initialVersion.prerelease.length > 0) {
+    throw new ConfigError(
+      `Package "${rawPath}": "initial-version" must be a stable semantic version, got "${value}"`,
+    );
+  }
+
+  return initialVersion;
+}
+
+function buildPackage(
+  rawPath: string,
+  pkg: ParsedPackage,
+  parsed: ParsedConfig,
+): PackageConfig {
+  const pkgPath = normalizeRepoPath(rawPath, 'Package path');
+  const join = (relative: string, what: string): string =>
+    normalizeRepoPath(
+      path.posix.join(pkgPath, normalizeRepoPath(relative, what)),
+      what,
+    );
+  const updaters = pkg.updaters.map(updater =>
+    buildUpdater(updater, rawPath, join),
+  );
+  const initialVersion = parseInitialVersion(pkg['initial-version'], rawPath);
+  const prerelease = pkg.prerelease ?? parsed.prerelease;
+  const format = tagFormat(parsed['tag-template'], pkg.component);
+
+  return {
+    path: pkgPath,
+    ...(pkg.component ? {component: pkg.component} : {}),
+    changelogPath: join(
+      pkg['changelog-path'] ?? 'CHANGELOG.md',
+      'changelog-path',
+    ),
+    updaters,
+    ...(prerelease ? {prerelease} : {}),
+    minorPreMajor:
+      pkg['bump-minor-pre-major'] ?? parsed['bump-minor-pre-major'],
+    ...(initialVersion ? {initialVersion} : {}),
+    tagPrefix: format.prefix,
+    tagSuffix: format.suffix,
+  };
+}
+
+function checkUniquePackages(packages: ReadonlyArray<PackageConfig>): void {
   const seenPaths = new Set<string>();
   const seenComponents = new Set<string | undefined>();
 
@@ -558,7 +577,12 @@ export function parseConfig(source: string | undefined): Config {
 
     seenComponents.add(pkg.component);
   }
+}
 
+function parseTypes(parsed: ParsedConfig): {
+  minorTypes: Array<string>;
+  patchTypes: Array<string>;
+} {
   const patchTypes = parsed['patch-types'].map(type => type.toLowerCase());
   const minorTypes = parsed['minor-types'].map(type => type.toLowerCase());
   const both = minorTypes.filter(type => patchTypes.includes(type));
@@ -569,7 +593,11 @@ export function parseConfig(source: string | undefined): Config {
     );
   }
 
-  const excludePaths = parsed['exclude-paths'].map(pattern => {
+  return {minorTypes, patchTypes};
+}
+
+function parseExcludePaths(patterns: ReadonlyArray<string>): Array<string> {
+  return patterns.map(pattern => {
     const normalized = pattern.replaceAll('\\', '/').replace(/^\.\//, '');
 
     if (normalized.startsWith('/') || normalized.split('/').includes('..')) {
@@ -580,8 +608,12 @@ export function parseConfig(source: string | undefined): Config {
 
     return normalized;
   });
+}
 
-  const linked = parsed['linked-versions'];
+function parseLinkedGroups(
+  linked: ParsedConfig['linked-versions'],
+  packages: ReadonlyArray<PackageConfig>,
+): Array<Array<string>> {
   const linkedGroups: Array<Array<string>> =
     linked === true
       ? [packages.map(pkg => pkg.path)]
@@ -590,10 +622,11 @@ export function parseConfig(source: string | undefined): Config {
         : linked.map(group =>
             group.map(entry => normalizeRepoPath(entry, 'linked-versions')),
           );
+  const known = new Set(packages.map(pkg => pkg.path));
   const grouped = new Set<string>();
 
   for (const entry of linkedGroups.flat()) {
-    if (!seenPaths.has(entry)) {
+    if (!known.has(entry)) {
       throw new ConfigError(
         `linked-versions: "${entry}" is not a configured package path`,
       );
@@ -608,7 +641,15 @@ export function parseConfig(source: string | undefined): Config {
     grouped.add(entry);
   }
 
-  const single = parsed['linked-tags'] === 'single';
+  return linkedGroups;
+}
+
+function checkTagFormats(
+  packages: ReadonlyArray<PackageConfig>,
+  linkedGroups: ReadonlyArray<ReadonlyArray<string>>,
+  linkedTags: ParsedConfig['linked-tags'],
+): void {
+  const single = linkedTags === 'single';
 
   if (single && linkedGroups.length === 0) {
     throw new ConfigError('linked-tags: "single" requires "linked-versions"');
@@ -638,7 +679,25 @@ export function parseConfig(source: string | undefined): Config {
 
     seenTagFormats.add(format);
   }
+}
 
+function parseLabels(labels: ParsedConfig['labels']): Config['labels'] {
+  const result = {
+    pending: labels.pending ?? 'relwolf: pending',
+    tagged: labels.tagged ?? 'relwolf: tagged',
+  };
+
+  if (result.pending === result.tagged) {
+    throw new ConfigError('labels: "pending" and "tagged" must differ');
+  }
+
+  return result;
+}
+
+function checkPullRequestSettings(
+  parsed: ParsedConfig,
+  packages: ReadonlyArray<PackageConfig>,
+): void {
   if (
     parsed['separate-pull-requests'] &&
     packages.some(pkg => !pkg.component) &&
@@ -648,16 +707,9 @@ export function parseConfig(source: string | undefined): Config {
       `separate-pull-requests: the component name "${ROOT_KEY}" is reserved for the package without a component`,
     );
   }
+}
 
-  const labels = {
-    pending: parsed.labels.pending ?? 'relwolf: pending',
-    tagged: parsed.labels.tagged ?? 'relwolf: tagged',
-  };
-
-  if (labels.pending === labels.tagged) {
-    throw new ConfigError('labels: "pending" and "tagged" must differ');
-  }
-
+function checkReleaseEmoji(parsed: ParsedConfig): void {
   if (
     parsed['release-emoji'] &&
     parsed['pull-request-body'] &&
@@ -667,6 +719,30 @@ export function parseConfig(source: string | undefined): Config {
       'release-emoji requires ${release} in pull-request-body',
     );
   }
+}
+
+export function parseConfig(source: string | undefined): Config {
+  const parsed = validateSchema(parseYaml(source));
+  const packages = Object.entries(parsed.packages).map(([rawPath, pkg]) =>
+    buildPackage(rawPath, pkg, parsed),
+  );
+
+  if (packages.length === 0) {
+    throw new ConfigError(`${CONFIG_FILE} must define at least one package`);
+  }
+
+  checkUniquePackages(packages);
+
+  const {minorTypes, patchTypes} = parseTypes(parsed);
+  const excludePaths = parseExcludePaths(parsed['exclude-paths']);
+  const linkedGroups = parseLinkedGroups(parsed['linked-versions'], packages);
+
+  checkTagFormats(packages, linkedGroups, parsed['linked-tags']);
+  checkPullRequestSettings(parsed, packages);
+
+  const labels = parseLabels(parsed.labels);
+
+  checkReleaseEmoji(parsed);
 
   return {
     ...(parsed.branch ? {branch: parsed.branch} : {}),

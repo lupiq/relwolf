@@ -17,6 +17,25 @@ export type ReleaseAs = Map<string, Version | null>;
 export const componentKey = (pkg: Pick<PackageConfig, 'component'>): string =>
   pkg.component ?? '';
 
+const unknownComponent = (key: string, token: string): ReleaseAsError =>
+  new ReleaseAsError(
+    key === ''
+      ? `RELWOLF_RELEASE_AS: "${token}" needs a component (component=version); every package has one.`
+      : `RELWOLF_RELEASE_AS: unknown component "${key}".`,
+  );
+
+function parseRequested(raw: string): Version {
+  const version = parseVersion(raw.replace(/^v/, ''));
+
+  if (!version) {
+    throw new ReleaseAsError(
+      `RELWOLF_RELEASE_AS: "${raw}" is not a valid semantic version.`,
+    );
+  }
+
+  return version;
+}
+
 /**
  * Parses `RELWOLF_RELEASE_AS`: a comma/whitespace separated list of `[component=]version`, where the
  * version may be `auto` to remove a request. A bare version applies to the package without component
@@ -37,27 +56,10 @@ export function parseReleaseAs(
     const raw = separator === -1 ? token : token.slice(separator + 1);
 
     if (!keys.has(key)) {
-      throw new ReleaseAsError(
-        key === ''
-          ? `RELWOLF_RELEASE_AS: "${token}" needs a component (component=version); every package has one.`
-          : `RELWOLF_RELEASE_AS: unknown component "${key}".`,
-      );
+      throw unknownComponent(key, token);
     }
 
-    if (raw === RESET) {
-      result.set(key, null);
-      continue;
-    }
-
-    const version = parseVersion(raw.replace(/^v/, ''));
-
-    if (!version) {
-      throw new ReleaseAsError(
-        `RELWOLF_RELEASE_AS: "${raw}" is not a valid semantic version.`,
-      );
-    }
-
-    result.set(key, version);
+    result.set(key, raw === RESET ? null : parseRequested(raw));
   }
 
   return result;

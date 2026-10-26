@@ -39,54 +39,58 @@ export function isPrerelease(version: Version): boolean {
 
 const isNumeric = (value: string): boolean => /^\d+$/.test(value);
 
-export function compareVersions(a: Version, b: Version): number {
-  for (const key of ['major', 'minor', 'patch'] as const) {
-    if (a[key] !== b[key]) {
-      return a[key] < b[key] ? -1 : 1;
-    }
+const sign = (left: number | string, right: number | string): number =>
+  left < right ? -1 : left > right ? 1 : 0;
+
+function compareIdentifiers(left: string, right: string): number {
+  const leftNumeric = isNumeric(left);
+  const rightNumeric = isNumeric(right);
+
+  if (leftNumeric && rightNumeric) {
+    return sign(Number(left), Number(right));
   }
 
-  if (a.prerelease.length === 0 || b.prerelease.length === 0) {
-    return a.prerelease.length === b.prerelease.length
-      ? 0
-      : a.prerelease.length === 0
-        ? 1
-        : -1;
+  if (leftNumeric !== rightNumeric) {
+    return leftNumeric ? -1 : 1;
   }
 
-  const length = Math.max(a.prerelease.length, b.prerelease.length);
+  return sign(left, right);
+}
 
-  for (let i = 0; i < length; i++) {
-    const left = a.prerelease[i];
-    const right = b.prerelease[i];
+/** A version without pre-release ranks above one with. */
+const compareStability = (a: Array<string>, b: Array<string>): number =>
+  sign(a.length === 0 ? 1 : 0, b.length === 0 ? 1 : 0);
 
-    if (left === undefined) {
-      return -1;
+function comparePrerelease(a: Array<string>, b: Array<string>): number {
+  if (a.length === 0 || b.length === 0) {
+    return compareStability(a, b);
+  }
+
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    const left = a[i];
+    const right = b[i];
+
+    if (left === undefined || right === undefined) {
+      return left === undefined ? -1 : 1;
     }
 
-    if (right === undefined) {
-      return 1;
+    const result = compareIdentifiers(left, right);
+
+    if (result !== 0) {
+      return result;
     }
-
-    if (left === right) {
-      continue;
-    }
-
-    const leftNumeric = isNumeric(left);
-    const rightNumeric = isNumeric(right);
-
-    if (leftNumeric && rightNumeric) {
-      return Number(left) < Number(right) ? -1 : 1;
-    }
-
-    if (leftNumeric !== rightNumeric) {
-      return leftNumeric ? -1 : 1;
-    }
-
-    return left < right ? -1 : 1;
   }
 
   return 0;
+}
+
+export function compareVersions(a: Version, b: Version): number {
+  return (
+    sign(a.major, b.major) ||
+    sign(a.minor, b.minor) ||
+    sign(a.patch, b.patch) ||
+    comparePrerelease(a.prerelease, b.prerelease)
+  );
 }
 
 export function sameCore(a: Version, b: Version): boolean {
@@ -137,6 +141,46 @@ export interface NextVersionInput {
   releaseAs?: Version | undefined;
 }
 
+function baseVersion(input: NextVersionInput, level: BumpLevel): Version {
+  if (input.lastStable) {
+    return bumpVersion(input.lastStable, level, input.minorPreMajor);
+  }
+
+  if (input.initialVersion) {
+    return {...input.initialVersion, prerelease: []};
+  }
+
+  return bumpVersion(
+    {major: 0, minor: 0, patch: 0, prerelease: []},
+    level,
+    input.minorPreMajor,
+  );
+}
+
+/** Next counter for `id` on `base`: continues the last pre-release of the same core and identifier. */
+function prereleaseCounter(
+  last: Version | undefined,
+  base: Version,
+  id: string,
+): number {
+  if (
+    !last ||
+    !isPrerelease(last) ||
+    !sameCore(last, base) ||
+    last.prerelease[0] !== id
+  ) {
+    return 1;
+  }
+
+  const current = last.prerelease[1];
+
+  return last.prerelease.length === 2 &&
+    current !== undefined &&
+    isNumeric(current)
+    ? Number(current) + 1
+    : 1;
+}
+
 export function nextVersion(input: NextVersionInput): Version | null {
   const {level, releaseAs} = input;
 
@@ -144,22 +188,10 @@ export function nextVersion(input: NextVersionInput): Version | null {
     return releaseAs;
   }
 
-  let base: Version;
+  const base = releaseAs ?? (level === null ? null : baseVersion(input, level));
 
-  if (releaseAs) {
-    base = releaseAs;
-  } else if (level === null) {
+  if (!base) {
     return null;
-  } else if (input.lastStable) {
-    base = bumpVersion(input.lastStable, level, input.minorPreMajor);
-  } else if (input.initialVersion) {
-    base = {...input.initialVersion, prerelease: []};
-  } else {
-    base = bumpVersion(
-      {major: 0, minor: 0, patch: 0, prerelease: []},
-      level,
-      input.minorPreMajor,
-    );
   }
 
   const id = input.prerelease;
@@ -168,24 +200,8 @@ export function nextVersion(input: NextVersionInput): Version | null {
     return base;
   }
 
-  const last = input.lastAny;
-  let counter = 1;
-
-  if (
-    last &&
-    isPrerelease(last) &&
-    sameCore(last, base) &&
-    last.prerelease[0] === id
-  ) {
-    const current = last.prerelease[1];
-
-    counter =
-      last.prerelease.length === 2 &&
-      current !== undefined &&
-      isNumeric(current)
-        ? Number(current) + 1
-        : 1;
-  }
-
-  return {...base, prerelease: [id, String(counter)]};
+  return {
+    ...base,
+    prerelease: [id, String(prereleaseCounter(input.lastAny, base, id))],
+  };
 }
