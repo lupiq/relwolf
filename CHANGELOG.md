@@ -1,3 +1,15 @@
+## [0.8.1](https://github.com/lupiq/relwolf/compare/v0.8.0...v0.8.1) - 2026-10-26
+
+### 📚 Documentation
+
+- Improve indexability of docs
+
+### 👷 CI
+
+- Use own GitHub app to create Release PRs
+
+---
+
 ## [0.8.0](https://github.com/lupiq/relwolf/compare/v0.7.0...v0.8.0) - 2026-10-26
 
 ### 🚀 Features

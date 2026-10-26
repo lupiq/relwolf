@@ -1,6 +1,6 @@
 {
   "name": "relwolf",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "description": "Release bot for GitLab (and GitHub) driven by Conventional Commits, inspired by release-please",
   "type": "module",
   "packageManager": "pnpm@12.15.0",
