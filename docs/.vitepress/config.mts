@@ -168,6 +168,7 @@ export default defineConfig({
         text: 'Development',
         items: [{text: 'Contributing', link: '/development/contributing'}],
       },
+      {text: 'Logos', link: '/logos'},
       {text: 'About lupiq', link: '/about'},
     ],
     socialLinks: [{icon: 'github', link: 'https://github.com/lupiq/relwolf'}],

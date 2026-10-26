@@ -1,6 +1,6 @@
 ---
 title: About lupiq
-description: relwolf is an open source release bot developed by lupiq. Learn who is behind it and how to use the relwolf bot avatar on GitLab.
+description: relwolf is an open source release bot developed by lupiq. Learn who is behind it.
 ---
 
 # About
@@ -18,10 +18,3 @@ relwolf was developed by **lupiq**.
 
 relwolf is open source under the [MIT License](https://github.com/lupiq/relwolf/blob/main/LICENSE) and lives on [GitHub](https://github.com/lupiq/relwolf). It is inspired by Google's
 [release-please](https://github.com/googleapis/release-please).
-
-## Bot avatar
-
-For a GitLab (or GitHub) bot user, use the relwolf avatar: [relwolf-avatar.png](/relwolf-avatar.png) (512 × 512 px).
-The logo is also available as a [SVG](/logo.svg).
-
-<img src="/relwolf-avatar.png" alt="relwolf avatar" width="160" />
