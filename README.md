@@ -25,37 +25,18 @@ release merge request with the changelog and updated version files, and tags and
 
 relwolf is developed by [lupiq](https://lupiq.com) and released under the [MIT License](LICENSE).
 
-## Quick start (GitHub Actions)
+## Getting started
 
-1. Store a personal access token (_contents_ and _pull requests_ write access) as the repository secret
-   `RELWOLF_TOKEN`.
-2. Repository settings: allow **squash merging** only and enable _Automatically delete head branches_.
-3. Add a workflow:
+relwolf runs as a single CI job on every push to your default branch. It needs the full git history, a personal
+access token and squash merging for release requests. Pick your platform:
 
-   ```yaml
-   name: Release
-   on:
-     push:
-       branches: [main] # your default branch
-   concurrency:
-     group: release
-   permissions:
-     contents: write
-     pull-requests: write
-   jobs:
-     relwolf:
-       runs-on: ubuntu-latest # Linux runners only (Docker container action)
-       steps:
-         - uses: actions/checkout@v7
-           with:
-             fetch-depth: 0 # relwolf needs the full history and all tags
-         - uses: lupiq/relwolf@v0 # x-relwolf-major
-           with:
-             token: ${{ secrets.RELWOLF_TOKEN }}
-   ```
+- **GitLab:** [Setup guide for GitLab CI](https://relwolf.lupiq.io/guide/gitlab)
+- **GitHub:** [Setup guide for GitHub Actions](https://relwolf.lupiq.io/guide/github)
 
-Using GitLab? See the [GitLab guide](https://relwolf.lupiq.io/guide/gitlab). For configuration (`relwolf.yaml`),
-monorepos, updaters, pre-releases, forcing a version and everything else, see the
+New to relwolf? [Getting started](https://relwolf.lupiq.io/guide/getting-started) explains the concepts, and
+[GitLab vs. GitHub](https://relwolf.lupiq.io/reference/github-vs-gitlab) lists the differences between the two.
+
+For configuration (`relwolf.yaml`), monorepos, updaters, pre-releases, forcing a version and everything else, see the
 [documentation](https://relwolf.lupiq.io).
 
 ## Development

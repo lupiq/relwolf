@@ -18,8 +18,6 @@ packages:
       - type: generic
         path: src/app-version.ts
       - type: generic
-        path: README.md
-      - type: generic
         path: docs/guide/gitlab.md
       - type: generic
         path: docs/guide/github.md
