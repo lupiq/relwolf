@@ -140,6 +140,13 @@ export const configSchema = z.strictObject({
     .describe(
       "Path to the git-cliff config. Defaults to git-cliff's own discovery.",
     ),
+  'pre-commit-script': z
+    .string()
+    .min(1)
+    .optional()
+    .describe(
+      'Script in the working tree (path relative to the repository root) that runs after the release files are written and before they are committed. Everything it changes ends up in the release commit.',
+    ),
   'pull-request-title': z
     .string()
     .min(1)
@@ -337,6 +344,8 @@ export interface Config {
   /** Prefix of the release branch, e.g. "relwolf/". */
   branchPrefix: string;
   cliffConfig?: string;
+  /** Repository-relative path of a script that may change the files of the release commit. */
+  preCommitScript?: string;
   /** Template for the release request title, see `renderTitle`. */
   pullRequestTitle?: string;
   /** Template for the release request body, see `renderBody`. */
@@ -662,6 +671,14 @@ export function parseConfig(source: string | undefined): Config {
   return {
     ...(parsed.branch ? {branch: parsed.branch} : {}),
     branchPrefix: parsed['branch-prefix'],
+    ...(parsed['pre-commit-script']
+      ? {
+          preCommitScript: normalizeRepoPath(
+            parsed['pre-commit-script'],
+            'pre-commit-script',
+          ),
+        }
+      : {}),
     ...(parsed['cliff-config']
       ? {cliffConfig: normalizeRepoPath(parsed['cliff-config'], 'cliff-config')}
       : {}),

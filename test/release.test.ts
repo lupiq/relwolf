@@ -1,5 +1,11 @@
 import {execFileSync} from 'node:child_process';
-import {existsSync, mkdtempSync, readFileSync, rmSync} from 'node:fs';
+import {
+  chmodSync,
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+} from 'node:fs';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {afterEach, beforeEach, describe, expect, it} from 'vitest';
@@ -1130,5 +1136,66 @@ describe('explanations in the log', () => {
 
     expect(output).toMatch(/\[api\] Found 1 feat commit, bumping minor/);
     expect(output).toMatch(/\[web\] No (releasable commits|commits touch)/);
+  });
+});
+
+describe('pre-commit-script', () => {
+  const SCRIPT = 'scripts/format.sh';
+  const CONFIG = `pre-commit-script: ${SCRIPT}\n`;
+  const NODE = `${CONFIG}${NODE_CONFIG}`;
+
+  const addScript = (body: string): void => {
+    repo.write(SCRIPT, `#!/bin/sh\n${body}\n`);
+    chmodSync(path.join(repo.dir, SCRIPT), 0o755);
+    repo.git('add', '-A');
+    repo.git('commit', '-q', '-m', 'chore: add script');
+  };
+
+  const committed = (file: string): string =>
+    provider.commits.at(-1)!.files.find(candidate => candidate.path === file)!
+      .content;
+
+  it('commits what the script changes and leaves the working tree clean', async () => {
+    repo.write('package.json', PACKAGE_JSON);
+    repo.commit('feat: a');
+    addScript(
+      'echo "formatted" >> CHANGELOG.md\necho "extra" > generated.txt\n',
+    );
+
+    await exec(NODE);
+
+    expect(committed('CHANGELOG.md')).toMatch(/formatted\n$/);
+    expect(committed('package.json')).toMatch(/"version": "0\.1\.0"/);
+    expect(
+      provider.commits.at(-1)!.files.find(f => f.path === 'generated.txt'),
+    ).toMatchObject({content: 'extra\n', exists: false});
+    expect(repo.git('status', '--porcelain')).toBe('');
+    expect(existsSync(path.join(repo.dir, 'generated.txt'))).toBe(false);
+  });
+
+  it('fails with a hint when the script is missing or fails', async () => {
+    repo.commit('feat: a');
+    await expect(exec(CONFIG)).rejects.toThrow(/does not exist/);
+
+    addScript('echo boom >&2\nexit 1');
+    await expect(exec(CONFIG)).rejects.toThrow(/failed.*boom/s);
+    expect(repo.git('status', '--porcelain')).toBe('');
+  });
+
+  it('rejects files deleted by the script', async () => {
+    repo.write('old.txt', 'x');
+    repo.commit('feat: a', 'old.txt');
+    addScript('rm old.txt');
+
+    await expect(exec(CONFIG)).rejects.toThrow(/deleted or renamed "old.txt"/);
+    expect(repo.git('status', '--porcelain')).toBe('');
+  });
+
+  it('refuses to overwrite uncommitted changes in release files', async () => {
+    repo.commit('feat: a');
+    addScript('true');
+    repo.write('CHANGELOG.md', 'local edit\n');
+
+    await expect(exec(CONFIG)).rejects.toThrow(/uncommitted changes/);
   });
 });

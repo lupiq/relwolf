@@ -12,6 +12,7 @@ updaters. Everything is configured through this file; there are no CLI flags. Se
 ```yaml [relwolf.yaml]
 branch: main # branch to release from; defaults to the CI default branch, then "main"
 cliff-config: cliff.toml # git-cliff config; defaults to git-cliff's own discovery/default
+pre-commit-script: scripts/format.sh # optional, runs before the release commit, may change any file
 pull-request-title: 'chore(release): Create release ${tags}' # optional, title of the release MR/PR
 prerelease: beta # optional, default for all packages
 bump-minor-pre-major: true # optional, default for all packages
@@ -51,6 +52,27 @@ packages:
 
 Paths of updaters and the changelog are relative to the package path. Unknown keys are rejected.
 
+## Pre-commit script
+
+`pre-commit-script` is the path (relative to the repository root) of a script in the working tree. Once relwolf has
+computed the release files (changelog, version updates, lockfiles), it writes them into the working tree, runs the
+script in the repository root and commits everything that changed afterwards, including new files. Use it for steps
+relwolf cannot do itself, for example formatting the generated changelog:
+
+```sh [scripts/format.sh]
+#!/bin/sh
+set -e
+pnpm run format
+```
+
+- The script is executed directly: it needs a shebang line and the executable bit (`chmod +x`).
+- Install what the script needs (dependencies, tools) in your pipeline before relwolf runs; relwolf does not.
+- Run relwolf on a clean checkout. It aborts if a release file has uncommitted changes. Other uncommitted changes are
+  neither committed nor touched.
+- Afterwards the working tree is reset to `HEAD`; the changes only exist in the release commit.
+- A non-zero exit code aborts the run. Deleting or renaming files is not supported and aborts the run, too.
+- Files are committed as UTF-8 text; binary files are not supported.
+
 ## Editor completion
 
 A JSON Schema of the file is published at `https://relwolf.lupiq.io/schema.json`. Editors with the YAML language server
@@ -67,6 +89,7 @@ of the file is:
 | ------------------------ | --------------- | --------------------------------------------- | -------------------------------------------------------------------------------- |
 | `branch`                 | global          | CI default branch, then `main`                | Branch to release from                                                           |
 | `cliff-config`           | global          | git-cliff discovery                           | Path to a git-cliff config                                                       |
+| `pre-commit-script`      | global          | none                                          | Script run before the release commit, see [below](#pre-commit-script)            |
 | `pull-request-title`     | global          | `chore(release): Create release ${tags}`      | Title template, see [below](#title-and-commit-message)                           |
 | `patch-types`            | global          | `[fix]`                                       | Commit types that trigger a patch release                                        |
 | `minor-types`            | global          | `[feat]`                                      | Commit types that trigger a minor release                                        |

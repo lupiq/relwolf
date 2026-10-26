@@ -1,4 +1,6 @@
 import {execFile} from 'node:child_process';
+import {rm} from 'node:fs/promises';
+import path from 'node:path';
 import {promisify} from 'node:util';
 
 const execFileAsync = promisify(execFile);
@@ -44,6 +46,13 @@ export interface RawCommit {
   message: string;
 }
 
+export interface StatusEntry {
+  path: string;
+  /** Whether the file is known to git (staged or committed), i.e. not untracked. */
+  tracked: boolean;
+  deleted: boolean;
+}
+
 export class Git {
   constructor(readonly cwd: string) {}
 
@@ -66,6 +75,68 @@ export class Git {
     const out = await this.git('ls-files', '-z', '--', `:(glob)${pattern}`);
 
     return out.split('\0').filter(Boolean).sort();
+  }
+
+  /** Changed, added, deleted and untracked files of the working tree (repository-relative). */
+  async status(): Promise<StatusEntry[]> {
+    const out = await this.git(
+      'status',
+      '--porcelain=v1',
+      '-z',
+      '--untracked-files=all',
+    );
+    const fields = out.split('\0');
+    const entries: StatusEntry[] = [];
+
+    for (let index = 0; index < fields.length; index++) {
+      const field = fields[index] ?? '';
+
+      if (field === '') {
+        continue;
+      }
+
+      const state = field.slice(0, 2);
+      const entryPath = field.slice(3);
+
+      entries.push({
+        path: entryPath,
+        tracked: state !== '??',
+        deleted: state.includes('D'),
+      });
+
+      // A rename or copy lists its origin as an extra field; the origin counts as deleted.
+      if (state.includes('R') || state.includes('C')) {
+        const origin = fields[++index] ?? '';
+
+        if (state.includes('R')) {
+          entries.push({path: origin, tracked: true, deleted: true});
+        }
+      }
+    }
+
+    return entries;
+  }
+
+  /** Resets the given files to HEAD and removes the untracked ones. */
+  async discard(entries: readonly StatusEntry[]): Promise<void> {
+    const tracked = entries
+      .filter(entry => entry.tracked)
+      .map(entry => entry.path);
+
+    if (tracked.length > 0) {
+      await this.git(
+        'restore',
+        '--source=HEAD',
+        '--staged',
+        '--worktree',
+        '--',
+        ...tracked,
+      );
+    }
+
+    for (const entry of entries.filter(entry => !entry.tracked)) {
+      await rm(path.join(this.cwd, entry.path), {force: true});
+    }
   }
 
   async tagsMergedIntoHead(): Promise<string[]> {

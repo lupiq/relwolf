@@ -6,6 +6,9 @@ patch-types: [fix, build, docs]
 
 release-emoji: true
 
+# Runs Prettier over the generated changelog before the release commit
+pre-commit-script: scripts/format.sh
+
 packages:
   '.':
     updaters:

@@ -192,6 +192,18 @@ packages:
   });
 });
 
+describe('pre-commit-script', () => {
+  it('is normalized to a repository path and optional', () => {
+    expect(parseConfig(undefined).preCommitScript).toBeUndefined();
+    expect(
+      parseConfig('pre-commit-script: ./scripts//format.sh').preCommitScript,
+    ).toBe('scripts/format.sh');
+    expect(() => parseConfig('pre-commit-script: ../x.sh')).toThrow(
+      /inside the repository/,
+    );
+  });
+});
+
 describe('loadConfig', () => {
   it('reads relwolf.yaml from the directory', async () => {
     const dir = mkdtempSync(path.join(tmpdir(), 'relwolf-cfg-'));

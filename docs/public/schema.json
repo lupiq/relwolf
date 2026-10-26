@@ -18,6 +18,11 @@
       "type": "string",
       "minLength": 1
     },
+    "pre-commit-script": {
+      "description": "Script in the working tree (path relative to the repository root) that runs after the release files are written and before they are committed. Everything it changes ends up in the release commit.",
+      "type": "string",
+      "minLength": 1
+    },
     "pull-request-title": {
       "description": "Title of the release request (single line). Placeholders: ${tags}, ${version}.",
       "type": "string",

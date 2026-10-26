@@ -1,4 +1,4 @@
-import {readFile} from 'node:fs/promises';
+import {mkdir, readFile, stat, writeFile} from 'node:fs/promises';
 import path from 'node:path';
 import {
   DEFAULT_RELEASE_TEXT,
@@ -24,7 +24,7 @@ import {
   type PackageConfig,
 } from './config.js';
 import {randomEmoji} from './emoji.js';
-import {Git} from './git.js';
+import {CommandError, Git, run as runCommand} from './git.js';
 import {
   maxLevel,
   nestedPackagePaths,
@@ -289,6 +289,91 @@ async function expandPath(git: Git, configured: string): Promise<string[]> {
   return files;
 }
 
+/**
+ * Writes the release files into the working tree, runs `pre-commit-script` and returns everything that changed
+ * (the script may touch or add any file). The working tree is reset afterwards.
+ */
+async function applyPreCommitScript(
+  options: RunOptions,
+  git: Git,
+  files: FileChange[],
+): Promise<FileChange[]> {
+  const script = options.config.preCommitScript;
+
+  if (!script) {
+    return files;
+  }
+
+  const scriptPath = path.join(options.cwd, script);
+
+  if (!(await stat(scriptPath).catch(() => undefined))?.isFile()) {
+    throw new RunError(
+      `The pre-commit-script "${script}" configured in relwolf.yaml does not exist.`,
+    );
+  }
+
+  const dirty = new Set((await git.status()).map(entry => entry.path));
+  const clobbered = files.filter(file => dirty.has(file.path));
+
+  if (clobbered.length > 0) {
+    throw new RunError(
+      `Cannot run the pre-commit-script: ${clobbered.map(file => file.path).join(', ')} has uncommitted changes in the working tree. Run relwolf on a clean checkout.`,
+    );
+  }
+
+  try {
+    for (const file of files) {
+      const target = path.join(options.cwd, file.path);
+
+      await mkdir(path.dirname(target), {recursive: true});
+      await writeFile(target, file.content);
+    }
+
+    options.log?.(`Running pre-commit-script ${script}.`);
+
+    try {
+      await runCommand(scriptPath, [], options.cwd, options.env);
+    } catch (error) {
+      const hint =
+        error instanceof CommandError && error.stderr.includes('EACCES')
+          ? ' Make it executable (chmod +x) and give it a shebang line.'
+          : '';
+
+      throw new RunError(
+        `The pre-commit-script "${script}" failed: ${(error as Error).message}${hint}`,
+      );
+    }
+
+    const changed = (await git.status()).filter(
+      entry => !dirty.has(entry.path),
+    );
+
+    const result: FileChange[] = [];
+
+    for (const entry of changed) {
+      if (entry.deleted) {
+        throw new RunError(
+          `The pre-commit-script deleted or renamed "${entry.path}", which a release commit cannot express.`,
+        );
+      }
+
+      result.push({
+        path: entry.path,
+        content: await readFile(path.join(options.cwd, entry.path), 'utf8'),
+        exists: entry.tracked,
+      });
+    }
+
+    return result;
+  } finally {
+    const leftovers = (await git.status()).filter(
+      entry => !dirty.has(entry.path),
+    );
+
+    await git.discard(leftovers);
+  }
+}
+
 async function buildFiles(
   options: RunOptions,
   git: Git,
@@ -429,7 +514,7 @@ async function buildFiles(
     });
   }
 
-  return {files, entries};
+  return {files: await applyPreCommitScript(options, git, files), entries};
 }
 
 /** Requests stored in the open release request, updated by the ones given for this run. */
