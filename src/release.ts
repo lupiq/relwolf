@@ -72,9 +72,9 @@ export interface ReleaseRequestResult {
 
 export interface RunResult {
   skipped?: string;
-  tagged: string[];
+  tagged: Array<string>;
   /** One entry per release request touched in this run (several with `separate-pull-requests`). */
-  releaseRequests: ReleaseRequestResult[];
+  releaseRequests: Array<ReleaseRequestResult>;
 }
 
 const labelDefinitions = (config: Config) => ({
@@ -136,7 +136,7 @@ export async function run(options: RunOptions): Promise<RunResult> {
 
   log('Phase 2: prepare the next release.');
 
-  const releaseRequests: ReleaseRequestResult[] = [];
+  const releaseRequests: Array<ReleaseRequestResult> = [];
   const units = releaseUnits(options.config);
 
   for (const unit of units) {
@@ -170,7 +170,7 @@ async function tagMergedReleases(
   git: Git,
   branch: string,
   log: (message: string) => void,
-): Promise<string[]> {
+): Promise<Array<string>> {
   const {provider} = options;
   const merged = await provider.listMergedReleaseRequests({
     targetBranch: branch,
@@ -178,7 +178,7 @@ async function tagMergedReleases(
   });
   const {config} = options;
   const labels = labelDefinitions(config);
-  const created: string[] = [];
+  const created: Array<string> = [];
 
   log(
     merged.length === 0
@@ -273,7 +273,10 @@ async function readIfExists(file: string): Promise<string | undefined> {
 const GLOB_CHARACTERS = /[*?[]/;
 
 /** A configured file path, or the tracked files matching it if it is a glob. */
-async function expandPath(git: Git, configured: string): Promise<string[]> {
+async function expandPath(
+  git: Git,
+  configured: string,
+): Promise<Array<string>> {
   if (!GLOB_CHARACTERS.test(configured)) {
     return [configured];
   }
@@ -296,8 +299,8 @@ async function expandPath(git: Git, configured: string): Promise<string[]> {
 async function applyPreCommitScript(
   options: RunOptions,
   git: Git,
-  files: FileChange[],
-): Promise<FileChange[]> {
+  files: Array<FileChange>,
+): Promise<Array<FileChange>> {
   const script = options.config.preCommitScript;
 
   if (!script) {
@@ -348,7 +351,7 @@ async function applyPreCommitScript(
       entry => !dirty.has(entry.path),
     );
 
-    const result: FileChange[] = [];
+    const result: Array<FileChange> = [];
 
     for (const entry of changed) {
       if (entry.deleted) {
@@ -377,8 +380,8 @@ async function applyPreCommitScript(
 async function buildFiles(
   options: RunOptions,
   git: Git,
-  plans: PackagePlan[],
-): Promise<{files: FileChange[]; entries: BodyEntry[]}> {
+  plans: Array<PackagePlan>,
+): Promise<{files: Array<FileChange>; entries: Array<BodyEntry>}> {
   const contents = new Map<
     string,
     {original: string | undefined; current: string}
@@ -410,7 +413,10 @@ async function buildFiles(
   };
 
   const allPackages = options.config.packages;
-  const notesByTag = new Map<string, {pkg: PackageConfig; notes: string}[]>();
+  const notesByTag = new Map<
+    string,
+    Array<{pkg: PackageConfig; notes: string}>
+  >();
 
   for (const plan of plans) {
     const {pkg} = plan;
@@ -479,7 +485,7 @@ async function buildFiles(
     }
   }
 
-  const entries: BodyEntry[] = [];
+  const entries: Array<BodyEntry> = [];
 
   for (const [tag, sections] of notesByTag) {
     const [only] = sections;
@@ -499,7 +505,7 @@ async function buildFiles(
     entries.push({tag, prerelease: Boolean(plan?.prerelease), notes});
   }
 
-  const files: FileChange[] = [];
+  const files: Array<FileChange> = [];
 
   for (const [filePath, {original, current}] of contents) {
     // Optional companion files that do not exist are loaded as empty and never written.
@@ -519,7 +525,7 @@ async function buildFiles(
 
 /** Requests stored in the open release request, updated by the ones given for this run. */
 function effectiveRequests(
-  packages: readonly PackageConfig[],
+  packages: ReadonlyArray<PackageConfig>,
   existingBody: string | undefined,
   requested: ReleaseAs,
 ): Map<string, Version> {
@@ -549,14 +555,14 @@ function effectiveRequests(
 interface ReleaseUnit {
   /** Branch suffix; none if there is only one unit. */
   key: string;
-  packages: PackageConfig[];
+  packages: Array<PackageConfig>;
   /** Linked packages (sharing one version) inside this unit. */
-  groups: PackageConfig[][];
+  groups: Array<Array<PackageConfig>>;
 }
 
 const packageKey = (pkg: PackageConfig): string => pkg.component ?? ROOT_KEY;
 
-export function releaseUnits(config: Config): ReleaseUnit[] {
+export function releaseUnits(config: Config): Array<ReleaseUnit> {
   const groups = config.linkedGroups.map(paths =>
     paths.flatMap(
       groupPath => config.packages.find(pkg => pkg.path === groupPath) ?? [],
@@ -567,7 +573,7 @@ export function releaseUnits(config: Config): ReleaseUnit[] {
     return [{key: '', packages: config.packages, groups}];
   }
 
-  const units: ReleaseUnit[] = [];
+  const units: Array<ReleaseUnit> = [];
   const seen = new Set<PackageConfig>();
 
   for (const pkg of config.packages) {
@@ -601,10 +607,10 @@ function planSettings(config: Config): PlanSettings {
 async function planGroup(
   git: Git,
   config: Config,
-  group: readonly PackageConfig[],
+  group: ReadonlyArray<PackageConfig>,
   versions: Map<string, Version>,
   log: (message: string) => void,
-): Promise<PackagePlan[]> {
+): Promise<Array<PackagePlan>> {
   const settings = planSettings(config);
   const tagsOf =
     config.linkedTags === 'single'
@@ -636,7 +642,7 @@ async function planGroup(
     (highest, plan) => maxLevel(highest, plan.level),
     null,
   );
-  const candidates: Version[] = group.flatMap(
+  const candidates: Array<Version> = group.flatMap(
     pkg => versions.get(componentKey(pkg)) ?? [],
   );
 
@@ -665,7 +671,7 @@ async function planGroup(
       compareVersions(version, highest) > 0 ? version : highest,
     first,
   );
-  const plans: PackagePlan[] = [];
+  const plans: Array<PackagePlan> = [];
 
   for (const pkg of group) {
     const plan = await planPackage(
@@ -694,10 +700,10 @@ async function planUnit(
   unit: ReleaseUnit,
   versions: Map<string, Version>,
   log: (message: string) => void,
-): Promise<PackagePlan[]> {
+): Promise<Array<PackagePlan>> {
   const settings = planSettings(config);
   const grouped = new Set(unit.groups.flat());
-  const plans: PackagePlan[] = [];
+  const plans: Array<PackagePlan> = [];
 
   for (const pkg of unit.packages) {
     if (grouped.has(pkg)) {
@@ -783,7 +789,7 @@ async function prepareReleaseRequest(
   const message = config.releaseCommitMessage
     ? renderTitle(tags, config.releaseCommitMessage, planVersions)
     : title;
-  const overrides: BodyOverride[] = plans.flatMap(plan => {
+  const overrides: Array<BodyOverride> = plans.flatMap(plan => {
     const version = versions.get(componentKey(plan.pkg));
 
     return version

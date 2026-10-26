@@ -81,7 +81,7 @@ const packageSchema = z.strictObject({
 });
 
 const placeholders = (
-  allowed: readonly string[],
+  allowed: ReadonlyArray<string>,
 ): ((value: string) => boolean) => {
   return value =>
     (value.match(/\$\{[^}]*\}/g) ?? []).every(item => allowed.includes(item));
@@ -330,7 +330,7 @@ export interface PackageConfig {
   path: string;
   component?: string;
   changelogPath: string;
-  updaters: UpdaterConfig[];
+  updaters: Array<UpdaterConfig>;
   prerelease?: string;
   minorPreMajor: boolean;
   initialVersion?: Version;
@@ -360,22 +360,22 @@ export interface Config {
   releaseEmoji: boolean;
   /** Text for the changelog and release notes of a package without changes; empty to add nothing. */
   noChangesText: string;
-  assignees: string[];
-  reviewers: string[];
+  assignees: Array<string>;
+  reviewers: Array<string>;
   /** Commit types (lower case) that trigger a minor or patch release; breaking changes always trigger a major one. */
-  minorTypes: string[];
-  patchTypes: string[];
+  minorTypes: Array<string>;
+  patchTypes: Array<string>;
   /** Globs (relative to the repository root) whose changes never count for any package. */
-  excludePaths: string[];
+  excludePaths: Array<string>;
   /** Commits up to and including this one are ignored for packages without a release tag. */
   bootstrapSha?: string;
   /** One release request per package (or group of linked packages). */
   separatePullRequests: boolean;
   /** Groups of package paths that always share one version. */
-  linkedGroups: string[][];
+  linkedGroups: Array<Array<string>>;
   /** `single`: a linked group gets one tag and release, named by `tagPackagePath`. */
   linkedTags: 'per-package' | 'single';
-  packages: PackageConfig[];
+  packages: Array<PackageConfig>;
 }
 
 export class ConfigError extends Error {
@@ -412,7 +412,7 @@ const DEFAULT_UPDATER_PATH: Partial<Record<UpdaterType, string>> = {
   'helm': 'Chart.yaml',
 };
 
-const KEY_TYPES: UpdaterType[] = ['json', 'yaml', 'toml'];
+const KEY_TYPES = new Set<UpdaterType>(['json', 'yaml', 'toml']);
 
 /**
  * Text before and after the version in the tags of a package. Without a component, `${component}` and the
@@ -432,7 +432,7 @@ export function tagFormat(
 }
 
 /** The package of a linked group whose tag format names the shared tag: the root package, else the first one. */
-export function tagPackagePath(group: readonly string[]): string {
+export function tagPackagePath(group: ReadonlyArray<string>): string {
   return group.includes('.') ? '.' : (group[0] ?? '.');
 }
 
@@ -461,7 +461,7 @@ export function parseConfig(source: string | undefined): Config {
 
   const parsed = result.data;
 
-  const packages: PackageConfig[] = Object.entries(parsed.packages).map(
+  const packages: Array<PackageConfig> = Object.entries(parsed.packages).map(
     ([rawPath, pkg]) => {
       const pkgPath = normalizeRepoPath(rawPath, 'Package path');
       const join = (relative: string, what: string): string =>
@@ -479,7 +479,7 @@ export function parseConfig(source: string | undefined): Config {
           );
         }
 
-        const needsKey = KEY_TYPES.includes(updater.type);
+        const needsKey = KEY_TYPES.has(updater.type);
 
         if (needsKey && !updater.key) {
           throw new ConfigError(
@@ -582,7 +582,7 @@ export function parseConfig(source: string | undefined): Config {
   });
 
   const linked = parsed['linked-versions'];
-  const linkedGroups: string[][] =
+  const linkedGroups: Array<Array<string>> =
     linked === true
       ? [packages.map(pkg => pkg.path)]
       : linked === false

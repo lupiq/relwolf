@@ -42,15 +42,15 @@ export function parseCommit(
 
 export interface BumpRules {
   /** Commit types (lower case) that trigger a minor release. */
-  minor: readonly string[];
+  minor: ReadonlyArray<string>;
   /** Commit types (lower case) that trigger a patch release. */
-  patch: readonly string[];
+  patch: ReadonlyArray<string>;
 }
 
 export const DEFAULT_BUMP_RULES: BumpRules = {minor: ['feat'], patch: ['fix']};
 
 export function bumpLevel(
-  commits: readonly ConventionalCommit[],
+  commits: ReadonlyArray<ConventionalCommit>,
   rules: BumpRules = DEFAULT_BUMP_RULES,
 ): BumpLevel | null {
   let level: BumpLevel | null = null;
@@ -84,8 +84,8 @@ interface MessageCommit {
  * squash merges drop that line, by the quoted subject of the nearest older commit.
  */
 export function splitReverted<T extends MessageCommit>(
-  commits: readonly T[],
-): {kept: T[]; dropped: T[]} {
+  commits: ReadonlyArray<T>,
+): {kept: Array<T>; dropped: Array<T>} {
   const subject = (c: T) => c.message.trim().split('\n')[0] ?? '';
   const target = new Map<number, number>();
 
@@ -146,7 +146,7 @@ export function splitReverted<T extends MessageCommit>(
 }
 
 export function withoutReverted<T extends MessageCommit>(
-  commits: readonly T[],
-): T[] {
+  commits: ReadonlyArray<T>,
+): Array<T> {
   return splitReverted(commits).kept;
 }

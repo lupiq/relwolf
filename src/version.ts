@@ -2,7 +2,7 @@ export interface Version {
   major: number;
   minor: number;
   patch: number;
-  prerelease: string[];
+  prerelease: Array<string>;
 }
 
 export type BumpLevel = 'major' | 'minor' | 'patch';

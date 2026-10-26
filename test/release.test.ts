@@ -1067,7 +1067,7 @@ describe('release title and text', () => {
 
 describe('explanations in the log', () => {
   const logs = async (yaml?: string) => {
-    const lines: string[] = [];
+    const lines: Array<string> = [];
 
     await run({
       cwd: repo.dir,

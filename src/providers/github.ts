@@ -24,7 +24,7 @@ interface GitHubPull {
   merged_at?: string | null;
   draft?: boolean;
   merge_commit_sha?: string | null;
-  labels: {name: string}[];
+  labels: Array<{name: string}>;
   base?: {ref: string};
 }
 
@@ -127,7 +127,7 @@ export class GitHubProvider implements Provider {
     branch: string;
     baseSha: string;
     message: string;
-    files: FileChange[];
+    files: Array<FileChange>;
   }): Promise<void> {
     const {data: baseCommit} = await this.http.request(
       'GET',
@@ -190,7 +190,7 @@ export class GitHubProvider implements Provider {
         per_page: '1',
       },
     });
-    const [pull] = data as GitHubPull[];
+    const [pull] = data as Array<GitHubPull>;
 
     return pull ? toReleaseRequest(pull) : null;
   }
@@ -200,10 +200,10 @@ export class GitHubProvider implements Provider {
     targetBranch: string;
     title: string;
     body: string;
-    labels: string[];
+    labels: Array<string>;
     draft: boolean;
-    assignees: string[];
-    reviewers: string[];
+    assignees: Array<string>;
+    reviewers: Array<string>;
   }): Promise<ReleaseRequest> {
     const {data} = await this.http.request('POST', `${this.repo}/pulls`, {
       body: {
@@ -258,7 +258,7 @@ export class GitHubProvider implements Provider {
   async listMergedReleaseRequests(options: {
     targetBranch: string;
     label: string;
-  }): Promise<ReleaseRequest[]> {
+  }): Promise<Array<ReleaseRequest>> {
     const data = await this.http.requestAll(`${this.repo}/issues`, {
       labels: options.label,
       state: 'closed',
@@ -266,12 +266,12 @@ export class GitHubProvider implements Provider {
       direction: 'asc',
       per_page: '100',
     });
-    const merged: ReleaseRequest[] = [];
+    const merged: Array<ReleaseRequest> = [];
 
-    for (const issue of data as {
+    for (const issue of data as Array<{
       number: number;
       pull_request?: unknown;
-    }[]) {
+    }>) {
       if (!issue.pull_request) {
         continue;
       }
@@ -292,7 +292,7 @@ export class GitHubProvider implements Provider {
 
   async setLabels(
     id: number,
-    options: {add: string[]; remove: string[]},
+    options: {add: Array<string>; remove: Array<string>},
   ): Promise<void> {
     if (options.add.length > 0) {
       await this.http.request('POST', `${this.repo}/issues/${id}/labels`, {

@@ -34,20 +34,20 @@ export interface PackagePlan {
   /** Revision range for the changelog; whole history if undefined. */
   range?: string | undefined;
   tagPattern: string;
-  commits: ConventionalCommit[];
+  commits: Array<ConventionalCommit>;
   /** Bump level derived from the commits; `null` if only a requested or linked version applies. */
   level: BumpLevel | null;
   /** No commit touched the package since the last release (it only follows the version of linked packages). */
   empty: boolean;
   /** Reverted commits and their reverts, left out of the changelog. */
-  revertedCommits: string[];
+  revertedCommits: Array<string>;
 }
 
 /** Other packages located inside `pkg`, whose changes must not count for `pkg`. */
 export function nestedPackagePaths(
   pkg: PackageConfig,
-  all: readonly PackageConfig[],
-): string[] {
+  all: ReadonlyArray<PackageConfig>,
+): Array<string> {
   return all
     .filter(
       other =>
@@ -61,7 +61,7 @@ export function nestedPackagePaths(
 export interface PlanSettings {
   bumpRules: BumpRules;
   /** Globs relative to the repository root, whose changes never count. */
-  excludePaths: readonly string[];
+  excludePaths: ReadonlyArray<string>;
   /** Start of the history for packages without a tag. */
   bootstrapSha?: string | undefined;
 }
@@ -73,9 +73,9 @@ export const DEFAULT_PLAN_SETTINGS: PlanSettings = {
 
 export function pathspecsFor(
   pkg: PackageConfig,
-  all: readonly PackageConfig[],
-  excludePaths: readonly string[] = [],
-): string[] {
+  all: ReadonlyArray<PackageConfig>,
+  excludePaths: ReadonlyArray<string> = [],
+): Array<string> {
   return [
     pkg.path,
     ...nestedPackagePaths(pkg, all).map(nested => `:(exclude)${nested}`),
@@ -84,7 +84,7 @@ export function pathspecsFor(
 }
 
 interface AnalysedCommits {
-  commits: ConventionalCommit[];
+  commits: Array<ConventionalCommit>;
   /** Commits in the range, before reverts and non-conventional messages were removed. */
   total: number;
   reverted: number;
@@ -93,7 +93,7 @@ interface AnalysedCommits {
 async function analyseCommits(
   git: Git,
   range: string | undefined,
-  pathspecs: string[],
+  pathspecs: Array<string>,
 ): Promise<AnalysedCommits> {
   const all = await git.log(range, pathspecs);
   const kept = withoutReverted(all);
@@ -110,8 +110,8 @@ async function analyseCommits(
 async function conventionalCommits(
   git: Git,
   range: string | undefined,
-  pathspecs: string[],
-): Promise<ConventionalCommit[]> {
+  pathspecs: Array<string>,
+): Promise<Array<ConventionalCommit>> {
   return (await analyseCommits(git, range, pathspecs)).commits;
 }
 
@@ -119,7 +119,7 @@ const plural = (count: number, word: string): string =>
   `${count} ${word}${count === 1 ? '' : 's'}`;
 
 /** E.g. "2 feat, 1 fix, 3 chore"; breaking commits are counted separately by the caller. */
-function countTypes(commits: readonly ConventionalCommit[]): string {
+function countTypes(commits: ReadonlyArray<ConventionalCommit>): string {
   const counts = new Map<string, number>();
 
   for (const commit of commits) {
@@ -133,7 +133,7 @@ function countTypes(commits: readonly ConventionalCommit[]): string {
 }
 
 function describeLevel(
-  commits: readonly ConventionalCommit[],
+  commits: ReadonlyArray<ConventionalCommit>,
   rules: BumpRules,
   level: BumpLevel,
 ): string {
@@ -161,7 +161,7 @@ export interface PlanOptions {
   log?: ((message: string) => void) | undefined;
 }
 
-const LEVELS: readonly BumpLevel[] = ['patch', 'minor', 'major'];
+const LEVELS: ReadonlyArray<BumpLevel> = ['patch', 'minor', 'major'];
 
 export function maxLevel(
   a: BumpLevel | null | undefined,
@@ -176,7 +176,7 @@ export function maxLevel(
 export async function planPackage(
   git: Git,
   pkg: PackageConfig,
-  all: readonly PackageConfig[],
+  all: ReadonlyArray<PackageConfig>,
   options: PlanOptions = {},
   settings: PlanSettings = DEFAULT_PLAN_SETTINGS,
 ): Promise<PackagePlan | null> {

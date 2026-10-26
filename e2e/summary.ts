@@ -6,16 +6,16 @@ interface Assertion {
   fullName: string;
   status: string;
   duration?: number | null;
-  failureMessages: string[];
+  failureMessages: Array<string>;
 }
 
 interface Report {
   startTime: number;
-  testResults: {
+  testResults: Array<{
     status: string;
     message: string;
-    assertionResults: Assertion[];
-  }[];
+    assertionResults: Array<Assertion>;
+  }>;
 }
 
 // eslint-disable-next-line no-control-regex

@@ -23,9 +23,9 @@ export const DEFAULT_TITLE_TEMPLATE = 'chore(release): Create release ${tags}';
 
 /** Placeholders: `${tags}` (all tags, comma separated) and `${version}` (the bare version for a single package, else the tags). */
 export function renderTitle(
-  tags: readonly string[],
+  tags: ReadonlyArray<string>,
   template = DEFAULT_TITLE_TEMPLATE,
-  versions: readonly string[] = tags,
+  versions: ReadonlyArray<string> = tags,
 ): string {
   const tagList = tags.join(', ');
   const version = (versions.length === 1 ? versions[0] : undefined) ?? tagList;
@@ -105,14 +105,14 @@ export interface RenderBodyOptions {
   /** Template with the placeholders `${tags}`, `${version}`, `${releases}`, `${hint}`, `${release}` and `${notes}`. */
   template?: string | undefined;
   /** Bare versions, for the `${version}` placeholder. */
-  versions?: readonly string[] | undefined;
+  versions?: ReadonlyArray<string> | undefined;
 }
 
 /** The relwolf markers (notes, requested versions, base commit) are always part of the body, whatever the template. */
 export function renderBody(
-  entries: readonly BodyEntry[],
+  entries: ReadonlyArray<BodyEntry>,
   baseSha: string,
-  overrides: readonly BodyOverride[] = [],
+  overrides: ReadonlyArray<BodyOverride> = [],
   options: RenderBodyOptions = {},
 ): string {
   const tags = entries.map(entry => entry.tag);
@@ -158,8 +158,8 @@ export function renderBody(
 export function parseBody(
   body: string,
   isValidTag: (tag: string) => boolean,
-): BodyEntry[] {
-  const entries: BodyEntry[] = [];
+): Array<BodyEntry> {
+  const entries: Array<BodyEntry> = [];
 
   for (const match of body.matchAll(NOTES_PATTERN)) {
     const [, tag = '', prerelease, notes = ''] = match;
@@ -174,7 +174,7 @@ export function parseBody(
   return entries;
 }
 
-export function parseOverrides(body: string): BodyOverride[] {
+export function parseOverrides(body: string): Array<BodyOverride> {
   return [...body.matchAll(OVERRIDE_PATTERN)].map(match => ({
     component: match[1] ?? '',
     version: match[2] ?? '',

@@ -18,7 +18,7 @@ function mockFetch(
     | {status?: number; json?: unknown; headers?: Record<string, string>}
     | undefined,
 ) {
-  const calls: Call[] = [];
+  const calls: Array<Call> = [];
   const fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
     const call: Call = {
       method: init?.method ?? 'GET',

@@ -18,7 +18,7 @@ export class CommandError extends Error {
 
 export async function run(
   command: string,
-  args: string[],
+  args: Array<string>,
   cwd: string,
   env?: NodeJS.ProcessEnv,
 ): Promise<string> {
@@ -56,7 +56,7 @@ export interface StatusEntry {
 export class Git {
   constructor(readonly cwd: string) {}
 
-  private git(...args: string[]): Promise<string> {
+  private git(...args: Array<string>): Promise<string> {
     return run('git', args, this.cwd);
   }
 
@@ -71,14 +71,14 @@ export class Git {
   }
 
   /** Tracked files matching a glob (relative to the repository root), sorted. */
-  async listFiles(pattern: string): Promise<string[]> {
+  async listFiles(pattern: string): Promise<Array<string>> {
     const out = await this.git('ls-files', '-z', '--', `:(glob)${pattern}`);
 
     return out.split('\0').filter(Boolean).sort();
   }
 
   /** Changed, added, deleted and untracked files of the working tree (repository-relative). */
-  async status(): Promise<StatusEntry[]> {
+  async status(): Promise<Array<StatusEntry>> {
     const out = await this.git(
       'status',
       '--porcelain=v1',
@@ -86,7 +86,7 @@ export class Git {
       '--untracked-files=all',
     );
     const fields = out.split('\0');
-    const entries: StatusEntry[] = [];
+    const entries: Array<StatusEntry> = [];
 
     for (let index = 0; index < fields.length; index++) {
       const field = fields[index] ?? '';
@@ -118,7 +118,7 @@ export class Git {
   }
 
   /** Resets the given files to HEAD and removes the untracked ones. */
-  async discard(entries: readonly StatusEntry[]): Promise<void> {
+  async discard(entries: ReadonlyArray<StatusEntry>): Promise<void> {
     const tracked = entries
       .filter(entry => entry.tracked)
       .map(entry => entry.path);
@@ -139,7 +139,7 @@ export class Git {
     }
   }
 
-  async tagsMergedIntoHead(): Promise<string[]> {
+  async tagsMergedIntoHead(): Promise<Array<string>> {
     const out = await this.git('tag', '--merged', 'HEAD');
 
     return out
@@ -180,8 +180,8 @@ export class Git {
   /** Commits in `range` (or the whole history) touching `pathspecs`, newest first, merges excluded. */
   async log(
     range: string | undefined,
-    pathspecs: string[],
-  ): Promise<RawCommit[]> {
+    pathspecs: Array<string>,
+  ): Promise<Array<RawCommit>> {
     const args = ['log', '--no-merges', '--format=%x1e%H%x1f%B'];
 
     args.push(range ?? 'HEAD');

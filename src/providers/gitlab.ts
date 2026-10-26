@@ -22,7 +22,7 @@ interface GitLabMergeRequest {
   description: string | null;
   web_url: string;
   state: string;
-  labels: string[];
+  labels: Array<string>;
   merge_commit_sha: string | null;
   squash_commit_sha: string | null;
   sha: string | null;
@@ -128,7 +128,7 @@ export class GitLabProvider implements Provider {
     branch: string;
     baseSha: string;
     message: string;
-    files: FileChange[];
+    files: Array<FileChange>;
   }): Promise<void> {
     await this.http.request('POST', `${this.project}/repository/commits`, {
       body: {
@@ -162,7 +162,7 @@ export class GitLabProvider implements Provider {
         },
       },
     );
-    const [mr] = data as GitLabMergeRequest[];
+    const [mr] = data as Array<GitLabMergeRequest>;
 
     return mr ? toReleaseRequest(mr) : null;
   }
@@ -172,10 +172,10 @@ export class GitLabProvider implements Provider {
     targetBranch: string;
     title: string;
     body: string;
-    labels: string[];
+    labels: Array<string>;
     draft: boolean;
-    assignees: string[];
-    reviewers: string[];
+    assignees: Array<string>;
+    reviewers: Array<string>;
   }): Promise<ReleaseRequest> {
     const assigneeIds = await this.userIds(options.assignees);
     const reviewerIds = await this.userIds(options.reviewers);
@@ -211,14 +211,14 @@ export class GitLabProvider implements Provider {
     });
   }
 
-  private async userIds(usernames: string[]): Promise<number[]> {
-    const ids: number[] = [];
+  private async userIds(usernames: Array<string>): Promise<Array<number>> {
+    const ids: Array<number> = [];
 
     for (const username of usernames) {
       const {data} = await this.http.request('GET', '/users', {
         query: {username},
       });
-      const [user] = data as {id: number}[];
+      const [user] = data as Array<{id: number}>;
 
       if (!user) {
         throw new ProviderError(`GitLab user "${username}" not found`);
@@ -239,7 +239,7 @@ export class GitLabProvider implements Provider {
   async listMergedReleaseRequests(options: {
     targetBranch: string;
     label: string;
-  }): Promise<ReleaseRequest[]> {
+  }): Promise<Array<ReleaseRequest>> {
     const data = await this.http.requestAll(`${this.project}/merge_requests`, {
       state: 'merged',
       target_branch: options.targetBranch,
@@ -249,12 +249,12 @@ export class GitLabProvider implements Provider {
       per_page: '100',
     });
 
-    return (data as GitLabMergeRequest[]).map(toReleaseRequest);
+    return (data as Array<GitLabMergeRequest>).map(toReleaseRequest);
   }
 
   async setLabels(
     id: number,
-    options: {add: string[]; remove: string[]},
+    options: {add: Array<string>; remove: Array<string>},
   ): Promise<void> {
     await this.http.request('PUT', `${this.project}/merge_requests/${id}`, {
       body: {

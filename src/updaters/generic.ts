@@ -16,7 +16,7 @@ interface Marker {
   format: (version: string) => string;
 }
 
-const MARKERS: Marker[] = [
+const MARKERS: Array<Marker> = [
   {
     name: GENERIC_MARKER,
     pattern: new RegExp(

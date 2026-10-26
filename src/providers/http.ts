@@ -69,8 +69,8 @@ export class HttpClient {
   async requestAll(
     path: string,
     query: Record<string, string> = {},
-  ): Promise<unknown[]> {
-    const items: unknown[] = [];
+  ): Promise<Array<unknown>> {
+    const items: Array<unknown> = [];
     let page: string | undefined;
 
     for (let count = 0; count < MAX_PAGES; count++) {
@@ -149,7 +149,7 @@ export class HttpClient {
     options: {
       query?: Record<string, string>;
       body?: unknown;
-      allow?: number[];
+      allow?: Array<number>;
     } = {},
   ): Promise<HttpResponse> {
     const url = new URL(this.baseUrl.replace(/\/+$/, '') + path);

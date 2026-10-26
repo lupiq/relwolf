@@ -37,6 +37,7 @@ export default defineConfig(
           next: ['const', 'let', 'var'],
         },
       ],
+      '@typescript-eslint/array-type': ['error', {default: 'generic'}],
       '@typescript-eslint/no-unused-vars': [
         'error',
         {argsIgnorePattern: '^_', varsIgnorePattern: '^_'},

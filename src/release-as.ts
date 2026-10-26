@@ -24,7 +24,7 @@ export const componentKey = (pkg: Pick<PackageConfig, 'component'>): string =>
  */
 export function parseReleaseAs(
   input: string | undefined,
-  packages: readonly PackageConfig[],
+  packages: ReadonlyArray<PackageConfig>,
 ): ReleaseAs {
   const result: ReleaseAs = new Map();
   const keys = new Set(packages.map(componentKey));

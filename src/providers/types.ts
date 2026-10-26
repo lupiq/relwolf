@@ -7,7 +7,7 @@ export interface ReleaseRequest {
   body: string;
   url: string;
   state: ReleaseRequestState;
-  labels: string[];
+  labels: Array<string>;
   /** Whether the request is a draft (GitLab: title prefix "Draft: ", which is not part of `title`). */
   draft: boolean;
   /** Commit on the target branch that contains the merged changes (merged requests only). */
@@ -41,7 +41,7 @@ export interface Provider {
     branch: string;
     baseSha: string;
     message: string;
-    files: FileChange[];
+    files: Array<FileChange>;
   }): Promise<void>;
 
   findOpenReleaseRequest(options: {
@@ -54,11 +54,11 @@ export interface Provider {
     targetBranch: string;
     title: string;
     body: string;
-    labels: string[];
+    labels: Array<string>;
     draft: boolean;
     /** Usernames; unknown users are an error. */
-    assignees: string[];
-    reviewers: string[];
+    assignees: Array<string>;
+    reviewers: Array<string>;
   }): Promise<ReleaseRequest>;
 
   updateReleaseRequest(
@@ -73,11 +73,11 @@ export interface Provider {
   listMergedReleaseRequests(options: {
     targetBranch: string;
     label: string;
-  }): Promise<ReleaseRequest[]>;
+  }): Promise<Array<ReleaseRequest>>;
 
   setLabels(
     id: number,
-    options: {add: string[]; remove: string[]},
+    options: {add: Array<string>; remove: Array<string>},
   ): Promise<void>;
 
   /** Creates a lightweight tag; resolves to "exists" if it is already present. */

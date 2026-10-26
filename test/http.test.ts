@@ -7,7 +7,7 @@ const json = (
   headers: Record<string, string> = {},
 ) => new Response(JSON.stringify(body), {status, headers});
 
-function client(responses: (Response | Error)[]) {
+function client(responses: Array<Response | Error>) {
   const fetchMock = vi.fn<FetchLike>(async () => {
     const next = responses.shift();
 

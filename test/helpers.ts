@@ -21,7 +21,7 @@ export class TestRepo {
     this.git('config', 'tag.gpgsign', 'false');
   }
 
-  git(...args: string[]): string {
+  git(...args: Array<string>): string {
     return execFileSync('git', args, {cwd: this.dir, encoding: 'utf8'}).trim();
   }
 
@@ -58,27 +58,29 @@ interface CommitCall {
   branch: string;
   baseSha: string;
   message: string;
-  files: FileChange[];
+  files: Array<FileChange>;
 }
 
 /** In-memory provider recording every call; merge requests live in a simple array. */
 export class FakeProvider implements Provider {
   readonly name = 'fake';
-  requests: (ReleaseRequest & {
-    sourceBranch: string;
-    targetBranch: string;
-    assignees?: string[];
-    reviewers?: string[];
-  })[] = [];
-  commits: CommitCall[] = [];
+  requests: Array<
+    ReleaseRequest & {
+      sourceBranch: string;
+      targetBranch: string;
+      assignees?: Array<string>;
+      reviewers?: Array<string>;
+    }
+  > = [];
+  commits: Array<CommitCall> = [];
   tags = new Map<string, string>();
-  releases: {
+  releases: Array<{
     tag: string;
     name: string;
     body: string;
     prerelease: boolean;
-  }[] = [];
-  labels: string[] = [];
+  }> = [];
+  labels: Array<string> = [];
   private nextId = 1;
 
   async ensureLabel(label: LabelDefinition): Promise<void> {
@@ -110,10 +112,10 @@ export class FakeProvider implements Provider {
     targetBranch: string;
     title: string;
     body: string;
-    labels: string[];
+    labels: Array<string>;
     draft?: boolean;
-    assignees?: string[];
-    reviewers?: string[];
+    assignees?: Array<string>;
+    reviewers?: Array<string>;
   }): Promise<ReleaseRequest> {
     const request = {
       id: this.nextId++,
@@ -151,7 +153,7 @@ export class FakeProvider implements Provider {
   async listMergedReleaseRequests(options: {
     targetBranch: string;
     label: string;
-  }): Promise<ReleaseRequest[]> {
+  }): Promise<Array<ReleaseRequest>> {
     return this.requests.filter(
       r =>
         r.state === 'merged' &&
@@ -162,7 +164,7 @@ export class FakeProvider implements Provider {
 
   async setLabels(
     id: number,
-    options: {add: string[]; remove: string[]},
+    options: {add: Array<string>; remove: Array<string>},
   ): Promise<void> {
     const request = this.mustFind(id);
 

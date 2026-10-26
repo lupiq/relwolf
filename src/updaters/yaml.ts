@@ -11,7 +11,7 @@ export function setYamlString(
 ): string | undefined {
   const parts = key.split('.');
   const lines = content.split('\n');
-  const stack: {indent: number; key: string}[] = [];
+  const stack: Array<{indent: number; key: string}> = [];
 
   for (let index = 0; index < lines.length; index++) {
     const line = lines[index] ?? '';

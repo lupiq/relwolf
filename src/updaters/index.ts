@@ -63,7 +63,7 @@ export function companions(
   type: UpdaterType,
   file: string,
   manifest: string,
-): Companion[] {
+): Array<Companion> {
   const dir = path.posix.dirname(file);
   const sibling = (name: string): string =>
     dir === '.' ? name : path.posix.join(dir, name);

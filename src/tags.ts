@@ -37,10 +37,10 @@ function versionOfTag(tag: string, format: TagFormat): Version | null {
 
 /** Valid release tags of one package, parsed from the list of all tags. */
 export function findReleaseTags(
-  allTags: readonly string[],
+  allTags: ReadonlyArray<string>,
   format: TagFormat,
-): ReleaseTag[] {
-  const result: ReleaseTag[] = [];
+): Array<ReleaseTag> {
+  const result: Array<ReleaseTag> = [];
 
   for (const tag of allTags) {
     const version = versionOfTag(tag, format);
@@ -53,7 +53,9 @@ export function findReleaseTags(
   return result;
 }
 
-export function highest(tags: readonly ReleaseTag[]): ReleaseTag | undefined {
+export function highest(
+  tags: ReadonlyArray<ReleaseTag>,
+): ReleaseTag | undefined {
   return tags.reduce<ReleaseTag | undefined>(
     (best, candidate) =>
       !best || compareVersions(candidate.version, best.version) > 0
@@ -64,7 +66,7 @@ export function highest(tags: readonly ReleaseTag[]): ReleaseTag | undefined {
 }
 
 export function highestStable(
-  tags: readonly ReleaseTag[],
+  tags: ReadonlyArray<ReleaseTag>,
 ): ReleaseTag | undefined {
   return highest(tags.filter(entry => !isPrerelease(entry.version)));
 }
@@ -85,7 +87,7 @@ export function tagPattern(
 /** The package and version a tag belongs to; `null` for anything that is not a release tag of the configuration. */
 export function parseReleaseTag(
   tag: string,
-  packages: readonly PackageConfig[],
+  packages: ReadonlyArray<PackageConfig>,
 ): {pkg: PackageConfig; version: Version} | null {
   // Several packages can match (e.g. "v1.0.0" and "api-v1.0.0" without separator); the longest prefix is the most specific.
   const candidates = [...packages].sort(
@@ -106,7 +108,7 @@ export function parseReleaseTag(
 /** Validates a tag read from untrusted text (e.g. a merge request description). */
 export function isValidReleaseTag(
   tag: string,
-  packages: readonly PackageConfig[],
+  packages: ReadonlyArray<PackageConfig>,
 ): boolean {
   return parseReleaseTag(tag, packages) !== null;
 }

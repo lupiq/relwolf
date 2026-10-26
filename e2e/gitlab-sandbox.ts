@@ -12,7 +12,7 @@ export interface MergeRequestInfo {
   title: string;
   description: string;
   state: string;
-  labels: string[];
+  labels: Array<string>;
   source_branch: string;
 }
 
@@ -30,7 +30,7 @@ const sleep = (ms: number): Promise<void> =>
 export class GitLabSandbox {
   private readonly http: HttpClient;
   private readonly project: string;
-  private readonly dirs: string[] = [];
+  private readonly dirs: Array<string> = [];
   private repositoryUrl = '';
 
   constructor(
@@ -259,7 +259,7 @@ export class GitLabSandbox {
 
     this.dirs.push(dir);
     const auth = Buffer.from(`oauth2:${this.token}`).toString('base64');
-    const git = (args: string[], env: NodeJS.ProcessEnv = {}): void => {
+    const git = (args: Array<string>, env: NodeJS.ProcessEnv = {}): void => {
       execFileSync('git', args, {
         cwd: dir,
         stdio: 'pipe',
@@ -297,7 +297,7 @@ export class GitLabSandbox {
 
     const releases = await this.http.requestAll(`${this.project}/releases`);
 
-    for (const release of releases as {tag_name: string}[]) {
+    for (const release of releases as Array<{tag_name: string}>) {
       await this.http.request(
         'DELETE',
         `${this.project}/releases/${encodeURIComponent(release.tag_name)}`,
@@ -307,7 +307,7 @@ export class GitLabSandbox {
 
     const tags = await this.http.requestAll(`${this.project}/repository/tags`);
 
-    for (const tag of tags as {name: string}[]) {
+    for (const tag of tags as Array<{name: string}>) {
       await this.http.request(
         'DELETE',
         `${this.project}/repository/tags/${encodeURIComponent(tag.name)}`,
@@ -317,7 +317,7 @@ export class GitLabSandbox {
 
     const open = (await this.http.requestAll(`${this.project}/merge_requests`, {
       state: 'opened',
-    })) as {iid: number}[];
+    })) as Array<{iid: number}>;
 
     for (const request of open) {
       await this.http.request(
@@ -331,7 +331,7 @@ export class GitLabSandbox {
     const pending = (await this.http.requestAll(
       `${this.project}/merge_requests`,
       {state: 'merged', labels: PENDING_LABEL},
-    )) as {iid: number}[];
+    )) as Array<{iid: number}>;
 
     for (const request of pending) {
       await this.http.request(
@@ -345,7 +345,7 @@ export class GitLabSandbox {
       `${this.project}/repository/branches`,
     );
 
-    for (const branch of branches as {name: string}[]) {
+    for (const branch of branches as Array<{name: string}>) {
       if (!/^(relwolf\/)?e2e-/.test(branch.name)) {
         continue;
       }

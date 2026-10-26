@@ -47,7 +47,7 @@ describe('parseCommit', () => {
 });
 
 describe('bumpLevel', () => {
-  const commits = (...messages: string[]) =>
+  const commits = (...messages: Array<string>) =>
     messages
       .map((message, i) => parseCommit(String(i), message)!)
       .filter(Boolean);
@@ -69,7 +69,7 @@ describe('bumpLevel', () => {
 
 describe('withoutReverted', () => {
   const c = (sha: string, message: string) => ({sha, message});
-  const shas = (list: {sha: string}[]) => list.map(x => x.sha);
+  const shas = (list: Array<{sha: string}>) => list.map(x => x.sha);
 
   it('drops a commit and its revert, matched by sha', () => {
     const list = [

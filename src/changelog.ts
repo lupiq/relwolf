@@ -17,14 +17,14 @@ export interface CliffInvocation {
   /** Regex of the tags that delimit releases. */
   tagPattern: string;
   includePath?: string | undefined;
-  excludePaths: string[];
+  excludePaths: Array<string>;
   /** Commits to leave out of the changelog, e.g. reverted ones. */
-  skipCommits?: string[] | undefined;
+  skipCommits?: Array<string> | undefined;
 }
 
 function resolveCliffCommand(env: NodeJS.ProcessEnv): {
   command: string;
-  prefix: string[];
+  prefix: Array<string>;
 } {
   if (env.RELWOLF_GIT_CLIFF) {
     return {command: env.RELWOLF_GIT_CLIFF, prefix: []};
@@ -35,8 +35,8 @@ function resolveCliffCommand(env: NodeJS.ProcessEnv): {
   return {command: process.execPath, prefix: [script]};
 }
 
-function baseArgs(options: CliffInvocation): string[] {
-  const args: string[] = [];
+function baseArgs(options: CliffInvocation): Array<string> {
+  const args: Array<string> = [];
 
   if (options.range) {
     args.push(options.range);
@@ -91,7 +91,7 @@ export function cliffEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
 
 async function cliff(
   options: CliffInvocation,
-  extra: string[],
+  extra: Array<string>,
   env: NodeJS.ProcessEnv,
 ): Promise<string> {
   const {command, prefix} = resolveCliffCommand(env);
