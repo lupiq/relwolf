@@ -42,7 +42,7 @@ git tag core-v1.2.3 v1.2.3
 git push origin orders-v1.2.3 core-v1.2.3
 ```
 
-The tag format follows [`tag-template`](/configuration/#tags-and-release-names).
+The tag format follows [`tag-template`](/configuration/relwolf-yaml#tags-and-release-names).
 
 As an alternative, `bootstrap-sha: <last release commit>` ignores all history before that commit for packages without a tag.
 Packages that already have a tag are not affected.

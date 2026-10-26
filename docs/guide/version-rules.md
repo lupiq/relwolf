@@ -13,14 +13,14 @@ description: How relwolf maps Conventional Commits to SemVer bumps - feat, fix a
 | everything else                          | none  |
 
 ::: tip Customisable types
-The table shows the defaults. Use [`minor-types` and `patch-types`](/configuration/#commit-types) to change which
+The table shows the defaults. Use [`minor-types` and `patch-types`](/configuration/relwolf-yaml#commit-types) to change which
 commit types trigger a minor or patch release, e.g. `patch-types: [fix, build]`. Breaking changes always bump major.
 :::
 
 - Before `1.0.0` a breaking change only bumps the minor version (`bump-minor-pre-major`, default `true`).
 - Without any tag the first release is calculated from `0.0.0` (`feat` → `0.1.0`, `fix` → `0.0.1`), unless
   `initial-version` is set.
-- Tags are `v1.2.3` by default; the format is set by [`tag-template`](/configuration/#tags-and-release-names).
+- Tags are `v1.2.3` by default; the format is set by [`tag-template`](/configuration/relwolf-yaml#tags-and-release-names).
 - Only commits touching a package's path count for that package; `exclude-paths` can ignore further paths.
 - Reverted commits do not count: a `Revert "feat: a"` commit (or git's `This reverts commit <sha>` line) cancels the
   original commit since the last release. If nothing else is releasable, an open release merge request is closed.

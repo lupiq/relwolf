@@ -146,7 +146,7 @@ export default defineConfig({
       {
         text: 'Configuration',
         items: [
-          {text: 'relwolf.yaml', link: '/configuration/'},
+          {text: 'relwolf.yaml', link: '/configuration/relwolf-yaml'},
           {text: 'Monorepos', link: '/configuration/monorepos'},
           {text: 'Updaters', link: '/configuration/updaters'},
           {text: 'Changelog (git-cliff)', link: '/configuration/changelog'},
@@ -166,7 +166,7 @@ export default defineConfig({
       },
       {
         text: 'Development',
-        items: [{text: 'Contributing', link: '/development/'}],
+        items: [{text: 'Contributing', link: '/development/contributing'}],
       },
       {text: 'About lupiq', link: '/about'},
     ],

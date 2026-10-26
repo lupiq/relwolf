@@ -78,7 +78,7 @@ Then start the workflow from the _Actions_ tab, or with `gh workflow run release
 
 ## Configure (optional)
 
-Add a [`relwolf.yaml`](/configuration/) to the repository root.
+Add a [`relwolf.yaml`](/configuration/relwolf-yaml) to the repository root.
 
 ## What you will see
 

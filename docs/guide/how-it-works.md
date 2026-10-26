@@ -25,14 +25,14 @@ relwolf
 - force-pushes a single commit to `relwolf/<branch>` through the API (the working tree is never modified),
 - creates or updates the merge request `chore(release): Create release v1.2.3` labelled `relwolf: pending`.
 
-Branch prefix, labels, title and body are [configurable](/configuration/#release-request). With several packages they
+Branch prefix, labels, title and body are [configurable](/configuration/relwolf-yaml#release-request). With several packages they
 share one request by default; see [Monorepos](/configuration/monorepos) for separate requests and linked versions.
 
 ## Customising a release
 
 The description of the release request contains a **release title** and a **release text**. Edit them before merging
 to name the release and add a short Markdown introduction above the changelog. See
-[Release title and text](/configuration/#release-title-and-text), including the optional random emoji.
+[Release title and text](/configuration/relwolf-yaml#release-title-and-text), including the optional random emoji.
 
 ## Reading the job log
 

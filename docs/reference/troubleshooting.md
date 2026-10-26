@@ -27,7 +27,7 @@ relwolf needs the full history and all tags. Set `GIT_DEPTH: 0` (GitLab) or `fet
 - The pipeline is not a branch pipeline for the default branch (merge request, tag or other branch pipelines are
   skipped).
 - No releasable commit since the last tag. By default these are `feat`, `fix` and breaking changes; see
-  [commit types](/configuration/#commit-types) and [Version rules](/guide/version-rules).
+  [commit types](/configuration/relwolf-yaml#commit-types) and [Version rules](/guide/version-rules).
 - The commits only touch paths in `exclude-paths` or another package.
 - A [version request](/guide/release-as) was set but there is no new commit since the last tag.
 

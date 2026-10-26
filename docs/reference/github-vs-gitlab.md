@@ -68,4 +68,4 @@ relwolf releases itself with the GitHub provider (`.github/workflows/release.yml
 ## Other platforms
 
 The provider layer is replaceable: implement the `Provider` interface (`src/providers/types.ts`) and extend
-`providers/index.ts`. See [Contributing](/development/).
+`providers/index.ts`. See [Contributing](/development/contributing).

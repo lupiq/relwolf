@@ -54,6 +54,6 @@ pnpm docs:dev       # documentation site (VitePress, sources in docs/)
 Git hooks (Husky, installed by `pnpm install`): `pre-commit` runs lint-staged (Prettier on staged files) and
 `pnpm lint`; `commit-msg` runs commitlint (Conventional Commits, subject must start with a capital letter).
 
-Design decisions, architecture and extension notes are documented in [AGENTS.md](AGENTS.md). Maintainer setup
-(release token, Pages, Renovate) is described in the
-[documentation](https://relwolf.lupiq.io/development/releasing).
+Design decisions, architecture and extension notes, including the maintainer setup (release token, Pages, Renovate),
+are documented in [AGENTS.md](AGENTS.md). See also the
+[contributing guide](https://relwolf.lupiq.io/development/contributing).

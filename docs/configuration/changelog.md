@@ -13,7 +13,7 @@ purely git-cliff configuration.
   repository root on its own.
 - relwolf adds `--tag`, `--tag-pattern`, `--include-path`/`--exclude-path` and the commit range, and prepends the entry
   to the changelog file.
-- Packages that were only bumped to follow linked versions get the [`no-changes-text`](/configuration/#release-request)
+- Packages that were only bumped to follow linked versions get the [`no-changes-text`](/configuration/relwolf-yaml#release-request)
   placeholder instead of an empty entry.
 - git-cliff's [GitLab](https://git-cliff.org/docs/integration/gitlab) and
   [GitHub](https://git-cliff.org/docs/integration/github) integrations (`remote` context such as PR/MR numbers and

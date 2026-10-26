@@ -45,7 +45,7 @@ jobs from running at the same time.
 
 ## 4. Configure (optional)
 
-Add a [`relwolf.yaml`](/configuration/) to the repository root to update version files, set a pre-release channel or
+Add a [`relwolf.yaml`](/configuration/relwolf-yaml) to the repository root to update version files, set a pre-release channel or
 configure a monorepo.
 
 ## Forcing a version

@@ -39,4 +39,4 @@ See [GitHub vs. GitLab](/reference/github-vs-gitlab) for all differences.
 
 - Set up the [GitLab](/guide/gitlab) or [GitHub](/guide/github) job.
 - Learn [how it works](/guide/how-it-works) and which [commits bump what](/guide/version-rules).
-- Add a [relwolf.yaml](/configuration/) to update version files such as `package.json` or `pom.xml`.
+- Add a [relwolf.yaml](/configuration/relwolf-yaml) to update version files such as `package.json` or `pom.xml`.

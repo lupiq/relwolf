@@ -81,7 +81,7 @@ packages:
 - **No Gradle updater.** The version lives in the tags, not in `build.gradle`, so relwolf only writes changelogs.
 - Every module gets `CHANGELOG.md` in its own directory (`services/orders/CHANGELOG.md`). Only commits touching the module
   appear there; a module without changes gets the
-  [`no-changes-text`](/configuration/#release-request) placeholder.
+  [`no-changes-text`](/configuration/relwolf-yaml#release-request) placeholder.
 - The root package (without `component`) produces the plain tag `v1.2.3` and a root `CHANGELOG.md` for changes outside
   the modules. axion-release ignores the component tags because they do not start with `v`.
 - To avoid one tag per module, add `linked-tags: single`: relwolf then creates only `v1.2.3` (one release with a

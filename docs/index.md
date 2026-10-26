@@ -57,6 +57,6 @@ features:
     linkText: Pre-releases
   - title: Configurable to the last detail
     details: Tag format, release names, labels, branch prefix, draft requests, assignees, reviewers and the request body are all options in relwolf.yaml.
-    link: /configuration/
+    link: /configuration/relwolf-yaml
     linkText: Configuration
 ---
