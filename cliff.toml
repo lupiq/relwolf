@@ -20,7 +20,7 @@ body = """
 {% for entry in commits | commit_groups(groups=commit_parsers_groups) %}
     ### {{ entry.group | striptags | trim | upper_first }}
     {% for commit in entry.commits %}
-        - {% if commit.scope %}*({{ commit.scope }})* {% endif %}\
+        - {% if commit.scope %}**{{ commit.scope }}**: {% endif %}\
             {% if commit.breaking %}[**breaking**] {% endif %}\
             {{ commit.message | upper_first }}\
     {% endfor %}
@@ -47,6 +47,12 @@ body = """
     {% for contributor in contributors %}
         - {{ contributor }}\
     {% endfor %}
+{% endif %}
+{# A rule separates this release from the older one below it #}\
+{% if version and previous.version %}\
+
+    ---
+
 {% endif %}
 """
 # Remove leading and trailing whitespaces from the changelog's body.

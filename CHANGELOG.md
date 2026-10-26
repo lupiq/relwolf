@@ -5,6 +5,8 @@
 - Improve the usage of git-cliff GitHub / GitLab integration
 - Add schema file for better source completion in `relwolf.yml`
 
+---
+
 ## [0.6.2](https://github.com/lupiq/relwolf/compare/v0.6.1...v0.6.2) - 2026-10-23
 
 ### 🐛 Bug Fixes
@@ -15,6 +17,8 @@
 
 - Remove dead link from navigation
 
+---
+
 ## [0.6.1](https://github.com/lupiq/relwolf/compare/v0.6.0...v0.6.1) - 2026-10-23
 
 ### 📚 Documentation
@@ -22,12 +26,16 @@
 - Remove docs about how to release relwolf itself since it is irrelevant for users
 - Improve Google result listing by adding more favicons
 
+---
+
 ## [0.6.0](https://github.com/lupiq/relwolf/compare/v0.5.0...v0.6.0) - 2026-10-21
 
 ### 🚀 Features
 
 - Improve log ouptput and error messages of main script
 - Add more updaters
+
+---
 
 ## [0.5.0](https://github.com/lupiq/relwolf/compare/v0.4.0...v0.5.0) - 2026-10-21
 
@@ -46,6 +54,8 @@
 - Improve stability of Docker build
 - Configure relwolf and Renovate to use the `build` commit type and trigger patch releases
 - Trigger patch release for `docs` as well
+
+---
 
 ## [0.4.0](https://github.com/lupiq/relwolf/compare/v0.3.0...v0.4.0) - 2026-10-20
 
@@ -66,6 +76,8 @@
 - Add test reports, codecov.io and integrate badges in `README.md`
 - Improve overall test coverage
 
+---
+
 ## [0.3.0](https://github.com/lupiq/relwolf/compare/v0.2.0...v0.3.0) - 2026-10-19
 
 ### 🚀 Features
@@ -80,6 +92,8 @@
 ### 👷 CI
 
 - Update used actions to latest version
+
+---
 
 ## [0.2.0](https://github.com/lupiq/relwolf/compare/v0.1.0...v0.2.0) - 2026-10-19
 
@@ -103,7 +117,9 @@
 - Add Renovate to update dependencies autimatically
 - Fix docker build
 
-## [0.1.0] - 2026-10-17
+---
+
+## 0.1.0 - 2026-10-17
 
 ### 🚀 Features
 
