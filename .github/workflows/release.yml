@@ -3,9 +3,10 @@ name: Release
 # relwolf releases itself: it opens/updates a release pull request and,
 # once that is merged, tags the commit and creates the GitHub release.
 #
-# RELWOLF_TOKEN must be a personal access token (not GITHUB_TOKEN), otherwise
-# the tag push would not trigger the "Publish image" workflow.
-# Required permissions: contents: write, pull requests: write.
+# The token is created from a GitHub App (variable RELWOLF_APP_CLIENT_ID, secret RELWOLF_APP_PRIVATE_KEY), so the
+# release pull requests are not authored by a maintainer. It must not be GITHUB_TOKEN, otherwise the tag push would
+# not trigger the "Publish image" workflow.
+# Required app permissions: contents: write, pull requests: write, issues: write (labels and assignees).
 
 on:
   push:
@@ -38,7 +39,12 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
+      - uses: actions/create-github-app-token@v3.3.0
+        id: app-token
+        with:
+          client-id: ${{ vars.RELWOLF_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELWOLF_APP_PRIVATE_KEY }}
       - run: node dist/cli.js
         env:
-          RELWOLF_TOKEN: ${{ secrets.RELWOLF_TOKEN }}
+          RELWOLF_TOKEN: ${{ steps.app-token.outputs.token }}
           RELWOLF_RELEASE_AS: ${{ inputs.release-as }}

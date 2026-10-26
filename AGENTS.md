@@ -45,5 +45,5 @@ Only things that are not enforced by ESLint, Prettier, commitlint or the type ch
 
 ## Manual setup that cannot be committed
 
-Pages source "GitHub Actions" + custom domain, secrets `RELWOLF_TOKEN` and `GITLAB_E2E_TOKEN`, public GHCR package,
+Pages source "GitHub Actions" + custom domain, GitHub App for the release token (variable `RELWOLF_APP_CLIENT_ID`, secret `RELWOLF_APP_PRIVATE_KEY`), secret `GITLAB_E2E_TOKEN`, public GHCR package,
 auto-delete head branches, Renovate GitHub App, squash merging.

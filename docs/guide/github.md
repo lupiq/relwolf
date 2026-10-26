@@ -16,6 +16,37 @@ Store a token as the repository secret **`RELWOLF_TOKEN`**.
 | Personal access token   | _contents_ and _pull requests_ write                                                                                                 | Recommended: CI runs on the release pull request and the tag push triggers other workflows |
 | Built-in `GITHUB_TOKEN` | `contents: write`, `pull-requests: write`, and _Allow GitHub Actions to create and approve pull requests_ in the repository settings | Events created with it do not trigger other workflows                                      |
 
+### Alternative: GitHub App
+
+A GitHub App is a good alternative to a personal access token: the release pull requests are authored by the app
+(`your-app[bot]`) instead of a person, so maintainers can review and merge them. Tokens of an app also trigger other
+workflows.
+
+1. Open _Settings → Developer settings → GitHub Apps → New GitHub App_. Do this in the settings of the **organization**
+   if the repository belongs to one, otherwise the app can only be installed on your personal account.
+2. Enter a unique name (e.g. `acme-relwolf`, the name of your organization plus `relwolf`) and any homepage URL.
+3. Disable _Webhook → Active_.
+4. Set the repository permissions _Contents_, _Pull requests_ and _Issues_ (labels and assignees) to _Read and write_.
+5. Under _Where can this GitHub App be installed?_ choose _Only on this account_ and create the app.
+6. Copy the **Client ID** from the app page and store it as the repository variable `RELWOLF_APP_CLIENT_ID`.
+7. Click _Generate a private key_ and store the content of the downloaded `.pem` file as the repository secret
+   `RELWOLF_APP_PRIVATE_KEY`.
+8. Open _Install App_ in the app settings and install it on the repository.
+
+Then generate a token in the workflow with
+[`actions/create-github-app-token`](https://github.com/actions/create-github-app-token):
+
+```yaml
+- uses: actions/create-github-app-token@v3
+  id: app-token
+  with:
+    client-id: ${{ vars.RELWOLF_APP_CLIENT_ID }}
+    private-key: ${{ secrets.RELWOLF_APP_PRIVATE_KEY }}
+- uses: lupiq/relwolf@v0 # x-relwolf-major
+  with:
+    token: ${{ steps.app-token.outputs.token }}
+```
+
 ## 2. Repository settings
 
 - Allow **squash merging** only.
