@@ -1,3 +1,24 @@
+## [0.8.0](https://github.com/lupiq/relwolf/compare/v0.7.0...v0.8.0) - 2026-10-26
+
+### 🚀 Features
+
+- Add possibility to run own script before the release commit (e.g. for formatting)
+
+### 📚 Documentation
+
+- Simplify `README.md` and add more links to docs
+
+### 🚜 Refactor
+
+- Use TS `Array<>` type instead of `[]`
+- Reduce cognitive complexity in whole workspace
+
+### 📦 Build
+
+- **deps**: Lock file maintenance (#16)
+
+---
+
 ## [0.7.0](https://github.com/lupiq/relwolf/compare/v0.6.2...v0.7.0) - 2026-10-23
 
 ### 🚀 Features
