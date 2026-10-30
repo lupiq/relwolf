@@ -75,9 +75,11 @@ pnpm run format
 
 ## Editor completion
 
-A JSON Schema of the file is published at `https://relwolf.lupiq.io/schema.json`. Editors with the YAML language server
-(VS Code with the Red Hat YAML extension, IntelliJ, …) offer completion, descriptions and validation when the first line
-of the file is:
+A JSON Schema of the file is published at `https://relwolf.lupiq.io/schema.json` and listed in
+[SchemaStore](https://www.schemastore.org/). Editors with SchemaStore support (VS Code with the Red Hat YAML extension,
+IntelliJ, …) pick it up automatically for `relwolf.yaml` and `relwolf.yml`; no configuration is needed.
+
+To pin the schema explicitly (e.g. in editors without SchemaStore), add this as the first line of the file:
 
 ```yaml [relwolf.yaml]
 # yaml-language-server: $schema=https://relwolf.lupiq.io/schema.json
