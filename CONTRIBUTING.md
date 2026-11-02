@@ -4,7 +4,7 @@ Thanks for your interest in relwolf! Bug reports, ideas and pull requests are we
 
 ## Setup
 
-Requirements: Node.js 24 and [pnpm](https://pnpm.io).
+Requirements: Node.js 26 (see `.node-version`) and [pnpm](https://pnpm.io).
 
 ```sh
 pnpm install

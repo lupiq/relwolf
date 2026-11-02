@@ -6,7 +6,7 @@ description: The public relwolf Docker image on ghcr.io - tags, platforms and us
 # Docker image
 
 `ghcr.io/lupiq/relwolf` (linux/amd64, linux/arm64), built by GitHub Actions on every release tag. The image is public and
-contains Node.js, git and relwolf with git-cliff.
+contains Node.js 26, git and relwolf with git-cliff. When running relwolf without the image, Node.js 26 or newer is required.
 
 | Tag            | Meaning                         |
 | -------------- | ------------------------------- |

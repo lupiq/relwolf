@@ -12,7 +12,7 @@
 [![Docker image](https://img.shields.io/badge/ghcr.io-lupiq%2Frelwolf-2496ed?logo=docker&logoColor=white)](https://github.com/lupiq/relwolf/pkgs/container/relwolf)
 [![GitHub Marketplace](https://img.shields.io/badge/Marketplace-relwolf%20Release%20Bot-2088ff?logo=github)](https://github.com/marketplace/actions/relwolf-release-bot)
 [![Documentation](https://img.shields.io/badge/docs-relwolf.lupiq.io-2bb3a3)](https://relwolf.lupiq.io)
-[![Node.js](https://img.shields.io/badge/node-%E2%89%A5%2024-5fa04e?logo=nodedotjs&logoColor=white)](package.json)
+[![Node.js](https://img.shields.io/badge/node-%E2%89%A5%2026-5fa04e?logo=nodedotjs&logoColor=white)](package.json)
 [![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-fe5196?logo=conventionalcommits&logoColor=white)](https://www.conventionalcommits.org/)
 [![Renovate](https://img.shields.io/badge/renovate-enabled-1a1f6c?logo=renovate&logoColor=white)](https://docs.renovatebot.com/)
 

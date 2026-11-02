@@ -14,7 +14,7 @@
     "dist"
   ],
   "engines": {
-    "node": "v26.12.1"
+    "node": ">=26"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
