@@ -24,8 +24,9 @@ These must pass before a pull request is merged (CI runs them as well):
 | `pnpm build`        | Compile to `dist/`             |
 | `pnpm docs:build`   | Build the documentation site   |
 
-`pnpm test:coverage` creates a coverage report. `pnpm test:e2e` runs the GitLab end-to-end tests and needs a
-`GITLAB_E2E_TOKEN`; it is optional for contributors.
+`pnpm test:coverage` creates a coverage report. `pnpm test:e2e` runs the GitLab and GitHub end-to-end tests and needs
+`GITLAB_E2E_TOKEN` and `GH_E2E_TOKEN`; it is optional for contributors. Pass a file to run only one provider, e.g.
+`pnpm test:e2e e2e/github.e2e.test.ts`.
 
 When you change behaviour, add or adjust a test in the matching file under `test/`. When you add or change a
 configuration option, update `docs/` and `AGENTS.md` as well.

@@ -16,9 +16,9 @@ export default defineConfig({
     ],
     testTimeout: 180_000,
     hookTimeout: 180_000,
-    // GitLab.com occasionally answers very slowly; every scenario starts from a clean state, so one retry is safe.
+    // The hosting platforms occasionally answer very slowly; every scenario starts from a clean state, so one retry is safe.
     retry: 1,
-    // The scenarios share one GitLab project and its tags, so they must run one after another.
+    // The scenarios share one sandbox and its tags, so they must run one after another.
     fileParallelism: false,
     sequence: {concurrent: false},
   },

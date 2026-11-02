@@ -5,7 +5,7 @@
 # relwolf
 
 [![CI](https://github.com/lupiq/relwolf/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/lupiq/relwolf/actions/workflows/ci.yml)
-[![E2E (GitLab)](https://github.com/lupiq/relwolf/actions/workflows/e2e.yml/badge.svg?branch=main)](https://github.com/lupiq/relwolf/actions/workflows/e2e.yml)
+[![E2E](https://github.com/lupiq/relwolf/actions/workflows/e2e.yml/badge.svg?branch=main)](https://github.com/lupiq/relwolf/actions/workflows/e2e.yml)
 [![Coverage](https://codecov.io/gh/lupiq/relwolf/graph/badge.svg)](https://codecov.io/gh/lupiq/relwolf)
 [![Latest release](https://img.shields.io/github/v/release/lupiq/relwolf)](https://github.com/lupiq/relwolf/releases/latest)
 [![License: MIT](https://img.shields.io/github/license/lupiq/relwolf)](LICENSE)

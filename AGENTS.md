@@ -39,11 +39,13 @@ Only things that are not enforced by ESLint, Prettier, commitlint or the type ch
 
 - typescript-eslint does not support TS 7 yet: `typescript` is aliased to `@typescript/typescript6` and TS 7 is
   installed as `@typescript/native`. Drop the alias once typescript-eslint supports TS ≥ 7.1.
-- `pnpm test:e2e` runs against a sandbox project on gitlab.com and needs `GITLAB_E2E_TOKEN` and
-  `GITLAB_E2E_PROJECT_ID` (see `e2e/`); it is not part of `pnpm test`.
+- `pnpm test:e2e` runs the same scenarios (`e2e/scenarios.ts`) against a sandbox project on gitlab.com
+  (`GITLAB_E2E_TOKEN`, `GITLAB_E2E_PROJECT_ID`) and a sandbox repository on github.com (`GH_E2E_TOKEN`,
+  `GH_E2E_REPOSITORY` as `owner/name`; Actions secrets cannot start with `GITHUB_`); see `e2e/`. Pass a test file to
+  run one provider only. It is not part of `pnpm test`.
 - Renovate (`renovate.json`) uses `build(deps)` commits for everything; related packages are grouped.
 
 ## Manual setup that cannot be committed
 
-Pages source "GitHub Actions" + custom domain, GitHub App for the release token (variable `RELWOLF_APP_CLIENT_ID`, secret `RELWOLF_APP_PRIVATE_KEY`), secret `GITLAB_E2E_TOKEN`, public GHCR package,
+Pages source "GitHub Actions" + custom domain, GitHub App for the release token (variable `RELWOLF_APP_CLIENT_ID`, secret `RELWOLF_APP_PRIVATE_KEY`), secrets `GITLAB_E2E_TOKEN` and `GH_E2E_TOKEN` (fine-grained PAT on the sandbox repository: contents, pull requests and issues read/write; the repository needs squash merging enabled), public GHCR package,
 auto-delete head branches, Renovate GitHub App, squash merging.

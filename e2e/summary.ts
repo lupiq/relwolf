@@ -1,5 +1,5 @@
 // Turns the Vitest JSON report into a Markdown table for the GitHub job summary.
-// Usage: node e2e/summary.ts [report.json]   (writes to $GITHUB_STEP_SUMMARY, or stdout when unset)
+// Usage: node e2e/summary.ts [report.json] [title]   (writes to $GITHUB_STEP_SUMMARY, or stdout when unset)
 import {appendFileSync, existsSync, readFileSync} from 'node:fs';
 
 interface Assertion {
@@ -28,8 +28,8 @@ function clean(text: string, limit = 1500): string {
   return plain.length > limit ? `${plain.slice(0, limit)}\n…` : plain;
 }
 
-function renderSummary(report: Report | undefined): string {
-  const lines = ['## GitLab E2E results', ''];
+function renderSummary(report: Report | undefined, title: string): string {
+  const lines = [`## ${title} E2E results`, ''];
   const assertions = report?.testResults.flatMap(r => r.assertionResults) ?? [];
   const suiteErrors =
     report?.testResults.filter(r => r.status === 'failed' && r.message) ?? [];
@@ -94,7 +94,7 @@ const file = process.argv[2] ?? 'e2e-report.json';
 const report = existsSync(file)
   ? (JSON.parse(readFileSync(file, 'utf8')) as Report)
   : undefined;
-const markdown = renderSummary(report);
+const markdown = renderSummary(report, process.argv[3] ?? 'GitHub/GitLab');
 const target = process.env.GITHUB_STEP_SUMMARY;
 
 if (target) {

@@ -1,33 +1,21 @@
-import {execFileSync} from 'node:child_process';
-import {mkdtempSync, rmSync} from 'node:fs';
-import {tmpdir} from 'node:os';
-import path from 'node:path';
+import {rmSync} from 'node:fs';
 import {parseConfig} from '../src/config.js';
 import {GitLabProvider} from '../src/providers/gitlab.js';
-import {HttpClient, type FetchLike} from '../src/providers/http.js';
+import {HttpClient} from '../src/providers/http.js';
 import {run, type RunResult} from '../src/release.js';
+import {
+  checkoutBranch,
+  MAIN,
+  newBranchName,
+  PENDING_LABEL,
+  type ReleaseRequestInfo,
+  type Sandbox,
+  sleep,
+  timeoutFetch,
+} from './sandbox.js';
 
-export interface MergeRequestInfo {
-  iid: number;
-  title: string;
-  description: string;
-  state: string;
-  labels: Array<string>;
-  source_branch: string;
-}
-
-const MAIN = 'main';
-const PENDING_LABEL = 'relwolf: pending';
-
-const sleep = (ms: number): Promise<void> =>
-  new Promise(resolve => setTimeout(resolve, ms));
-
-/**
- * A dedicated GitLab project used as a sandbox. Every scenario gets its own release branch
- * (`e2e-<id>`) so scenarios cannot influence each other; tags, releases and branches are
- * removed again by `cleanup()`.
- */
-export class GitLabSandbox {
+/** A dedicated GitLab project used as a sandbox. */
+export class GitLabSandbox implements Sandbox {
   private readonly http: HttpClient;
   private readonly project: string;
   private readonly dirs: Array<string> = [];
@@ -38,32 +26,6 @@ export class GitLabSandbox {
     private readonly token: string,
     private readonly projectId: string,
   ) {
-    // A stalled request must not block a whole scenario; the client retries idempotent calls.
-    const timeoutFetch: FetchLike = async (input, init) => {
-      const started = Date.now();
-
-      try {
-        const response = await fetch(input, {
-          ...init,
-          signal: AbortSignal.timeout(60_000),
-        });
-
-        if (process.env.E2E_DEBUG) {
-          console.log(
-            `${init?.method ?? 'GET'} ${input} -> ${response.status} (${Date.now() - started} ms)`,
-          );
-        }
-
-        return response;
-      } catch (error) {
-        if (process.env.E2E_DEBUG) {
-          console.log(`${init?.method ?? 'GET'} ${input} FAILED`);
-        }
-
-        throw error;
-      }
-    };
-
     this.http = new HttpClient(
       apiUrl,
       {'PRIVATE-TOKEN': token, 'Accept': 'application/json'},
@@ -90,7 +52,6 @@ export class GitLabSandbox {
     );
   }
 
-  /** Makes sure `main` exists (the sandbox project may be completely empty) and removes leftovers. */
   async init(): Promise<void> {
     const {data} = await this.http.request('GET', this.project);
 
@@ -114,7 +75,7 @@ export class GitLabSandbox {
   }
 
   newBranchName(): string {
-    return `e2e-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+    return newBranchName();
   }
 
   async createBranch(branch: string): Promise<void> {
@@ -123,7 +84,6 @@ export class GitLabSandbox {
     });
   }
 
-  /** Commits the given files (created or updated) to `branch`; resolves to the commit sha. */
   async commit(
     branch: string,
     message: string,
@@ -170,16 +130,26 @@ export class GitLabSandbox {
     );
   }
 
-  async mergeRequest(iid: number): Promise<MergeRequestInfo> {
+  async releaseRequest(iid: number): Promise<ReleaseRequestInfo> {
     const {data} = await this.http.request(
       'GET',
       `${this.project}/merge_requests/${iid}`,
     );
 
-    return data as MergeRequestInfo;
+    return {
+      title: data.title as string,
+      body: (data.description as string | null) ?? '',
+      state:
+        data.state === 'opened'
+          ? 'open'
+          : data.state === 'merged'
+            ? 'merged'
+            : 'closed',
+      labels: data.labels as Array<string>,
+      sourceBranch: data.source_branch as string,
+    };
   }
 
-  /** Squash-merges the merge request, waiting until GitLab has finished checking it. */
   async merge(iid: number): Promise<void> {
     for (let attempt = 0; ; attempt++) {
       const response = await this.http.request(
@@ -202,7 +172,7 @@ export class GitLabSandbox {
     }
 
     for (let attempt = 0; attempt < 30; attempt++) {
-      if ((await this.mergeRequest(iid)).state === 'merged') {
+      if ((await this.releaseRequest(iid)).state === 'merged') {
         return;
       }
 
@@ -222,7 +192,7 @@ export class GitLabSandbox {
     return response.status !== 404;
   }
 
-  async releaseDescription(tag: string): Promise<string | null> {
+  async releaseBody(tag: string): Promise<string | null> {
     const response = await this.http.request(
       'GET',
       `${this.project}/releases/${encodeURIComponent(tag)}`,
@@ -234,7 +204,6 @@ export class GitLabSandbox {
       : ((response.data.description as string | null) ?? '');
   }
 
-  /** Runs relwolf against a fresh full clone of `branch`, like a CI job would. */
   async runRelwolf(
     branch: string,
     configYaml = '',
@@ -251,40 +220,19 @@ export class GitLabSandbox {
       currentBranch: branch,
       defaultBranch: MAIN,
       releaseAs,
+      log: process.env.E2E_DEBUG ? console.log : undefined,
     });
   }
 
   private checkout(branch: string): string {
-    const dir = mkdtempSync(path.join(tmpdir(), 'relwolf-e2e-'));
+    const dir = checkoutBranch({
+      repositoryUrl: this.repositoryUrl,
+      username: 'oauth2',
+      token: this.token,
+      branch,
+    });
 
     this.dirs.push(dir);
-    const auth = Buffer.from(`oauth2:${this.token}`).toString('base64');
-    const git = (args: Array<string>, env: NodeJS.ProcessEnv = {}): void => {
-      execFileSync('git', args, {
-        cwd: dir,
-        stdio: 'pipe',
-        env: {...process.env, ...env},
-      });
-    };
-
-    git(['init', '-q', '-b', 'scratch']);
-    // The header goes through the environment so that it never shows up in error messages.
-    git(
-      [
-        'fetch',
-        '-q',
-        '--tags',
-        '--force',
-        this.repositoryUrl,
-        `+refs/heads/${branch}:refs/remotes/origin/${branch}`,
-      ],
-      {
-        GIT_CONFIG_COUNT: '1',
-        GIT_CONFIG_KEY_0: 'http.extraHeader',
-        GIT_CONFIG_VALUE_0: `Authorization: Basic ${auth}`,
-      },
-    );
-    git(['checkout', '-q', '-B', branch, `refs/remotes/origin/${branch}`]);
 
     return dir;
   }
