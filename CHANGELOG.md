@@ -1,3 +1,27 @@
+## [0.9.0](https://github.com/lupiq/relwolf/compare/v0.8.1...v0.9.0) - 2026-11-02
+
+### 🚀 Features
+
+- Add possiblity to rewrite whole changelog(s) if the `git-cliff` config changes
+
+### 🐛 Bug Fixes
+
+- Find just merged release pull requests on GitHub reliably
+
+### 📚 Documentation
+
+- Mention schemastore in docs
+
+### 🧪 Testing
+
+- Add GitHub sandbox E2E tests
+
+### 📦 Build
+
+- Use Node.js v26 and document it correctly
+
+---
+
 ## [0.8.1](https://github.com/lupiq/relwolf/compare/v0.8.0...v0.8.1) - 2026-10-26
 
 ### 📚 Documentation
