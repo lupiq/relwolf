@@ -259,35 +259,24 @@ export class GitHubProvider implements Provider {
     targetBranch: string;
     label: string;
   }): Promise<Array<ReleaseRequest>> {
-    const data = await this.http.requestAll(`${this.repo}/issues`, {
-      labels: options.label,
+    // The pull request list is consistent right after a merge or label change, unlike the label-filtered issue
+    // list, which lags behind by several seconds and would hide the request that was merged just now.
+    const data = await this.http.requestAll(`${this.repo}/pulls`, {
       state: 'closed',
+      base: options.targetBranch,
       sort: 'updated',
-      direction: 'asc',
+      direction: 'desc',
       per_page: '100',
     });
-    const merged: Array<ReleaseRequest> = [];
 
-    for (const issue of data as Array<{
-      number: number;
-      pull_request?: unknown;
-    }>) {
-      if (!issue.pull_request) {
-        continue;
-      }
-
-      const {data: pull} = await this.http.request(
-        'GET',
-        `${this.repo}/pulls/${issue.number}`,
-      );
-      const candidate = pull as GitHubPull;
-
-      if (candidate.merged_at && candidate.base?.ref === options.targetBranch) {
-        merged.push(toReleaseRequest(candidate));
-      }
-    }
-
-    return merged;
+    return (data as Array<GitHubPull>)
+      .filter(
+        pull =>
+          pull.merged_at &&
+          pull.labels.some(label => label.name === options.label),
+      )
+      .sort((a, b) => (a.merged_at ?? '').localeCompare(b.merged_at ?? ''))
+      .map(toReleaseRequest);
   }
 
   async setLabels(

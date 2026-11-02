@@ -540,88 +540,69 @@ describe('GitHubProvider', () => {
     expect(calls[1]!.body).toEqual({labels: ['relwolf: pending']});
   });
 
-  it('only returns merged pull requests of the target branch', async () => {
-    const {provider} = make(call => {
-      const path = call.url.pathname;
-
-      if (path.endsWith('/issues')) {
-        return {
-          json: [
-            {number: 1, pull_request: {}},
-            {number: 2, pull_request: {}},
-            {number: 3, pull_request: {}},
-            {number: 4},
-          ],
-        };
-      }
-
-      if (path.endsWith('/pulls/1')) {
-        return {
-          json: ghPull({
-            number: 1,
-            state: 'closed',
-            merged_at: '2026-01-01',
-            merge_commit_sha: 'sha1',
-          }),
-        };
-      }
-
-      if (path.endsWith('/pulls/2')) {
-        return {json: ghPull({number: 2, state: 'closed', merged_at: null})};
-      }
-
-      if (path.endsWith('/pulls/3')) {
-        return {
-          json: ghPull({
-            number: 3,
-            state: 'closed',
-            merged_at: '2026-01-01',
-            base: {ref: 'other'},
-          }),
-        };
-      }
-
-      throw new Error(`unexpected ${path}`);
-    });
+  it('only returns merged, labelled pull requests of the target branch, oldest first', async () => {
+    const {provider, calls} = make(() => ({
+      json: [
+        ghPull({
+          number: 1,
+          state: 'closed',
+          merged_at: '2026-02-01T00:00:00Z',
+          merge_commit_sha: 'sha1',
+        }),
+        ghPull({number: 2, state: 'closed', merged_at: null}),
+        ghPull({
+          number: 3,
+          state: 'closed',
+          merged_at: '2026-01-01T00:00:00Z',
+          labels: [{name: 'relwolf: pending'}, {name: 'other'}],
+        }),
+        ghPull({
+          number: 4,
+          state: 'closed',
+          merged_at: '2026-01-01T00:00:00Z',
+          labels: [{name: 'relwolf: tagged'}],
+        }),
+      ],
+    }));
     const result = await provider.listMergedReleaseRequests({
       targetBranch: 'main',
       label: 'relwolf: pending',
     });
 
-    expect(result).toHaveLength(1);
-    expect(result[0]).toMatchObject({id: 1, state: 'merged', mergeSha: 'sha1'});
+    expect(result.map(r => r.id)).toEqual([3, 1]);
+    expect(result[1]).toMatchObject({state: 'merged', mergeSha: 'sha1'});
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.url.pathname).toBe('/repos/lupiq/relwolf/pulls');
+    expect(Object.fromEntries(calls[0]!.url.searchParams)).toMatchObject({
+      state: 'closed',
+      base: 'main',
+    });
   });
 
   it('follows the Link header when listing closed pull requests', async () => {
-    const {provider, calls} = make(call => {
-      const path = call.url.pathname;
-
-      if (path.endsWith('/issues')) {
-        return call.url.searchParams.get('page') === '2'
-          ? {json: [{number: 2, pull_request: {}}]}
-          : {
-              json: [{number: 1, pull_request: {}}],
-              headers: {
-                Link: '<https://api.github.com/repos/lupiq/relwolf/issues?page=2>; rel="next", <https://api.github.com/repos/lupiq/relwolf/issues?page=2>; rel="last"',
-              },
-            };
-      }
-
-      const number = Number(path.split('/').at(-1));
-
-      return {
-        json: ghPull({number, state: 'closed', merged_at: '2026-01-01'}),
-      };
-    });
+    const {provider, calls} = make(call =>
+      call.url.searchParams.get('page') === '2'
+        ? {
+            json: [
+              ghPull({number: 2, state: 'closed', merged_at: '2026-01-02'}),
+            ],
+          }
+        : {
+            json: [
+              ghPull({number: 1, state: 'closed', merged_at: '2026-01-01'}),
+            ],
+            headers: {
+              Link: '<https://api.github.com/repos/lupiq/relwolf/pulls?page=2>; rel="next", <https://api.github.com/repos/lupiq/relwolf/pulls?page=2>; rel="last"',
+            },
+          },
+    );
     const result = await provider.listMergedReleaseRequests({
       targetBranch: 'main',
       label: 'relwolf: pending',
     });
 
     expect(result.map(r => r.id)).toEqual([1, 2]);
-    expect(calls.filter(c => c.url.pathname.endsWith('/issues'))).toHaveLength(
-      2,
-    );
+    expect(calls).toHaveLength(2);
   });
 
   it('swaps labels', async () => {
