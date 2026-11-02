@@ -18,6 +18,11 @@
       "type": "string",
       "minLength": 1
     },
+    "rewrite-changelog": {
+      "default": false,
+      "description": "Regenerate the whole changelog of every released package when the git-cliff config changed since its last release.",
+      "type": "boolean"
+    },
     "pre-commit-script": {
       "description": "Script in the working tree (path relative to the repository root) that runs after the release files are written and before they are committed. Everything it changes ends up in the release commit.",
       "type": "string",

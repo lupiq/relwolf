@@ -304,6 +304,61 @@ describe('release request', () => {
   });
 });
 
+describe('rewrite-changelog', () => {
+  const YAML = `rewrite-changelog: true\ncliff-config: cliff.toml\n${NODE_CONFIG}`;
+  const cliffToml = (label: string) =>
+    `[changelog]\nheader = "# Log\\n"\nbody = "${label} {{ version }}{% for c in commits %}\\n- {{ c.message }}{% endfor %}\\n"\ntrim = true\n\n[git]\nconventional_commits = true\n`;
+
+  async function released(yaml: string) {
+    repo.write('package.json', PACKAGE_JSON);
+    repo.write('cliff.toml', cliffToml('OLD'));
+    repo.commit('feat: initial');
+    await exec(yaml);
+    mergeLastRelease(repo, provider, 1);
+    await exec(yaml);
+  }
+
+  const lastChangelog = () =>
+    provider.commits.at(-1)!.files.find(file => file.path === 'CHANGELOG.md')!
+      .content;
+
+  it('regenerates all releases after the cliff config changed', async () => {
+    await released(YAML);
+    repo.write('cliff.toml', cliffToml('NEW'));
+    repo.git('add', '-A');
+    repo.git('commit', '-q', '-m', 'fix: later');
+    await exec(YAML);
+
+    const changelog = lastChangelog();
+
+    expect(changelog).toMatch(/NEW v0\.1\.1[\s\S]*NEW v0\.1\.0/);
+    expect(changelog).not.toContain('OLD');
+  });
+
+  it('only prepends while the cliff config is unchanged', async () => {
+    await released(YAML);
+    repo.commit('fix: later');
+    await exec(YAML);
+
+    expect(lastChangelog()).toMatch(/OLD v0\.1\.1[\s\S]*OLD v0\.1\.0/);
+  });
+
+  it('keeps prepending when disabled', async () => {
+    const yaml = YAML.replace(
+      'rewrite-changelog: true',
+      'rewrite-changelog: false',
+    );
+
+    await released(yaml);
+    repo.write('cliff.toml', cliffToml('NEW'));
+    repo.git('add', '-A');
+    repo.git('commit', '-q', '-m', 'fix: later');
+    await exec(yaml);
+
+    expect(lastChangelog()).toMatch(/NEW v0\.1\.1[\s\S]*OLD v0\.1\.0/);
+  });
+});
+
 describe('tagging merged release requests', () => {
   async function firstRelease() {
     repo.write('package.json', PACKAGE_JSON);

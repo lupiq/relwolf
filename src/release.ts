@@ -15,6 +15,7 @@ import {
 import {
   generateNotes,
   prependToChangelog,
+  rewriteChangelog,
   type CliffInvocation,
 } from './changelog.js';
 import {
@@ -500,6 +501,23 @@ async function buildFiles(
   return {files: await applyPreCommitScript(options, git, files), entries};
 }
 
+/** Whether `rewrite-changelog` applies: the git-cliff config differs from the one of the previous release. */
+async function cliffConfigChanged(
+  options: RunOptions,
+  git: Git,
+  plan: PackagePlan,
+): Promise<boolean> {
+  if (!options.config.rewriteChangelog || !plan.previousTag) {
+    return false;
+  }
+
+  const file = options.config.cliffConfig ?? 'cliff.toml';
+  const before = await git.fileAt(plan.previousTag, file);
+  const after = await git.fileAt('HEAD', file);
+
+  return before !== after;
+}
+
 /** Generates the notes of a plan, prepends them to the changelog and runs the updaters. */
 async function applyPlan(
   options: RunOptions,
@@ -535,12 +553,29 @@ async function applyPlan(
 
   const changelog = await load(pkg.changelogPath, false);
 
-  changelog.current = await prependToChangelog(
-    cliff,
-    changelog.current,
-    env,
-    placeholder,
-  );
+  if (await cliffConfigChanged(options, git, plan)) {
+    options.log?.(
+      `[${pkg.component ?? pkg.path}] The git-cliff config changed since ${plan.previousTag}, rewriting the whole changelog.`,
+    );
+
+    const {bootstrapSha} = options.config;
+
+    changelog.current = await rewriteChangelog(
+      {...cliff, range: bootstrapSha && `${bootstrapSha}..HEAD`},
+      env,
+    );
+    // The rewrite has no entry for a package without changes yet.
+    changelog.current = placeholder
+      ? await prependToChangelog(cliff, changelog.current, env, placeholder)
+      : changelog.current;
+  } else {
+    changelog.current = await prependToChangelog(
+      cliff,
+      changelog.current,
+      env,
+      placeholder,
+    );
+  }
 
   const version = formatVersion(plan.version);
 

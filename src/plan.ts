@@ -35,6 +35,8 @@ export interface PackagePlan {
   /** Revision range for the changelog; whole history if undefined. */
   range?: string | undefined;
   tagPattern: string;
+  /** Latest release tag of the package (pre-releases included), if any. */
+  previousTag?: string | undefined;
   commits: Array<ConventionalCommit>;
   /** Bump level derived from the commits; `null` if only a requested or linked version applies. */
   level: BumpLevel | null;
@@ -423,6 +425,7 @@ async function buildPlan(
     tag,
     prerelease: isPrerelease(version),
     range,
+    previousTag: context.lastAny?.tag,
     tagPattern: tagPattern(tagged, Boolean(pkg.prerelease)),
     level,
     empty: touching.length === 0,

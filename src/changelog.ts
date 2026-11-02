@@ -20,6 +20,8 @@ export interface CliffInvocation {
   excludePaths: Array<string>;
   /** Commits to leave out of the changelog, e.g. reverted ones. */
   skipCommits?: Array<string> | undefined;
+  /** Render all releases of the range instead of only the unreleased commits. */
+  all?: boolean | undefined;
 }
 
 function resolveCliffCommand(env: NodeJS.ProcessEnv): {
@@ -40,7 +42,7 @@ function baseArgs(options: CliffInvocation): Array<string> {
 
   if (options.range) {
     args.push(options.range);
-  } else {
+  } else if (!options.all) {
     args.push('--unreleased');
   }
 
@@ -136,6 +138,23 @@ export async function prependToChangelog(
     const added = result.slice(0, result.length - existing.length).trimEnd();
 
     return `${added}\n\n${placeholder}\n\n${existing}`.trimEnd() + '\n';
+  } finally {
+    await rm(dir, {recursive: true, force: true});
+  }
+}
+
+/** Renders the complete changelog from the history, including the new entry. */
+export async function rewriteChangelog(
+  options: CliffInvocation,
+  env: NodeJS.ProcessEnv = process.env,
+): Promise<string> {
+  const dir = await mkdtemp(path.join(tmpdir(), 'relwolf-'));
+  const file = path.join(dir, 'CHANGELOG.md');
+
+  try {
+    await cliff({...options, all: true}, ['--output', file], env);
+
+    return await readFile(file, 'utf8');
   } finally {
     await rm(dir, {recursive: true, force: true});
   }

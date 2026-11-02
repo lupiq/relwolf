@@ -163,6 +163,19 @@ export class Git {
     }
   }
 
+  /** Content of a file at `rev`, or `undefined` if it does not exist there. */
+  async fileAt(rev: string, file: string): Promise<string | undefined> {
+    try {
+      return await this.git('show', `${rev}:${file}`);
+    } catch (error) {
+      if (error instanceof CommandError) {
+        return undefined;
+      }
+
+      throw error;
+    }
+  }
+
   async hasTag(tag: string): Promise<boolean> {
     try {
       await this.git('rev-parse', '--verify', '--quiet', `refs/tags/${tag}`);

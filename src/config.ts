@@ -140,6 +140,12 @@ export const configSchema = z.strictObject({
     .describe(
       "Path to the git-cliff config. Defaults to git-cliff's own discovery.",
     ),
+  'rewrite-changelog': z
+    .boolean()
+    .default(false)
+    .describe(
+      'Regenerate the whole changelog of every released package when the git-cliff config changed since its last release.',
+    ),
   'pre-commit-script': z
     .string()
     .min(1)
@@ -358,6 +364,8 @@ export interface Config {
   draft: boolean;
   /** Prefix the default release title with a random emoji. */
   releaseEmoji: boolean;
+  /** Regenerate whole changelogs if the git-cliff config changed since the last release. */
+  rewriteChangelog: boolean;
   /** Text for the changelog and release notes of a package without changes; empty to add nothing. */
   noChangesText: string;
   assignees: Array<string>;
@@ -771,6 +779,7 @@ export function parseConfig(source: string | undefined): Config {
     labels,
     draft: parsed.draft,
     releaseEmoji: parsed['release-emoji'],
+    rewriteChangelog: parsed['rewrite-changelog'],
     noChangesText: parsed['no-changes-text'],
     assignees: parsed.assignees,
     reviewers: parsed.reviewers,

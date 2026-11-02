@@ -27,6 +27,14 @@ Release merge requests are titled `chore(release): Create release …` (see `pul
 in the changelog (relwolf's own `cliff.toml` skips all `chore` commits).
 :::
 
+## Rewrite the whole changelog
+
+relwolf only prepends the new entry, so changes to your `cliff.toml` (templates, groups, …) do not affect existing
+entries. With `rewrite-changelog: true`, the next release regenerates the complete changelog of every released package
+from the full history (from `bootstrap-sha`, if set) as soon as the git-cliff config (`cliff-config`, default
+`cliff.toml`) differs from its state at the package's previous release tag. Later releases prepend again. Manual edits of
+existing entries are lost when this happens. The job log tells when a changelog is rewritten.
+
 ## Example: everything except chores
 
 ```toml [cliff.toml]
