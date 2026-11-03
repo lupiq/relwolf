@@ -3,6 +3,7 @@
   "extends": ["config:recommended"],
   "schedule": ["at any time"],
   "prHourlyLimit": 0,
+  "dependencyDashboardApproval": false,
   "rangeStrategy": "pin",
   "semanticCommits": "enabled",
   "semanticCommitType": "build",
