@@ -3,7 +3,7 @@ FROM node:26.13.0-slim AS base
 ENV npm_config_fetch_retries=6 \
     npm_config_fetch_retry_mintimeout=5000 \
     npm_config_fetch_retry_maxtimeout=60000
-RUN npm install --global pnpm@12.15.0
+RUN npm install --global pnpm@12.16.1
 WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
