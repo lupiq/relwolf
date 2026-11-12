@@ -74,3 +74,8 @@
   margin: -1rem 0;
   vertical-align: middle;
 }
+
+/* The changelog separates releases with a rule for GitLab; VitePress already draws one above each h2 */
+.changelog-page .vp-doc hr {
+  display: none;
+}

@@ -127,6 +127,7 @@ export default defineConfig({
         link: '/reference/github-vs-gitlab',
         activeMatch: '/reference/',
       },
+      {text: 'Changelog', link: '/changelog'},
       {text: 'About', link: '/about'},
     ],
     sidebar: [
@@ -168,6 +169,7 @@ export default defineConfig({
         text: 'Development',
         items: [{text: 'Contributing', link: '/development/contributing'}],
       },
+      {text: 'Changelog', link: '/changelog'},
       {text: 'Logos', link: '/logos'},
       {text: 'About lupiq', link: '/about'},
     ],
