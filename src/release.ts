@@ -13,6 +13,7 @@ import {
   type BodyOverride,
 } from './body.js';
 import {
+  applyChangelogLinks,
   applyChangelogTitle,
   generateNotes,
   prependToChangelog,
@@ -665,6 +666,21 @@ async function applyPlan(
     pkg.component ?? '',
     pkg.changelogTitle,
   );
+
+  if (options.config.changelogLinks && pkg.path === '.') {
+    const directory = path.posix.dirname(pkg.changelogPath);
+
+    changelog.current = applyChangelogLinks(
+      changelog.current,
+      options.config.changelogLinksText,
+      options.config.packages
+        .filter(other => other !== pkg)
+        .map(other => ({
+          label: other.component ?? other.path,
+          href: path.posix.relative(directory, other.changelogPath),
+        })),
+    );
+  }
 
   const version = formatVersion(plan.version);
 

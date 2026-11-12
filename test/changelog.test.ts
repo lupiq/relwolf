@@ -1,5 +1,9 @@
 import {describe, expect, it} from 'vitest';
-import {applyChangelogTitle, cliffEnv} from '../src/changelog.js';
+import {
+  applyChangelogLinks,
+  applyChangelogTitle,
+  cliffEnv,
+} from '../src/changelog.js';
 
 describe('applyChangelogTitle', () => {
   const changelog = '# Changelog\n\n## 1.0.0\n- a ${component}\n';
@@ -19,6 +23,37 @@ describe('applyChangelogTitle', () => {
   it('keeps the changelog without a title or a leading heading', () => {
     expect(applyChangelogTitle('## 1.0.0\n', 'api', 'X')).toBe('## 1.0.0\n');
     expect(applyChangelogTitle('# Changelog\n', 'api')).toBe('# Changelog\n');
+  });
+});
+
+describe('applyChangelogLinks', () => {
+  const links = [{label: 'api', href: 'services/api/CHANGELOG.md'}];
+
+  it('writes the links below the heading', () => {
+    expect(
+      applyChangelogLinks('# Changelog\n\n## 1.0.0\n', 'See:', links),
+    ).toBe(
+      '# Changelog\n\n<!-- relwolf:changelog-links:start -->\nSee:\n\n- [api](services/api/CHANGELOG.md)\n<!-- relwolf:changelog-links:end -->\n\n## 1.0.0\n',
+    );
+  });
+
+  it('is idempotent and removes the block without links', () => {
+    const once = applyChangelogLinks(
+      '# Changelog\n\n## 1.0.0\n',
+      'See:',
+      links,
+    );
+
+    expect(applyChangelogLinks(once, 'See:', links)).toBe(once);
+    expect(applyChangelogLinks(once, 'See:', [])).toBe(
+      '# Changelog\n\n## 1.0.0\n',
+    );
+  });
+
+  it('puts the block on top without a heading', () => {
+    expect(applyChangelogLinks('## 1.0.0\n', 'See:', links)).toMatch(
+      /^<!-- relwolf:changelog-links:start -->\nSee:[\s\S]*end -->\n\n## 1\.0\.0\n$/,
+    );
   });
 });
 

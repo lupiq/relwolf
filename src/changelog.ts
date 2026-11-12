@@ -181,6 +181,50 @@ export function applyChangelogTitle(
   return replaced.replace(/^(\s*)# .*/, (_, lead: string) => lead + heading);
 }
 
+const escapeRegex = (value: string): string =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const LINKS_START = '<!-- relwolf:changelog-links:start -->';
+const LINKS_END = '<!-- relwolf:changelog-links:end -->';
+
+/** A link to the changelog of another package. */
+export interface ChangelogLink {
+  label: string;
+  /** Path relative to the changelog the link is written to. */
+  href: string;
+}
+
+/**
+ * Writes a block with links to other changelogs below the leading first-level heading (or at the top without one).
+ * An existing block is replaced, so repeated runs do not duplicate it.
+ */
+export function applyChangelogLinks(
+  changelog: string,
+  text: string,
+  links: ReadonlyArray<ChangelogLink>,
+): string {
+  const start = escapeRegex(LINKS_START);
+  const end = escapeRegex(LINKS_END);
+  const without = changelog.replace(
+    new RegExp(`${start}[\\s\\S]*?${end}\\s*`, 'g'),
+    '',
+  );
+
+  if (links.length === 0) {
+    return without;
+  }
+
+  const list = links.map(link => `- [${link.label}](${link.href})`);
+  const block = [LINKS_START, text, '', ...list, LINKS_END].join('\n');
+  const heading = /^(\s*# .*\n)\s*/.exec(without);
+
+  if (!heading) {
+    return `${block}\n\n${without.trimStart()}`;
+  }
+
+  return `${heading[1]}\n${block}\n\n${without.slice(heading[0].length)}`;
+}
+
 /** One release of a rewritten changelog. */
 export interface RewriteRelease {
   tag: string;
@@ -205,9 +249,6 @@ function stripFor(keepHeader: boolean, keepFooter: boolean): Strip | undefined {
 
   return keepFooter ? 'header' : 'all';
 }
-
-const escapeRegex = (value: string): string =>
-  value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /**
  * Renders the complete changelog from the history, including the new entry.

@@ -30,6 +30,13 @@ purely git-cliff configuration.
   Alternatively set `changelog-title` per package in `relwolf.yaml`; it replaces the leading `# ` heading produced by
   your header and also supports `${component}`.
 
+## Links to component changelogs
+
+With `changelog-links: true` (monorepos), relwolf writes a list of links to the changelogs of all other packages below
+the title of the changelog of the root package (path `.`), labelled with the `component`. The text above the list is
+`changelog-links-text`. The block sits between `<!-- relwolf:changelog-links:start -->` and `…:end -->` and is replaced on
+every release of the root package.
+
 ::: warning
 Release merge requests are titled `chore(release): Create release …` (see `pull-request-title`). Make sure your `cliff.toml` does not list that commit
 in the changelog (relwolf's own `cliff.toml` skips all `chore` commits).

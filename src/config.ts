@@ -253,6 +253,17 @@ export const configSchema = z.strictObject({
     .boolean()
     .default(false)
     .describe('Prefix the default release title with a random emoji.'),
+  'changelog-links': z
+    .boolean()
+    .default(false)
+    .describe(
+      'Link the changelogs of all other packages in the header of the changelog of the root package.',
+    ),
+  'changelog-links-text': z
+    .string()
+    .min(1)
+    .default('For changes to individual components, see their changelogs:')
+    .describe('Text above the links of `changelog-links`.'),
   'no-changes-text': z
     .string()
     .default('No changes, version bumped to stay in sync.')
@@ -376,6 +387,10 @@ export interface Config {
   rewriteChangelog: boolean;
   /** Text for the changelog and release notes of a package without changes; empty to add nothing. */
   noChangesText: string;
+  /** Link the changelogs of the other packages in the changelog of the root package. */
+  changelogLinks: boolean;
+  /** Text above the links. */
+  changelogLinksText: string;
   assignees: Array<string>;
   reviewers: Array<string>;
   /** Commit types (lower case) that trigger a minor or patch release; breaking changes always trigger a major one. */
@@ -790,6 +805,8 @@ export function parseConfig(source: string | undefined): Config {
     releaseEmoji: parsed['release-emoji'],
     rewriteChangelog: parsed['rewrite-changelog'],
     noChangesText: parsed['no-changes-text'],
+    changelogLinks: parsed['changelog-links'],
+    changelogLinksText: parsed['changelog-links-text'],
     assignees: parsed.assignees,
     reviewers: parsed.reviewers,
     minorTypes,

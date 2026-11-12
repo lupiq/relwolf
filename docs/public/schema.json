@@ -87,6 +87,17 @@
       "description": "Prefix the default release title with a random emoji.",
       "type": "boolean"
     },
+    "changelog-links": {
+      "default": false,
+      "description": "Link the changelogs of all other packages in the header of the changelog of the root package.",
+      "type": "boolean"
+    },
+    "changelog-links-text": {
+      "default": "For changes to individual components, see their changelogs:",
+      "description": "Text above the links of `changelog-links`.",
+      "type": "string",
+      "minLength": 1
+    },
     "no-changes-text": {
       "default": "No changes, version bumped to stay in sync.",
       "description": "Text for packages that were only released to follow linked packages; empty to add nothing.",
