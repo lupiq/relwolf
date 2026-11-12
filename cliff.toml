@@ -10,9 +10,11 @@ header_marker = "<!-- git-cliff: end of header -->"
 body = """
 {% if version %}\
     {% if previous.version %}\
-        ## [{{ version | trim_start_matches(pat="v") }}](https://github.com/lupiq/relwolf/compare/{{ previous.version }}...{{ version }}) - {{ timestamp | date(format="%Y-%m-%d") }}
+        ## [{{ version | trim_start_matches(pat="v") }}](https://github.com/lupiq/relwolf/releases/tag/{{ version }}) - {{ timestamp | date(format="%Y-%m-%d") }}
+
+        [See changes](https://github.com/lupiq/relwolf/compare/{{ previous.version }}...{{ version }})
     {% else %}\
-        ## {{ version | trim_start_matches(pat="v") }} - {{ timestamp | date(format="%Y-%m-%d") }}
+        ## [{{ version | trim_start_matches(pat="v") }}](https://github.com/lupiq/relwolf/releases/tag/{{ version }}) - {{ timestamp | date(format="%Y-%m-%d") }}
     {% endif %}\
 {% else %}\
     ## [unreleased]
@@ -22,7 +24,8 @@ body = """
     {% for commit in entry.commits %}
         - {% if commit.scope %}**{{ commit.scope }}**: {% endif %}\
             {% if commit.breaking %}[**breaking**] {% endif %}\
-            {{ commit.message | upper_first }}\
+            {{ commit.message | upper_first }} \
+            ([{{ commit.id | truncate(length=7, end="") }}](https://github.com/lupiq/relwolf/commit/{{ commit.id }}))\
     {% endfor %}
 {% endfor %}
 {# Maintainers (by e-mail) and bots are not thanked; GitHub usernames come from git-cliff's GitHub integration #}\
