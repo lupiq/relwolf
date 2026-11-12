@@ -6,6 +6,8 @@ docs/.vitepress/cache
 docs/.vitepress/dist
 *.log
 e2e-report.json
+.op
+REVIEW-FINDINGS.md
 
 # MacOS
 .DS_Store
