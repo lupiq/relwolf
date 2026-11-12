@@ -2,6 +2,16 @@
 
 <!-- git-cliff: end of header -->
 
+## 🥝 [0.12.0](https://github.com/lupiq/relwolf/releases/tag/v0.12.0) - 2026-11-12
+
+[See changes](https://github.com/lupiq/relwolf/compare/v0.11.0...v0.12.0)
+
+### 🚀 Features
+
+- Add possibility to insert links to component changelogs into the root changelog ([e466157](https://github.com/lupiq/relwolf/commit/e466157cafc578289a837a65d52e7162cee8214b))
+
+---
+
 ## 📌 [0.11.0](https://github.com/lupiq/relwolf/releases/tag/v0.11.0) - 2026-11-12
 
 [See changes](https://github.com/lupiq/relwolf/compare/v0.10.0...v0.11.0)
