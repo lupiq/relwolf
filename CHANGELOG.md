@@ -1,3 +1,21 @@
+## [0.10.0](https://github.com/lupiq/relwolf/releases/tag/v0.10.0) - 2026-11-12
+
+[See changes](https://github.com/lupiq/relwolf/compare/v0.9.1...v0.10.0)
+
+### 🚀 Features
+
+- Add possibility to set a dynamic changelog title per component ([069f36c](https://github.com/lupiq/relwolf/commit/069f36c108ab1504210d3276043d0bc6753f71d2))
+
+### 🐛 Bug Fixes
+
+- Keep empty version bumps in multi-module projects if changelog is rewritten ([5011b95](https://github.com/lupiq/relwolf/commit/5011b9527689b7e20e5448ed0f32ea2ddf5d8a21))
+
+### 📚 Documentation
+
+- Include changelog in docs ([ff540c0](https://github.com/lupiq/relwolf/commit/ff540c0988188b1f2611af453ffbd70c72a58004))
+
+---
+
 ## [0.9.1](https://github.com/lupiq/relwolf/releases/tag/v0.9.1) - 2026-11-03
 
 [See changes](https://github.com/lupiq/relwolf/compare/v0.9.0...v0.9.1)
