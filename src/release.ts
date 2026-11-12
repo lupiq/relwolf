@@ -404,13 +404,30 @@ async function writeFiles(
   }
 }
 
+/** Variables that may hold an API token; the pre-commit-script only gets them with `pre-commit-script-tokens`. */
+const TOKEN_VARIABLES = new Set([
+  'RELWOLF_TOKEN',
+  'GITHUB_TOKEN',
+  'GITLAB_TOKEN',
+]);
+
+function preCommitScriptEnv(options: RunOptions): NodeJS.ProcessEnv {
+  const env = options.env ?? process.env;
+
+  return options.config.preCommitScriptTokens
+    ? env
+    : Object.fromEntries(
+        Object.entries(env).filter(([name]) => !TOKEN_VARIABLES.has(name)),
+      );
+}
+
 async function runPreCommitScript(
   options: RunOptions,
   script: string,
   scriptPath: string,
 ): Promise<void> {
   try {
-    await runCommand(scriptPath, [], options.cwd, options.env);
+    await runCommand(scriptPath, [], options.cwd, preCommitScriptEnv(options));
   } catch (error) {
     const hint =
       error instanceof CommandError && error.stderr.includes('EACCES')

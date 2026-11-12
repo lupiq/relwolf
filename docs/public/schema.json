@@ -28,6 +28,11 @@
       "type": "string",
       "minLength": 1
     },
+    "pre-commit-script-tokens": {
+      "default": false,
+      "description": "Pass RELWOLF_TOKEN, GITHUB_TOKEN and GITLAB_TOKEN to the pre-commit-script; they are removed from its environment by default.",
+      "type": "boolean"
+    },
     "pull-request-title": {
       "description": "Title of the release request (single line). Placeholders: ${tags}, ${version}.",
       "type": "string",

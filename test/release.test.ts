@@ -26,7 +26,11 @@ afterEach(() => repo.cleanup());
 
 const exec = (
   yaml?: string,
-  overrides: {currentBranch?: string; releaseAs?: string} = {},
+  overrides: {
+    currentBranch?: string;
+    releaseAs?: string;
+    env?: NodeJS.ProcessEnv;
+  } = {},
 ) =>
   run({
     cwd: repo.dir,
@@ -34,7 +38,7 @@ const exec = (
     provider,
     currentBranch: overrides.currentBranch ?? 'main',
     releaseAs: overrides.releaseAs,
-    env: {...process.env, NO_COLOR: '1'},
+    env: {...process.env, NO_COLOR: '1', ...overrides.env},
   });
 
 const PACKAGE_JSON = '{\n  "name": "demo",\n  "version": "0.0.0"\n}\n';
@@ -1291,6 +1295,27 @@ describe('pre-commit-script', () => {
 
     await expect(exec(CONFIG)).rejects.toThrow(/deleted or renamed "old.txt"/);
     expect(repo.git('status', '--porcelain')).toBe('');
+  });
+
+  it('removes the tokens from the environment of the script unless allowed', async () => {
+    repo.commit('feat: a');
+    addScript(
+      'echo "${RELWOLF_TOKEN:-none} ${GITHUB_TOKEN:-none} ${GITLAB_TOKEN:-none} ${CI_JOB_TOKEN:-none}" > env.txt',
+    );
+    const env = {
+      RELWOLF_PROVIDER: 'github',
+      RELWOLF_TOKEN: 'r',
+      GITHUB_TOKEN: 'gh',
+      GITLAB_TOKEN: 'gl',
+      CI_JOB_TOKEN: 'job',
+    };
+
+    await exec(CONFIG, {env});
+    expect(committed('env.txt')).toBe('none none none job\n');
+
+    provider = new FakeProvider();
+    await exec(`${CONFIG}pre-commit-script-tokens: true\n`, {env});
+    expect(committed('env.txt')).toBe('r gh gl job\n');
   });
 
   it('refuses to overwrite uncommitted changes in release files', async () => {

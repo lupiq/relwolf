@@ -160,6 +160,12 @@ export const configSchema = z.strictObject({
     .describe(
       'Script in the working tree (path relative to the repository root) that runs after the release files are written and before they are committed. Everything it changes ends up in the release commit.',
     ),
+  'pre-commit-script-tokens': z
+    .boolean()
+    .default(false)
+    .describe(
+      'Pass RELWOLF_TOKEN, GITHUB_TOKEN and GITLAB_TOKEN to the pre-commit-script; they are removed from its environment by default.',
+    ),
   'pull-request-title': z
     .string()
     .min(1)
@@ -371,6 +377,8 @@ export interface Config {
   cliffConfig?: string;
   /** Repository-relative path of a script that may change the files of the release commit. */
   preCommitScript?: string;
+  /** Whether the pre-commit-script gets the tokens; they are removed from its environment otherwise. */
+  preCommitScriptTokens: boolean;
   /** Template for the release request title, see `renderTitle`. */
   pullRequestTitle?: string;
   /** Template for the release request body, see `renderBody`. */
@@ -787,6 +795,7 @@ export function parseConfig(source: string | undefined): Config {
           ),
         }
       : {}),
+    preCommitScriptTokens: parsed['pre-commit-script-tokens'],
     ...(parsed['cliff-config']
       ? {cliffConfig: normalizeRepoPath(parsed['cliff-config'], 'cliff-config')}
       : {}),
