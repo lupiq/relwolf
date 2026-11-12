@@ -214,6 +214,11 @@
             "type": "string",
             "minLength": 1
           },
+          "changelog-title": {
+            "description": "Title (first-level heading) of the changelog, replacing the one of the git-cliff header. Placeholder: ${component}.",
+            "type": "string",
+            "minLength": 1
+          },
           "updaters": {
             "default": [],
             "description": "Files in which the version is updated.",

@@ -61,6 +61,13 @@ const packageSchema = z.strictObject({
     .min(1)
     .optional()
     .describe('Changelog file, relative to the package path.'),
+  'changelog-title': z
+    .string()
+    .min(1)
+    .optional()
+    .describe(
+      'Title (first-level heading) of the changelog, replacing the one of the git-cliff header. Placeholder: ${component}.',
+    ),
   'updaters': z
     .array(updaterSchema)
     .default([])
@@ -336,6 +343,7 @@ export interface PackageConfig {
   path: string;
   component?: string;
   changelogPath: string;
+  changelogTitle?: string;
   updaters: Array<UpdaterConfig>;
   prerelease?: string;
   minorPreMajor: boolean;
@@ -554,6 +562,7 @@ function buildPackage(
       pkg['changelog-path'] ?? 'CHANGELOG.md',
       'changelog-path',
     ),
+    ...(pkg['changelog-title'] ? {changelogTitle: pkg['changelog-title']} : {}),
     updaters,
     ...(prerelease ? {prerelease} : {}),
     minorPreMajor:

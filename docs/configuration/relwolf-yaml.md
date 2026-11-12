@@ -40,6 +40,7 @@ packages:
   '.':
     component: app # optional for one package; required for every other package (used as tag prefix)
     changelog-path: CHANGELOG.md # relative to the package path
+    changelog-title: 'Changelog ${component}' # optional, replaces the git-cliff header title
     initial-version: 1.0.0 # optional, first stable version if no tag exists
     prerelease: rc # optional, overrides the global value
     bump-minor-pre-major: false # optional, overrides the global value
@@ -117,6 +118,7 @@ To pin the schema explicitly (e.g. in editors without SchemaStore), add this as 
 | `bump-minor-pre-major`   | global, package | `true`                                        | Breaking changes only bump minor before `1.0.0`                                                                           |
 | `component`              | package         | none                                          | Tag prefix, see [Monorepos](/configuration/monorepos)                                                                     |
 | `changelog-path`         | package         | `CHANGELOG.md`                                | Changelog file, relative to the package                                                                                   |
+| `changelog-title`        | package         | from the git-cliff header                     | Replaces the leading `# ` heading of the changelog; `${component}` is replaced by the component                           |
 | `initial-version`        | package         | computed from `0.0.0`                         | First stable version if no tag exists                                                                                     |
 | `updaters`               | package         | none                                          | [Files to update](/configuration/updaters)                                                                                |
 

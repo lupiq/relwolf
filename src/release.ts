@@ -13,6 +13,7 @@ import {
   type BodyOverride,
 } from './body.js';
 import {
+  applyChangelogTitle,
   generateNotes,
   prependToChangelog,
   rewriteChangelog,
@@ -652,6 +653,12 @@ async function applyPlan(
       placeholder,
     );
   }
+
+  changelog.current = applyChangelogTitle(
+    changelog.current,
+    pkg.component ?? '',
+    pkg.changelogTitle,
+  );
 
   const version = formatVersion(plan.version);
 

@@ -1,5 +1,26 @@
 import {describe, expect, it} from 'vitest';
-import {cliffEnv} from '../src/changelog.js';
+import {applyChangelogTitle, cliffEnv} from '../src/changelog.js';
+
+describe('applyChangelogTitle', () => {
+  const changelog = '# Changelog\n\n## 1.0.0\n- a ${component}\n';
+
+  it('replaces ${component} everywhere', () => {
+    expect(
+      applyChangelogTitle('# Changelog ${component}\n\n## 1.0.0\n', 'api'),
+    ).toBe('# Changelog api\n\n## 1.0.0\n');
+  });
+
+  it('replaces the leading heading with the title', () => {
+    expect(
+      applyChangelogTitle(changelog, 'api', 'Changelog ${component}'),
+    ).toBe('# Changelog api\n\n## 1.0.0\n- a api\n');
+  });
+
+  it('keeps the changelog without a title or a leading heading', () => {
+    expect(applyChangelogTitle('## 1.0.0\n', 'api', 'X')).toBe('## 1.0.0\n');
+    expect(applyChangelogTitle('# Changelog\n', 'api')).toBe('# Changelog\n');
+  });
+});
 
 describe('cliffEnv', () => {
   it('passes RELWOLF_TOKEN as GITLAB_TOKEN and the API URL on GitLab', () => {

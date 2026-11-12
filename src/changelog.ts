@@ -160,6 +160,27 @@ export async function prependToChangelog(
   }
 }
 
+/**
+ * Makes the changelog title package specific without touching the git-cliff config:
+ * `${component}` is replaced everywhere (usable in the cliff header), and `title` replaces a leading
+ * first-level heading.
+ */
+export function applyChangelogTitle(
+  changelog: string,
+  component: string,
+  title?: string,
+): string {
+  const replaced = changelog.replaceAll('${component}', component);
+
+  if (!title) {
+    return replaced;
+  }
+
+  const heading = `# ${title.replaceAll('${component}', component)}`;
+
+  return replaced.replace(/^(\s*)# .*/, (_, lead: string) => lead + heading);
+}
+
 /** One release of a rewritten changelog. */
 export interface RewriteRelease {
   tag: string;

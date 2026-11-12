@@ -21,6 +21,10 @@ purely git-cliff configuration.
   (depending on the provider) and, on GitLab, `CI_API_V4_URL` as `GITLAB_API_URL`. Variables you set yourself take
   precedence. The token is only used when your `cliff.toml` uses the integration.
 - Use `RELWOLF_GIT_CLIFF` to run your own git-cliff executable instead of the bundled one.
+- **Package-specific title** (monorepos): write `${component}` into the `header` of your `cliff.toml`, e.g.
+  `header = "# Changelog ${component}\n"`; relwolf replaces it with the package's `component` (empty without one).
+  Alternatively set `changelog-title` per package in `relwolf.yaml`; it replaces the leading `# ` heading produced by
+  your header and also supports `${component}`.
 
 ::: warning
 Release merge requests are titled `chore(release): Create release …` (see `pull-request-title`). Make sure your `cliff.toml` does not list that commit
