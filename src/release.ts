@@ -17,6 +17,7 @@ import {
   prependToChangelog,
   rewriteChangelog,
   type CliffInvocation,
+  type RewriteRelease,
 } from './changelog.js';
 import {
   ROOT_KEY,
@@ -29,6 +30,7 @@ import {CommandError, Git, run as runCommand} from './git.js';
 import {
   maxLevel,
   nestedPackagePaths,
+  pathspecsFor,
   planPackage,
   type PackagePlan,
   type PlanSettings,
@@ -40,7 +42,7 @@ import {
   parseReleaseAs,
   type ReleaseAs,
 } from './release-as.js';
-import {isValidReleaseTag, parseReleaseTag} from './tags.js';
+import {findReleaseTags, isValidReleaseTag, parseReleaseTag} from './tags.js';
 import {applyUpdater, companions} from './updaters/index.js';
 import {
   compareVersions,
@@ -518,6 +520,78 @@ async function cliffConfigChanged(
   return before !== after;
 }
 
+/**
+ * The releases of the package, newest first, up to HEAD (which becomes the new release). Empty if there are no
+ * release tags to split the history at.
+ */
+async function rewriteReleases(
+  options: RunOptions,
+  git: Git,
+  plan: PackagePlan,
+): Promise<Array<RewriteRelease>> {
+  const {bootstrapSha, packages, excludePaths} = options.config;
+  const pathspecs = pathspecsFor(plan.pkg, packages, excludePaths);
+  const pattern = new RegExp(plan.tagPattern);
+  const tags = findReleaseTags(
+    (await git.tagsMergedIntoHead()).filter(tag => pattern.test(tag)),
+    plan.tagged,
+  )
+    .sort((a, b) => compareVersions(a.version, b.version))
+    .map(({tag}) => tag);
+  // Without bootstrap-sha, git-cliff needs a start for the range of the first release; the root commit is left out.
+  const first = bootstrapSha ?? (await git.rootCommits())[0];
+  const releases: Array<RewriteRelease> = [];
+
+  const commitsOf = async (range: string): Promise<Array<string>> =>
+    (await git.log(range, pathspecs)).map(({sha}) => sha);
+
+  for (const [index, tag] of tags.entries()) {
+    const previous = tags[index - 1];
+    const start = previous ?? first;
+
+    if (!start) {
+      return [];
+    }
+
+    const range = `${start}..${tag}`;
+
+    // A tag on the start itself has an empty range, which git-cliff cannot render as a release.
+    if ((await git.log(range, [])).length === 0) {
+      continue;
+    }
+
+    releases.push({
+      tag,
+      previous,
+      range,
+      commits: await commitsOf(range),
+      placeholder: true,
+    });
+  }
+
+  const last = tags.at(-1);
+
+  if (!last) {
+    return [];
+  }
+
+  const tail = `${last}..HEAD`;
+  const commits = await commitsOf(tail);
+
+  // Without commits the new release is the one without changes, which is handled by the caller.
+  if (commits.length > 0) {
+    releases.push({
+      tag: plan.tag,
+      previous: last,
+      range: tail,
+      commits,
+      placeholder: false,
+    });
+  }
+
+  return releases.reverse();
+}
+
 /** Generates the notes of a plan, prepends them to the changelog and runs the updaters. */
 async function applyPlan(
   options: RunOptions,
@@ -563,6 +637,8 @@ async function applyPlan(
     changelog.current = await rewriteChangelog(
       {...cliff, range: bootstrapSha && `${bootstrapSha}..HEAD`},
       env,
+      await rewriteReleases(options, git, plan),
+      options.config.noChangesText,
     );
     // The rewrite has no entry for a package without changes yet.
     changelog.current = placeholder

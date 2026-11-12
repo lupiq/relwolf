@@ -152,6 +152,66 @@ packages:
       expect(await sandbox.releaseBody('web-v0.0.1')).toContain('Fix layout');
     });
 
+    it('keeps releases without changes when rewriting the changelog', async () => {
+      const branch = await newBranch();
+      const cliffToml = (label: string): string =>
+        `[changelog]\nheader = "# Log\\n"\nbody = "${label} {{ version }}{% for c in commits %}\\n- {{ c.message }}{% endfor %}\\n"\ntrim = true\n\n[git]\nconventional_commits = true\ncommit_parsers = [{message = '^chore', skip = true}]\n`;
+      const config = `
+linked-versions: true
+linked-tags: single
+rewrite-changelog: true
+cliff-config: cliff.toml
+no-changes-text: "Nothing here."
+packages:
+  '.':
+    updaters: []
+  packages/api:
+    component: api
+    updaters: []
+  packages/web:
+    component: web
+    updaters: []
+`;
+      const release = async (): Promise<void> => {
+        const {releaseRequests} = await sandbox.runRelwolf(branch, config);
+
+        await sandbox.merge(releaseRequests[0]!.id);
+        await sandbox.runRelwolf(branch, config);
+      };
+
+      await sandbox.commit(branch, 'chore: Add packages', {
+        'cliff.toml': cliffToml('OLD'),
+        'packages/api/api.txt': 'a',
+        'packages/web/web.txt': 'a',
+      });
+      await sandbox.commit(branch, 'feat(api): Add endpoint', {
+        'packages/api/api.txt': 'b',
+      });
+      await release();
+      await sandbox.commit(branch, 'fix(api): Fix endpoint', {
+        'packages/api/api.txt': 'c',
+      });
+      await release();
+
+      expect(await sandbox.tagExists('v0.1.1')).toBe(true);
+
+      await sandbox.commit(branch, 'fix(api): Fix endpoint again', {
+        'cliff.toml': cliffToml('NEW'),
+        'packages/api/api.txt': 'd',
+      });
+      const {releaseRequests} = await sandbox.runRelwolf(branch, config);
+      const web = await sandbox.fileContent(
+        `relwolf/${branch}`,
+        'packages/web/CHANGELOG.md',
+      );
+
+      expect(web).toMatch(
+        /NEW v0\.1\.2[\s\S]*Nothing here\.[\s\S]*NEW v0\.1\.1[\s\S]*Nothing here\.[\s\S]*NEW v0\.1\.0/,
+      );
+      expect(web).not.toContain('OLD');
+      expect(releaseRequests[0]?.action).toBe('created');
+    });
+
     it('creates numbered pre-releases', async () => {
       const branch = await newBranch();
       const config = 'prerelease: beta\n';

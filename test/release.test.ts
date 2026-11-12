@@ -994,6 +994,28 @@ packages:
     );
   });
 
+  it('keeps the releases without changes when rewriting the changelog', async () => {
+    const cliffToml = (label: string) =>
+      `[changelog]\nheader = "# Log\\n"\nbody = "${label} {{ version }}{% for c in commits %}\\n- {{ c.message }}{% endfor %}\\n"\ntrim = true\n\n[git]\nconventional_commits = true\ncommit_parsers = [{message = '^chore', skip = true}]\n`;
+    const config = `rewrite-changelog: true\nno-changes-text: "Nothing here."${yaml}`;
+
+    repo.write('cliff.toml', cliffToml('OLD'));
+    await releaseThenChangeOrders(config);
+    mergeLastRelease(repo, provider, 2);
+    await exec(config);
+    repo.write('cliff.toml', cliffToml('NEW'));
+    repo.commit('fix: orders again', 'services/orders/a.txt');
+    await exec(config);
+
+    const files = provider.commits.at(-1)!.files;
+    const core = files.find(f => f.path === 'common/core/CHANGELOG.md')!;
+
+    expect(core.content).toMatch(
+      /NEW v0\.1\.2[\s\S]*Nothing here\.[\s\S]*Nothing here\.[\s\S]*NEW v0\.1\.0/,
+    );
+    expect(core.content).not.toContain('OLD');
+  });
+
   it('can customise the text', async () => {
     const files = await releaseThenChangeOrders(
       `no-changes-text: "Nothing here."${yaml}`,

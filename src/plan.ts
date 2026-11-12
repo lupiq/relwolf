@@ -42,6 +42,8 @@ export interface PackagePlan {
   level: BumpLevel | null;
   /** No commit touched the package since the last release (it only follows the version of linked packages). */
   empty: boolean;
+  /** Package whose tags the release follows (differs from `pkg` for a single tag of a linked group). */
+  tagged: PackageConfig;
   /** Reverted commits and their reverts, left out of the changelog. */
   revertedCommits: Array<string>;
 }
@@ -429,6 +431,7 @@ async function buildPlan(
     tagPattern: tagPattern(tagged, Boolean(pkg.prerelease)),
     level,
     empty: touching.length === 0,
+    tagged,
     commits,
     revertedCommits: splitReverted(touching).dropped.map(commit => commit.sha),
   };

@@ -70,6 +70,13 @@ export class Git {
     return (await this.git('rev-parse', 'HEAD')).trim();
   }
 
+  /** The commits without parent in the history of HEAD. */
+  async rootCommits(): Promise<Array<string>> {
+    const out = await this.git('rev-list', '--max-parents=0', 'HEAD');
+
+    return out.split('\n').filter(Boolean);
+  }
+
   /** Tracked files matching a glob (relative to the repository root), sorted. */
   async listFiles(pattern: string): Promise<Array<string>> {
     const out = await this.git('ls-files', '-z', '--', `:(glob)${pattern}`);

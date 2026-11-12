@@ -114,6 +114,20 @@ export async function generateNotes(
   return (await cliff(options, ['--strip', 'all'], env)).trim();
 }
 
+function commonSuffixLength(a: string, b: string): number {
+  let length = 0;
+
+  while (
+    length < a.length &&
+    length < b.length &&
+    a[a.length - 1 - length] === b[b.length - 1 - length]
+  ) {
+    length++;
+  }
+
+  return length;
+}
+
 /** Returns `existing` with the new release entry prepended, following the user's git-cliff config. */
 export async function prependToChangelog(
   options: CliffInvocation,
@@ -131,22 +145,110 @@ export async function prependToChangelog(
 
     const result = await readFile(file, 'utf8');
 
-    if (!placeholder || !result.endsWith(existing)) {
+    if (!placeholder) {
       return result;
     }
 
-    const added = result.slice(0, result.length - existing.length).trimEnd();
+    // git-cliff removes the old header before prepending, so the old entries are only a suffix of `existing`.
+    const kept = commonSuffixLength(result, existing);
+    const added = result.slice(0, result.length - kept).trimEnd();
+    const rest = result.slice(result.length - kept).trimStart();
 
-    return `${added}\n\n${placeholder}\n\n${existing}`.trimEnd() + '\n';
+    return `${added}\n\n${placeholder}\n\n${rest}`.trimEnd() + '\n';
   } finally {
     await rm(dir, {recursive: true, force: true});
   }
 }
 
-/** Renders the complete changelog from the history, including the new entry. */
+/** One release of a rewritten changelog. */
+export interface RewriteRelease {
+  tag: string;
+  /** The release before it, if any; git-cliff otherwise links the newest release as its predecessor. */
+  previous?: string | undefined;
+  /** Git revision range of the release. */
+  range: string;
+  /** Commits of the package in the range. */
+  commits: ReadonlyArray<string>;
+  /** Whether the entry gets the placeholder if no commit shows up in it. */
+  placeholder: boolean;
+}
+
+type Strip = 'header' | 'footer' | 'all';
+
+function stripFor(keepHeader: boolean, keepFooter: boolean): Strip | undefined {
+  if (keepHeader) {
+    return keepFooter ? undefined : 'footer';
+  }
+
+  return keepFooter ? 'header' : 'all';
+}
+
+const escapeRegex = (value: string): string =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/**
+ * Renders the complete changelog from the history, including the new entry.
+ *
+ * With `releases` (newest first), every release is rendered on its own: git-cliff does not recognise tags on
+ * commits that do not touch the package (and omits releases without any commit), so a single render would
+ * move changes between releases and drop releases without changes.
+ */
 export async function rewriteChangelog(
   options: CliffInvocation,
   env: NodeJS.ProcessEnv = process.env,
+  releases: ReadonlyArray<RewriteRelease> = [],
+  placeholder = '',
+): Promise<string> {
+  if (releases.length === 0) {
+    return renderAll(options, env);
+  }
+
+  const rendered: Array<string> = [];
+
+  for (const [index, release] of releases.entries()) {
+    const strip = stripFor(index === 0, index === releases.length - 1);
+    const render = (skip: ReadonlyArray<string>): Promise<string> =>
+      cliff(
+        {
+          ...options,
+          range: release.range,
+          tag: release.tag,
+          // Only the previous release counts, otherwise git-cliff links the newest one.
+          tagPattern: release.previous
+            ? `^${escapeRegex(release.previous)}$`
+            : '^$',
+          all: true,
+          skipCommits: [...(options.skipCommits ?? []), ...skip],
+        },
+        strip ? ['--strip', strip] : [],
+        env,
+      );
+    const text = await render([]);
+
+    // The entry of a release in which every commit is left out by the git-cliff config looks like one without commits.
+    const empty =
+      release.placeholder &&
+      (release.commits.length === 0 ||
+        text === (await render(release.commits)));
+
+    if (!empty) {
+      rendered.push(text);
+      continue;
+    }
+
+    const entry = text.trimEnd();
+
+    rendered.push(
+      placeholder ? `${entry}\n\n${placeholder}\n\n` : `${entry}\n`,
+    );
+  }
+
+  return rendered.join('');
+}
+
+async function renderAll(
+  options: CliffInvocation,
+  env: NodeJS.ProcessEnv,
 ): Promise<string> {
   const dir = await mkdtemp(path.join(tmpdir(), 'relwolf-'));
   const file = path.join(dir, 'CHANGELOG.md');

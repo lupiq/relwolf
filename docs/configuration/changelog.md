@@ -33,7 +33,11 @@ relwolf only prepends the new entry, so changes to your `cliff.toml` (templates,
 entries. With `rewrite-changelog: true`, the next release regenerates the complete changelog of every released package
 from the full history (from `bootstrap-sha`, if set) as soon as the git-cliff config (`cliff-config`, default
 `cliff.toml`) differs from its state at the package's previous release tag. Later releases prepend again. Manual edits of
-existing entries are lost when this happens. The job log tells when a changelog is rewritten.
+existing entries are lost when this happens. Releases without changes in a package (linked versions) are restored
+with the current `no-changes-text`, so changing the text and the config regenerates them too. A release counts as empty if none of its commits shows up in
+the entry, e.g. because they are all skipped by the git-cliff config. Each release is rendered on its own, from the
+previous release tag. Without `bootstrap-sha`, the root commit of the repository is not part of the first release. The
+job log tells when a changelog is rewritten.
 
 ## Example: everything except chores
 
