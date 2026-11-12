@@ -2,6 +2,16 @@
 
 <!-- git-cliff: end of header -->
 
+## 📌 [0.11.0](https://github.com/lupiq/relwolf/releases/tag/v0.11.0) - 2026-11-12
+
+[See changes](https://github.com/lupiq/relwolf/compare/v0.10.0...v0.11.0)
+
+### 🚀 Features
+
+- Add possibility to write release emoji to changelog ([81cee54](https://github.com/lupiq/relwolf/commit/81cee542e2ad015545c206ef9e8eb56a3c4ec781))
+
+---
+
 ## ⚓ [0.10.0](https://github.com/lupiq/relwolf/releases/tag/v0.10.0) - 2026-11-12
 
 [See changes](https://github.com/lupiq/relwolf/compare/v0.9.1...v0.10.0)
