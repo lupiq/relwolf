@@ -5,16 +5,25 @@
 [changelog]
 # Used by `--prepend` to remove the previous header.
 header_marker = "<!-- git-cliff: end of header -->"
+# The title of the changelog; the marker line below lets `--prepend` find the end of it.
+header = """
+# Changelog of relwolf
+
+<!-- git-cliff: end of header -->
+
+"""
 # A Tera template to be rendered for each release in the changelog.
 # See https://keats.github.io/tera/#getting-started
 body = """
+{# Set by relwolf (release-emoji); empty for older releases #}\
+{% set emoji = get_env(name="RELWOLF_RELEASE_EMOJI", default="") %}\
 {% if version %}\
     {% if previous.version %}\
-        ## [{{ version | trim_start_matches(pat="v") }}](https://github.com/lupiq/relwolf/releases/tag/{{ version }}) - {{ timestamp | date(format="%Y-%m-%d") }}
+        ## {% if emoji %}{{ emoji }} {% endif %}[{{ version | trim_start_matches(pat="v") }}](https://github.com/lupiq/relwolf/releases/tag/{{ version }}) - {{ timestamp | date(format="%Y-%m-%d") }}
 
         [See changes](https://github.com/lupiq/relwolf/compare/{{ previous.version }}...{{ version }})
     {% else %}\
-        ## [{{ version | trim_start_matches(pat="v") }}](https://github.com/lupiq/relwolf/releases/tag/{{ version }}) - {{ timestamp | date(format="%Y-%m-%d") }}
+        ## {% if emoji %}{{ emoji }} {% endif %}[{{ version | trim_start_matches(pat="v") }}](https://github.com/lupiq/relwolf/releases/tag/{{ version }}) - {{ timestamp | date(format="%Y-%m-%d") }}
     {% endif %}\
 {% else %}\
     ## [unreleased]

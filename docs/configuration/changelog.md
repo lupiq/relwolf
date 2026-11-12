@@ -21,6 +21,10 @@ purely git-cliff configuration.
   (depending on the provider) and, on GitLab, `CI_API_V4_URL` as `GITLAB_API_URL`. Variables you set yourself take
   precedence. The token is only used when your `cliff.toml` uses the integration.
 - Use `RELWOLF_GIT_CLIFF` to run your own git-cliff executable instead of the bundled one.
+- **Release emoji**: relwolf passes the emoji of the release title (see `release-emoji`, also if you add one by hand
+  in the release request) as `RELWOLF_RELEASE_EMOJI` to git-cliff; it is empty without one. Use it in your `cliff.toml`,
+  e.g. <code v-pre>{{ get_env(name="RELWOLF_RELEASE_EMOJI", default="") }}</code>. Only the new release gets it: entries that were
+  already released (also when [rewriting](#rewrite-the-whole-changelog)) are rendered without an emoji.
 - **Package-specific title** (monorepos): write `${component}` into the `header` of your `cliff.toml`, e.g.
   `header = "# Changelog ${component}\n"`; relwolf replaces it with the package's `component` (empty without one).
   Alternatively set `changelog-title` per package in `relwolf.yaml`; it replaces the leading `# ` heading produced by

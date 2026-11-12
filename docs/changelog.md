@@ -7,4 +7,5 @@ pageClass: changelog-page
 
 # Changelog
 
-<!--@include: ../CHANGELOG.md-->
+<!-- The changelog starts with its own title and the git-cliff header marker (lines 1-4), which this page replaces -->
+<!--@include: ../CHANGELOG.md{5,}-->

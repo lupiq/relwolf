@@ -97,3 +97,11 @@ export function randomEmoji(random: () => number = Math.random): string {
     '🚀'
   );
 }
+
+const LEADING_EMOJI =
+  /^\p{Extended_Pictographic}\uFE0F?(?:\u200D\p{Extended_Pictographic}\uFE0F?)*/u;
+
+/** The emoji a title starts with, or an empty string. */
+export function leadingEmoji(title: string): string {
+  return LEADING_EMOJI.exec(title.trimStart())?.[0] ?? '';
+}

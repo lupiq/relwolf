@@ -26,7 +26,7 @@ import {
   type Config,
   type PackageConfig,
 } from './config.js';
-import {randomEmoji} from './emoji.js';
+import {leadingEmoji, randomEmoji} from './emoji.js';
 import {CommandError, Git, run as runCommand} from './git.js';
 import {
   maxLevel,
@@ -489,13 +489,14 @@ async function buildFiles(
   options: RunOptions,
   git: Git,
   plans: Array<PackagePlan>,
+  emoji: string,
 ): Promise<{files: Array<FileChange>; entries: Array<BodyEntry>}> {
   const contents = new Map<string, FileState>();
   const load = createLoader(options.cwd, contents);
   const notesByTag: NotesByTag = new Map();
 
   for (const plan of plans) {
-    await applyPlan(options, git, plan, load, notesByTag);
+    await applyPlan(options, git, plan, load, notesByTag, emoji);
   }
 
   const entries = buildEntries(notesByTag, plans);
@@ -587,6 +588,7 @@ async function rewriteReleases(
       range: tail,
       commits,
       placeholder: false,
+      emoji: true,
     });
   }
 
@@ -600,6 +602,7 @@ async function applyPlan(
   plan: PackagePlan,
   load: FileLoader,
   notesByTag: NotesByTag,
+  emoji: string,
 ): Promise<void> {
   const {pkg} = plan;
   const nested = nestedPackagePaths(pkg, options.config.packages);
@@ -616,7 +619,10 @@ async function applyPlan(
     ],
     skipCommits: plan.revertedCommits,
   };
-  const env = options.env ?? process.env;
+  const env = {
+    ...(options.env ?? process.env),
+    RELWOLF_RELEASE_EMOJI: emoji,
+  };
 
   const placeholder = plan.empty ? options.config.noChangesText : '';
   const notes = placeholder || (await generateNotes(cliff, env));
@@ -992,7 +998,8 @@ async function prepareReleaseRequest(
   }
 
   const baseSha = await git.head();
-  const {files, entries} = await buildFiles(options, git, plans);
+  const emoji = releaseEmoji(config, existing, options.random);
+  const {files, entries} = await buildFiles(options, git, plans, emoji);
 
   log(
     `Release commit changes ${files.length} file(s): ${files.map(file => file.path).join(', ')}.`,
@@ -1005,6 +1012,7 @@ async function prepareReleaseRequest(
     versions,
     baseSha,
     existing,
+    emoji,
   );
 
   if (existing?.title === title && existing.body === body) {
@@ -1067,6 +1075,21 @@ async function closeObsolete(
   }
 }
 
+/** The emoji of the release: kept from the (possibly edited) release title, otherwise random if enabled. */
+function releaseEmoji(
+  config: RunOptions['config'],
+  existing: ReleaseRequest | null,
+  random?: () => number,
+): string {
+  const title = existing ? parseDetails(existing.body).title : undefined;
+
+  if (title !== undefined) {
+    return leadingEmoji(title);
+  }
+
+  return config.releaseEmoji ? randomEmoji(random) : '';
+}
+
 function renderRequest(
   options: RunOptions,
   plans: Array<PackagePlan>,
@@ -1074,6 +1097,7 @@ function renderRequest(
   versions: Map<string, Version>,
   baseSha: string,
   existing: ReleaseRequest | null,
+  emoji: string,
 ): {title: string; message: string; body: string} {
   const {config} = options;
   const unique = plans.filter(
@@ -1099,9 +1123,7 @@ function renderRequest(
     details: {
       title:
         previous.title ??
-        (config.releaseEmoji
-          ? `${randomEmoji(options.random)} ${config.releaseName}`
-          : config.releaseName),
+        (emoji ? `${emoji} ${config.releaseName}` : config.releaseName),
       text: previous.text ?? DEFAULT_RELEASE_TEXT,
     },
   });

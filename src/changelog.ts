@@ -192,6 +192,8 @@ export interface RewriteRelease {
   commits: ReadonlyArray<string>;
   /** Whether the entry gets the placeholder if no commit shows up in it. */
   placeholder: boolean;
+  /** Whether the release gets `RELWOLF_RELEASE_EMOJI`; older releases render without it. */
+  emoji?: boolean | undefined;
 }
 
 type Strip = 'header' | 'footer' | 'all';
@@ -242,7 +244,7 @@ export async function rewriteChangelog(
           skipCommits: [...(options.skipCommits ?? []), ...skip],
         },
         strip ? ['--strip', strip] : [],
-        env,
+        release.emoji ? env : {...env, RELWOLF_RELEASE_EMOJI: ''},
       );
     const text = await render([]);
 

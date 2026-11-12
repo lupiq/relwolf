@@ -304,6 +304,31 @@ describe('release request', () => {
   });
 });
 
+describe('release emoji in the changelog', () => {
+  const emojiToml =
+    '[changelog]\nbody = "{{ get_env(name=\\"RELWOLF_RELEASE_EMOJI\\", default=\\"\\") }}|{{ version }}\\n"\n\n[git]\nconventional_commits = true\n';
+
+  it('passes the emoji of the request to the changelog, also once edited', async () => {
+    const yaml = 'release-emoji: true\ncliff-config: cliff.toml';
+
+    repo.write('cliff.toml', emojiToml);
+    repo.commit('feat: a');
+    await run({
+      cwd: repo.dir,
+      config: parseConfig(yaml),
+      provider,
+      currentBranch: 'main',
+      random: () => 0,
+    });
+    expect(provider.commits.at(-1)!.files[0]!.content).toContain('🚀|v0.1.0');
+
+    provider.requests[0]!.body = provider.requests[0]!.body.replace('🚀', '🎉');
+    repo.commit('fix: b');
+    await exec(yaml);
+    expect(provider.commits.at(-1)!.files[0]!.content).toContain('🎉|v0.1.0');
+  });
+});
+
 describe('rewrite-changelog', () => {
   const YAML = `rewrite-changelog: true\ncliff-config: cliff.toml\n${NODE_CONFIG}`;
   const cliffToml = (label: string) =>

@@ -1,4 +1,8 @@
-## [0.10.0](https://github.com/lupiq/relwolf/releases/tag/v0.10.0) - 2026-11-12
+# Changelog of relwolf
+
+<!-- git-cliff: end of header -->
+
+## ⚓ [0.10.0](https://github.com/lupiq/relwolf/releases/tag/v0.10.0) - 2026-11-12
 
 [See changes](https://github.com/lupiq/relwolf/compare/v0.9.1...v0.10.0)
 
@@ -16,7 +20,7 @@
 
 ---
 
-## [0.9.1](https://github.com/lupiq/relwolf/releases/tag/v0.9.1) - 2026-11-03
+## 🗺 [0.9.1](https://github.com/lupiq/relwolf/releases/tag/v0.9.1) - 2026-11-03
 
 [See changes](https://github.com/lupiq/relwolf/compare/v0.9.0...v0.9.1)
 
@@ -30,7 +34,7 @@
 
 ---
 
-## [0.9.0](https://github.com/lupiq/relwolf/releases/tag/v0.9.0) - 2026-11-02
+## 🪐 [0.9.0](https://github.com/lupiq/relwolf/releases/tag/v0.9.0) - 2026-11-02
 
 [See changes](https://github.com/lupiq/relwolf/compare/v0.8.1...v0.9.0)
 
@@ -56,7 +60,7 @@
 
 ---
 
-## [0.8.1](https://github.com/lupiq/relwolf/releases/tag/v0.8.1) - 2026-10-26
+## 🗺 [0.8.1](https://github.com/lupiq/relwolf/releases/tag/v0.8.1) - 2026-10-26
 
 [See changes](https://github.com/lupiq/relwolf/compare/v0.8.0...v0.8.1)
 
@@ -71,7 +75,7 @@
 
 ---
 
-## [0.8.0](https://github.com/lupiq/relwolf/releases/tag/v0.8.0) - 2026-10-26
+## ⛅ [0.8.0](https://github.com/lupiq/relwolf/releases/tag/v0.8.0) - 2026-10-26
 
 [See changes](https://github.com/lupiq/relwolf/compare/v0.7.0...v0.8.0)
 
@@ -94,7 +98,7 @@
 
 ---
 
-## [0.7.0](https://github.com/lupiq/relwolf/releases/tag/v0.7.0) - 2026-10-23
+## 🍓 [0.7.0](https://github.com/lupiq/relwolf/releases/tag/v0.7.0) - 2026-10-23
 
 [See changes](https://github.com/lupiq/relwolf/compare/v0.6.2...v0.7.0)
 
@@ -105,7 +109,7 @@
 
 ---
 
-## [0.6.2](https://github.com/lupiq/relwolf/releases/tag/v0.6.2) - 2026-10-23
+## 🌱 [0.6.2](https://github.com/lupiq/relwolf/releases/tag/v0.6.2) - 2026-10-23
 
 [See changes](https://github.com/lupiq/relwolf/compare/v0.6.1...v0.6.2)
 
@@ -119,7 +123,7 @@
 
 ---
 
-## [0.6.1](https://github.com/lupiq/relwolf/releases/tag/v0.6.1) - 2026-10-23
+## ⏰ [0.6.1](https://github.com/lupiq/relwolf/releases/tag/v0.6.1) - 2026-10-23
 
 [See changes](https://github.com/lupiq/relwolf/compare/v0.6.0...v0.6.1)
 
@@ -130,7 +134,7 @@
 
 ---
 
-## [0.6.0](https://github.com/lupiq/relwolf/releases/tag/v0.6.0) - 2026-10-21
+## 🎉 [0.6.0](https://github.com/lupiq/relwolf/releases/tag/v0.6.0) - 2026-10-21
 
 [See changes](https://github.com/lupiq/relwolf/compare/v0.5.0...v0.6.0)
 
@@ -141,7 +145,7 @@
 
 ---
 
-## [0.5.0](https://github.com/lupiq/relwolf/releases/tag/v0.5.0) - 2026-10-21
+## 🧁 [0.5.0](https://github.com/lupiq/relwolf/releases/tag/v0.5.0) - 2026-10-21
 
 [See changes](https://github.com/lupiq/relwolf/compare/v0.4.0...v0.5.0)
 
