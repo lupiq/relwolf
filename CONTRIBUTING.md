@@ -44,6 +44,9 @@ subject starts with a capital letter, e.g. `feat: Add dry-run mode`. relwolf rel
 
 Other types (`docs`, `test`, `chore`, `ci`, `refactor`, …) do not trigger a release.
 
+The `commit-msg` hook also spell-checks the message with [cspell](https://cspell.org) and rejects the commit on
+unknown words. Add legitimate project terms to `words` in `cspell.json`.
+
 Pull requests are squash-merged, so the pull request title must be a valid Conventional Commit as well.
 
 ## Code style
