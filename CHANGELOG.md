@@ -2,6 +2,28 @@
 
 <!-- git-cliff: end of header -->
 
+## 🛹 [0.13.0](https://github.com/lupiq/relwolf/releases/tag/v0.13.0) - 2026-11-13
+
+[See changes](https://github.com/lupiq/relwolf/compare/v0.12.0...v0.13.0)
+
+### 🚀 Features
+
+- Remove secrets from `preCommitScript` env to avoid leaking ([da662d8](https://github.com/lupiq/relwolf/commit/da662d80add90ff4ff48bf526e5c8281183ed1a1))
+- Abort the release process if the corresponding tag already exists ([d517858](https://github.com/lupiq/relwolf/commit/d51785872b1be2e5a87e75d33b40187d21fe28df))
+- Only tag merged requests from relwolf release branches ([14fa357](https://github.com/lupiq/relwolf/commit/14fa35735e9f5a6f052bdca102b44353a86ca37b))
+- Add configurable http timeout ([47558ce](https://github.com/lupiq/relwolf/commit/47558ceb15b03656ee14c98968a2111ccd2fb359))
+- Add top-level generic updaters with component markers for monorepos ([5dbaa00](https://github.com/lupiq/relwolf/commit/5dbaa00569d978b3d276a916723ddef84049726a))
+
+### 🐛 Bug Fixes
+
+- Insert `no-changes-text` above a possible horizontal line from the changelog template ([f722f66](https://github.com/lupiq/relwolf/commit/f722f66e8f53c8c58592ef43ff72383bd55a744a))
+
+### 👷 CI
+
+- Add configuration for codecov ([e0a1d0e](https://github.com/lupiq/relwolf/commit/e0a1d0ea79c32e2a36145e038c3ccc16fe61fe09))
+
+---
+
 ## 🥝 [0.12.0](https://github.com/lupiq/relwolf/releases/tag/v0.12.0) - 2026-11-12
 
 [See changes](https://github.com/lupiq/relwolf/compare/v0.11.0...v0.12.0)
