@@ -20,6 +20,7 @@ A release bot for **GitLab** and **GitHub** that follows the workflow of Google'
 [release-please](https://github.com/googleapis/release-please): it determines the next
 [SemVer](https://semver.org/) version from [Conventional Commits](https://www.conventionalcommits.org/), opens a
 release merge request with the changelog and updated version files, and tags and releases once it is merged.
+Alternatively, [Changesets](https://relwolf.lupiq.io/configuration/changesets) can decide versions and changelogs.
 
 📖 **Documentation: [relwolf.lupiq.io](https://relwolf.lupiq.io)**
 

@@ -20,7 +20,12 @@ Only things that are not enforced by ESLint, Prettier, commitlint or the type ch
 - Single command, no subcommands or CLI flags; configuration only via `relwolf.yaml` (strict schema), secrets and CI
   context via env vars.
 - Git is used read-only; all writes (release commit, MR, labels, tags, releases) go through the `Provider` interface
-  (`src/providers/types.ts`). The working tree is never modified; files are computed in memory.
+  (`src/providers/types.ts`). Files are computed in memory; only the `pre-commit-script` and the changesets strategy
+  write to the working tree (`withWorkingTree` in `src/release.ts`), which is reset afterwards.
+- `strategy: changesets` (default `conventional-commits`) only branches at three seams: config validation
+  (`checkStrategy`), package discovery at the start of `run()`, and `prepareChangesets` vs. `prepareConventional` in
+  `src/release.ts`. All changesets code lives in `src/changesets.ts`, all changesets docs in
+  `docs/configuration/changesets.md`. Changesets reads versions from `package.json`; tags are only an output.
 - Requires a full clone; shallow clones abort with an error.
 - The release MR body is the state store (notes, base sha, release-as, editable title/text between hidden
   `relwolf:*` markers). Identical title and body means "up to date".

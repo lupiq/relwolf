@@ -2,6 +2,15 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
   "properties": {
+    "strategy": {
+      "default": "conventional-commits",
+      "description": "How versions and changelogs are determined: conventional-commits (git-cliff) or changesets (.changeset directory).",
+      "type": "string",
+      "enum": [
+        "conventional-commits",
+        "changesets"
+      ]
+    },
     "branch": {
       "description": "Branch to release from. Defaults to the CI default branch, then \"main\".",
       "type": "string",

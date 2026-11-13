@@ -118,6 +118,30 @@ const BODY_PLACEHOLDERS = [
   '${release}',
   '${notes}',
 ] as const;
+
+export const STRATEGIES = ['conventional-commits', 'changesets'] as const;
+export type Strategy = (typeof STRATEGIES)[number];
+
+/** Options that changesets decides itself, via `.changeset/config.json` or the workspace. */
+const CHANGESETS_REJECTED_OPTIONS = [
+  'patch-types',
+  'minor-types',
+  'cliff-config',
+  'rewrite-changelog',
+  'exclude-paths',
+  'bootstrap-sha',
+  'linked-versions',
+  'linked-tags',
+  'prerelease',
+  'bump-minor-pre-major',
+  'tag-template',
+  'changelog-links',
+  'changelog-links-text',
+  'no-changes-text',
+  'separate-pull-requests',
+  'packages',
+] as const;
+
 const RELEASE_NAME_PLACEHOLDERS = ['${tag}', '${version}', '${component}'];
 const TAG_PLACEHOLDERS = ['${component}', '${version}'];
 
@@ -133,6 +157,12 @@ const label = z
 const userNames = z.array(z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]*$/));
 
 export const configSchema = z.strictObject({
+  'strategy': z
+    .enum(STRATEGIES)
+    .default('conventional-commits')
+    .describe(
+      'How versions and changelogs are determined: conventional-commits (git-cliff) or changesets (.changeset directory).',
+    ),
   'branch': z
     .string()
     .min(1)
@@ -398,6 +428,8 @@ export interface PackageConfig {
 }
 
 export interface Config {
+  /** Where versions and changelogs come from. */
+  strategy: Strategy;
   branch?: string;
   /** Prefix of the release branch, e.g. "relwolf/". */
   branchPrefix: string;
@@ -807,8 +839,25 @@ function checkReleaseEmoji(parsed: ParsedConfig): void {
   }
 }
 
+function checkStrategy(raw: unknown, parsed: ParsedConfig): void {
+  if (parsed.strategy !== 'changesets' || !raw || typeof raw !== 'object') {
+    return;
+  }
+
+  const rejected = CHANGESETS_REJECTED_OPTIONS.filter(key => key in raw);
+
+  if (rejected.length > 0) {
+    throw new ConfigError(
+      `strategy changesets: ${rejected.join(', ')} ${rejected.length === 1 ? 'is' : 'are'} not supported; changesets takes packages, versions and changelogs from the workspace and .changeset/config.json`,
+    );
+  }
+}
+
 export function parseConfig(source: string | undefined): Config {
-  const parsed = validateSchema(parseYaml(source));
+  const raw = parseYaml(source);
+  const parsed = validateSchema(raw);
+
+  checkStrategy(raw, parsed);
   const packages = Object.entries(parsed.packages).map(([rawPath, pkg]) =>
     buildPackage(rawPath, pkg, parsed),
   );
@@ -832,6 +881,7 @@ export function parseConfig(source: string | undefined): Config {
   checkReleaseEmoji(parsed);
 
   return {
+    strategy: parsed.strategy,
     ...(parsed.branch ? {branch: parsed.branch} : {}),
     branchPrefix: parsed['branch-prefix'],
     ...(parsed['pre-commit-script']

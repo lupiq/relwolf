@@ -10,6 +10,7 @@ updaters. Everything is configured through this file; there are no CLI flags. Se
 [environment variables](/reference/environment-variables).
 
 ```yaml [relwolf.yaml]
+strategy: conventional-commits # or changesets, see the Changesets page
 branch: main # branch to release from; defaults to the CI default branch, then "main"
 cliff-config: cliff.toml # git-cliff config; defaults to git-cliff's own discovery/default
 rewrite-changelog: false # true: regenerate whole changelogs when the git-cliff config changed since the last release
@@ -101,6 +102,7 @@ To pin the schema explicitly (e.g. in editors without SchemaStore), add this as 
 
 | Key                        | Level           | Default                                                       | Description                                                                                                                              |
 | -------------------------- | --------------- | ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `strategy`                 | global          | `conventional-commits`                                        | `changesets` lets [Changesets](/configuration/changesets) decide versions and changelogs                                                 |
 | `branch`                   | global          | CI default branch, then `main`                                | Branch to release from                                                                                                                   |
 | `cliff-config`             | global          | git-cliff discovery                                           | Path to a git-cliff config                                                                                                               |
 | `rewrite-changelog`        | global          | `false`                                                       | Rewrite changelogs if the git-cliff config changed, see [Changelog](/configuration/changelog#rewrite-the-whole-changelog)                |

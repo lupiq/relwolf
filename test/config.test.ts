@@ -334,3 +334,42 @@ describe('new properties', () => {
     ).toBe(true);
   });
 });
+
+describe('strategy', () => {
+  it('defaults to conventional commits', () => {
+    expect(parseConfig(undefined).strategy).toBe('conventional-commits');
+    expect(() => parseConfig('strategy: semver')).toThrow(ConfigError);
+  });
+
+  it('accepts the generic options with changesets', () => {
+    const config = parseConfig(`
+strategy: changesets
+branch: develop
+pre-commit-script: scripts/fix.sh
+release-emoji: true
+draft: true
+updaters:
+  - type: generic
+    path: README.md
+`);
+
+    expect(config.strategy).toBe('changesets');
+    expect(config.componentUpdaters).toEqual([
+      {type: 'generic', path: 'README.md'},
+    ]);
+  });
+
+  it('rejects options that changesets decides itself when set explicitly', () => {
+    expect(() =>
+      parseConfig('strategy: changesets\nbump-minor-pre-major: true'),
+    ).toThrow(/bump-minor-pre-major is not supported/);
+    expect(() =>
+      parseConfig(
+        'strategy: changesets\npackages:\n  ".": {}\nprerelease: beta',
+      ),
+    ).toThrow(/prerelease, packages are not supported/);
+    expect(
+      parseConfig('bump-minor-pre-major: true\nprerelease: beta').strategy,
+    ).toBe('conventional-commits');
+  });
+});

@@ -33,11 +33,20 @@
     "prepare": "husky || true"
   },
   "dependencies": {
+    "@changesets/apply-release-plan": "8.1.1",
+    "@changesets/assemble-release-plan": "7.0.0",
+    "@changesets/changelog-git": "1.0.0",
+    "@changesets/changelog-github": "1.0.1",
+    "@changesets/config": "4.0.1",
+    "@changesets/pre": "3.0.0",
+    "@changesets/read": "1.0.1",
+    "@manypkg/get-packages": "3.1.0",
     "git-cliff": "2.14.2",
     "yaml": "2.9.1",
     "zod": "4.6.7"
   },
   "devDependencies": {
+    "@changesets/types": "7.0.0",
     "@commitlint/cli": "21.2.4",
     "@commitlint/config-conventional": "21.2.4",
     "@commitlint/types": "21.2.3",

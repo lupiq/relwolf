@@ -152,7 +152,7 @@ export class GitHubProvider implements Provider {
             path: file.path,
             mode: '100644',
             type: 'blob',
-            content: file.content,
+            ...(file.deleted ? {sha: null} : {content: file.content}),
           })),
         },
       },

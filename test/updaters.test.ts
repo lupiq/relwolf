@@ -287,6 +287,17 @@ describe('component markers', () => {
     });
   });
 
+  it('accepts npm package names with a scope as component', () => {
+    expect(
+      updateComponentMarkers(
+        'npm i @acme/ui@1.0.0 # x-relwolf-version:@acme/ui',
+        new Map([['@acme/ui', '1.1.0']]),
+        new Set(['@acme/ui']),
+        'f',
+      ).content,
+    ).toBe('npm i @acme/ui@1.1.0 # x-relwolf-version:@acme/ui');
+  });
+
   it('fails on markers without or with an unknown component', () => {
     const versions = new Map([['api', '1.0.0']]);
 

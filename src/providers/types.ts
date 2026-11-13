@@ -23,6 +23,8 @@ export interface FileChange {
   content: string;
   /** Whether the file already exists at the base commit. */
   exists: boolean;
+  /** Remove the file; `content` is ignored. */
+  deleted?: boolean;
 }
 
 export interface LabelDefinition {

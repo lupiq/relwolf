@@ -22,6 +22,15 @@ import {
   type RewriteRelease,
 } from './changelog.js';
 import {
+  applyChangesets,
+  extractNotes,
+  loadWorkspace,
+  readReleasePlan,
+  type ChangesetsPlan,
+  type ChangesetsRelease,
+  type Workspace,
+} from './changesets.js';
+import {
   ROOT_KEY,
   tagPackagePath,
   type Config,
@@ -44,7 +53,12 @@ import {
   parseReleaseAs,
   type ReleaseAs,
 } from './release-as.js';
-import {findReleaseTags, isValidReleaseTag, parseReleaseTag} from './tags.js';
+import {
+  findReleaseTags,
+  isValidReleaseTag,
+  parseReleaseTag,
+  tagName,
+} from './tags.js';
 import {
   applyUpdater,
   companions,
@@ -133,6 +147,23 @@ export async function run(options: RunOptions): Promise<RunResult> {
     );
   }
 
+  let workspace: Workspace | undefined;
+
+  if (options.config.strategy === 'changesets') {
+    if (options.releaseAs?.trim()) {
+      throw new RunError(
+        'RELWOLF_RELEASE_AS is not supported with strategy changesets; add a changeset with the wanted bump instead.',
+      );
+    }
+
+    workspace = await loadWorkspace(options.cwd);
+    // Packages come from the workspace, so that tags, release names and component markers work as usual.
+    options = {
+      ...options,
+      config: {...options.config, packages: workspace.packageConfigs},
+    };
+  }
+
   const requested = parseReleaseAs(options.releaseAs, options.config.packages);
 
   log(
@@ -156,6 +187,7 @@ export async function run(options: RunOptions): Promise<RunResult> {
       unit,
       units.length > 1,
       requested,
+      workspace,
       log,
     );
 
@@ -392,18 +424,48 @@ async function expandPath(
 }
 
 /**
- * Writes the release files into the working tree, runs `pre-commit-script` and returns everything that changed
- * (the script may touch or add any file). The working tree is reset afterwards.
+ * Runs `body`, which may change the working tree, and resets everything it changed afterwards. `body` gets the files
+ * that were already dirty before; they are neither collected nor reset.
  */
-async function applyPreCommitScript(
-  options: RunOptions,
+async function withWorkingTree<T>(
   git: Git,
-  files: Array<FileChange>,
-): Promise<Array<FileChange>> {
+  body: (dirty: ReadonlySet<string>) => Promise<T>,
+): Promise<T> {
+  const dirty = new Set((await git.status()).map(entry => entry.path));
+
+  try {
+    return await body(dirty);
+  } finally {
+    const leftovers = (await git.status()).filter(
+      entry => !dirty.has(entry.path),
+    );
+
+    await git.discard(leftovers);
+  }
+}
+
+function checkNotDirty(
+  paths: ReadonlyArray<string>,
+  dirty: ReadonlySet<string>,
+  what: string,
+): void {
+  const clobbered = paths.filter(file => dirty.has(file));
+
+  if (clobbered.length > 0) {
+    throw new RunError(
+      `Cannot ${what}: ${clobbered.join(', ')} has uncommitted changes in the working tree. Run relwolf on a clean checkout.`,
+    );
+  }
+}
+
+/** The absolute path of the configured pre-commit-script, if any; fails if it does not exist. */
+async function preCommitScriptPath(
+  options: RunOptions,
+): Promise<string | undefined> {
   const script = options.config.preCommitScript;
 
   if (!script) {
-    return files;
+    return undefined;
   }
 
   const scriptPath = path.join(options.cwd, script);
@@ -414,28 +476,35 @@ async function applyPreCommitScript(
     );
   }
 
-  const dirty = new Set((await git.status()).map(entry => entry.path));
-  const clobbered = files.filter(file => dirty.has(file.path));
+  return scriptPath;
+}
 
-  if (clobbered.length > 0) {
-    throw new RunError(
-      `Cannot run the pre-commit-script: ${clobbered.map(file => file.path).join(', ')} has uncommitted changes in the working tree. Run relwolf on a clean checkout.`,
-    );
+/**
+ * Writes the release files into the working tree, runs `pre-commit-script` and returns everything that changed
+ * (the script may touch or add any file). The working tree is reset afterwards.
+ */
+async function applyPreCommitScript(
+  options: RunOptions,
+  git: Git,
+  files: Array<FileChange>,
+): Promise<Array<FileChange>> {
+  const scriptPath = await preCommitScriptPath(options);
+
+  if (!scriptPath) {
+    return files;
   }
 
-  try {
+  return withWorkingTree(git, async dirty => {
+    checkNotDirty(
+      files.map(file => file.path),
+      dirty,
+      'run the pre-commit-script',
+    );
     await writeFiles(options.cwd, files);
-    options.log?.(`Running pre-commit-script ${script}.`);
-    await runPreCommitScript(options, script, scriptPath);
+    await runPreCommitScript(options, scriptPath);
 
-    return await collectChanges(options.cwd, git, dirty);
-  } finally {
-    const leftovers = (await git.status()).filter(
-      entry => !dirty.has(entry.path),
-    );
-
-    await git.discard(leftovers);
-  }
+    return collectChanges(options.cwd, git, dirty, false);
+  });
 }
 
 async function writeFiles(
@@ -469,9 +538,12 @@ function preCommitScriptEnv(options: RunOptions): NodeJS.ProcessEnv {
 
 async function runPreCommitScript(
   options: RunOptions,
-  script: string,
   scriptPath: string,
 ): Promise<void> {
+  const script = options.config.preCommitScript;
+
+  options.log?.(`Running pre-commit-script ${script}.`);
+
   try {
     await runCommand(scriptPath, [], options.cwd, preCommitScriptEnv(options));
   } catch (error) {
@@ -486,16 +558,22 @@ async function runPreCommitScript(
   }
 }
 
-/** Files changed by the script, excluding those that were already dirty before. */
+/** Files changed in the working tree, excluding those that were already dirty before. */
 async function collectChanges(
   cwd: string,
   git: Git,
   dirty: ReadonlySet<string>,
+  allowDeletions: boolean,
 ): Promise<Array<FileChange>> {
   const changed = (await git.status()).filter(entry => !dirty.has(entry.path));
   const result: Array<FileChange> = [];
 
   for (const entry of changed) {
+    if (entry.deleted && allowDeletions) {
+      result.push({path: entry.path, content: '', exists: true, deleted: true});
+      continue;
+    }
+
     if (entry.deleted) {
       throw new RunError(
         `The pre-commit-script deleted or renamed "${entry.path}", which a release commit cannot express.`,
@@ -563,7 +641,14 @@ async function buildFiles(
     await applyPlan(options, git, plan, load, notesByTag, emoji);
   }
 
-  await applyComponentUpdaters(options, git, plans, load);
+  await applyComponentUpdaters(
+    options,
+    git,
+    new Map(
+      plans.map(plan => [packageKey(plan.pkg), formatVersion(plan.version)]),
+    ),
+    load,
+  );
 
   const entries = buildEntries(notesByTag, plans);
   const files = changedFiles(contents);
@@ -756,18 +841,18 @@ async function applyPlan(
   }
 }
 
-/** Runs the top-level updaters: every component marker gets the version of its package if that is released now. */
+/**
+ * Runs the top-level updaters: every component marker gets the version of its package if that is released now.
+ * `versions` maps the package key to the new version.
+ */
 async function applyComponentUpdaters(
   options: RunOptions,
   git: Git,
-  plans: ReadonlyArray<PackagePlan>,
+  versions: ReadonlyMap<string, string>,
   load: FileLoader,
 ): Promise<void> {
   const {componentUpdaters, packages} = options.config;
   const known = new Set(packages.map(packageKey));
-  const versions = new Map(
-    plans.map(plan => [packageKey(plan.pkg), formatVersion(plan.version)]),
-  );
 
   for (const updater of componentUpdaters) {
     for (const file of await expandPath(git, updater.path)) {
@@ -1082,6 +1167,174 @@ async function planUnit(
   );
 }
 
+/** A package released in a release request. */
+interface ReleasedPackage {
+  pkg: PackageConfig;
+  tag: string;
+  version: Version;
+}
+
+/** Everything a release request needs, whatever decided the versions. */
+interface PreparedRelease {
+  /** Released packages that get a tag. */
+  released: Array<ReleasedPackage>;
+  files: Array<FileChange>;
+  entries: Array<BodyEntry>;
+  /** Versions requested with RELWOLF_RELEASE_AS, stored in the body. */
+  versions: Map<string, Version>;
+  emoji: string;
+}
+
+async function prepareConventional(
+  options: RunOptions,
+  git: Git,
+  unit: ReleaseUnit,
+  separate: boolean,
+  requested: ReleaseAs,
+  existing: ReleaseRequest | null,
+  log: (message: string) => void,
+): Promise<PreparedRelease | undefined> {
+  const {config} = options;
+  const versions = effectiveRequests(unit.packages, existing?.body, requested);
+  const plans = await planUnit(git, config, unit, versions, log);
+
+  if (plans.length === 0) {
+    log(
+      `No releasable changes found${separate ? ` for ${unit.key}` : ''} (see "patch-types" and "minor-types"; breaking commits always release).`,
+    );
+
+    return undefined;
+  }
+
+  const emoji = releaseEmoji(config, existing, options.random);
+  const {files, entries} = await buildFiles(options, git, plans, emoji);
+
+  return {released: plans, files, entries, versions, emoji};
+}
+
+/** Paths in the working tree that changesets may write. */
+const changesetsMayTouch = (file: string): boolean =>
+  file.startsWith('.changeset/') ||
+  ['package.json', 'CHANGELOG.md'].includes(path.posix.basename(file));
+
+/**
+ * Lets changesets plan the release and write it into the working tree (reading the pre-release state may migrate it,
+ * too), runs the top-level updaters and the pre-commit-script on top and collects every changed file. The working
+ * tree is reset afterwards.
+ */
+async function prepareChangesets(
+  options: RunOptions,
+  git: Git,
+  workspace: Workspace,
+  existing: ReleaseRequest | null,
+  log: (message: string) => void,
+): Promise<PreparedRelease | undefined> {
+  const scriptPath = await preCommitScriptPath(options);
+
+  return withWorkingTree(git, async dirty => {
+    checkNotDirty(
+      [...dirty].filter(changesetsMayTouch),
+      dirty,
+      'apply the changesets',
+    );
+
+    const plan = await readReleasePlan(workspace, log);
+
+    if (!plan) {
+      return undefined;
+    }
+
+    const tagged = plan.releases.filter(release => release.tagged);
+
+    if (tagged.length === 0) {
+      log(
+        plan.releases.length === 0
+          ? 'The changesets change no version.'
+          : 'Only private packages without tags would be released; the changesets stay pending until a tagged package is released too (see "privatePackages" in .changeset/config.json).',
+      );
+
+      return undefined;
+    }
+
+    await applyChangesets(workspace, plan, options.env ?? process.env, log);
+    await applyChangesetsUpdaters(options, git, plan, dirty);
+
+    if (scriptPath) {
+      await runPreCommitScript(options, scriptPath);
+    }
+
+    const released = tagged.map(release => releasedPackage(release));
+    const entries: Array<BodyEntry> = [];
+
+    for (const {pkg, tag, version} of released) {
+      const changelog = await readIfExists(
+        path.join(options.cwd, pkg.changelogPath),
+      );
+
+      entries.push({
+        tag,
+        prerelease: version.prerelease.length > 0,
+        notes: extractNotes(changelog ?? '', formatVersion(version)),
+      });
+    }
+
+    return {
+      released,
+      files: await collectChanges(options.cwd, git, dirty, true),
+      entries,
+      versions: new Map(),
+      emoji: releaseEmoji(options.config, existing, options.random),
+    };
+  });
+}
+
+function releasedPackage(release: ChangesetsRelease): ReleasedPackage {
+  const version = parseVersion(release.newVersion);
+
+  if (!version) {
+    throw new RunError(
+      `Changesets planned the invalid version "${release.newVersion}" for ${release.name}.`,
+    );
+  }
+
+  return {
+    pkg: release.pkg,
+    tag: tagName(release.pkg, release.newVersion),
+    version,
+  };
+}
+
+/** Runs the top-level updaters on the files changesets wrote; every released package counts, tagged or not. */
+async function applyChangesetsUpdaters(
+  options: RunOptions,
+  git: Git,
+  plan: ChangesetsPlan,
+  dirty: ReadonlySet<string>,
+): Promise<void> {
+  const contents = new Map<string, FileState>();
+
+  await applyComponentUpdaters(
+    options,
+    git,
+    new Map(
+      plan.releases.map(release => [
+        packageKey(release.pkg),
+        release.newVersion,
+      ]),
+    ),
+    createLoader(options.cwd, contents),
+  );
+
+  const updated = changedFiles(contents);
+
+  checkNotDirty(
+    updated.map(file => file.path),
+    dirty,
+    'run the updaters',
+  );
+  await writeFiles(options.cwd, updated);
+}
+
 async function prepareReleaseRequest(
   options: RunOptions,
   git: Git,
@@ -1089,6 +1342,7 @@ async function prepareReleaseRequest(
   unit: ReleaseUnit,
   separate: boolean,
   requested: ReleaseAs,
+  workspace: Workspace | undefined,
   log: (message: string) => void,
 ): Promise<ReleaseRequestResult | undefined> {
   const {provider, config} = options;
@@ -1097,24 +1351,26 @@ async function prepareReleaseRequest(
     sourceBranch,
     targetBranch: branch,
   });
+  const baseSha = await git.head();
+  const prepared = workspace
+    ? await prepareChangesets(options, git, workspace, existing, log)
+    : await prepareConventional(
+        options,
+        git,
+        unit,
+        separate,
+        requested,
+        existing,
+        log,
+      );
 
-  const versions = effectiveRequests(unit.packages, existing?.body, requested);
-  const plans = await planUnit(git, config, unit, versions, log);
-
-  if (plans.length === 0) {
-    await closeObsolete(
-      provider,
-      existing,
-      separate ? unit.key : undefined,
-      log,
-    );
+  if (!prepared) {
+    await closeObsolete(provider, existing, log);
 
     return undefined;
   }
 
-  const baseSha = await git.head();
-  const emoji = releaseEmoji(config, existing, options.random);
-  const {files, entries} = await buildFiles(options, git, plans, emoji);
+  const {files} = prepared;
 
   log(
     `Release commit changes ${files.length} file(s): ${files.map(file => file.path).join(', ')}.`,
@@ -1122,12 +1378,9 @@ async function prepareReleaseRequest(
 
   const {title, message, body} = renderRequest(
     options,
-    plans,
-    entries,
-    versions,
+    prepared,
     baseSha,
     existing,
-    emoji,
   );
 
   if (existing?.title === title && existing.body === body) {
@@ -1171,17 +1424,12 @@ async function createRequest(
   return {id: created.id, url: created.url, action: 'created'};
 }
 
-/** Logs that there is nothing to release and closes the release request that is still open. */
+/** Closes the release request that is still open although there is nothing to release. */
 async function closeObsolete(
   provider: Provider,
   existing: ReleaseRequest | null,
-  unitKey: string | undefined,
   log: (message: string) => void,
 ): Promise<void> {
-  log(
-    `No releasable changes found${unitKey === undefined ? '' : ` for ${unitKey}`} (see "patch-types" and "minor-types"; breaking commits always release).`,
-  );
-
   if (existing) {
     await provider.closeReleaseRequest(existing.id);
     log(
@@ -1207,14 +1455,12 @@ function releaseEmoji(
 
 function renderRequest(
   options: RunOptions,
-  plans: Array<PackagePlan>,
-  entries: Array<BodyEntry>,
-  versions: Map<string, Version>,
+  prepared: PreparedRelease,
   baseSha: string,
   existing: ReleaseRequest | null,
-  emoji: string,
 ): {title: string; message: string; body: string} {
   const {config} = options;
+  const {released: plans, entries, versions, emoji} = prepared;
   const unique = plans.filter(
     (plan, index) => plans.findIndex(other => other.tag === plan.tag) === index,
   );

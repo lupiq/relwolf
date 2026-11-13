@@ -284,4 +284,106 @@ packages:
       );
     });
   });
+
+  describe(`${name} changesets flow`, () => {
+    const config = 'strategy: changesets\n';
+    const changesetsConfig = `${JSON.stringify({
+      changelog: '@changesets/cli/changelog',
+      commit: false,
+      fixed: [],
+      linked: [],
+      access: 'restricted',
+      baseBranch: 'main',
+      updateInternalDependencies: 'patch',
+      ignore: [],
+    })}\n`;
+    const changeset = (releases: string, text: string): string =>
+      `---\n${releases}\n---\n\n${text}\n`;
+
+    it('releases a single package with the versions changesets computes', async () => {
+      const branch = await newBranch();
+
+      await sandbox.commit(branch, 'chore: Add changesets', {
+        'package.json': '{"name": "e2e-demo", "version": "1.0.0"}\n',
+        '.changeset/config.json': changesetsConfig,
+      });
+      await sandbox.commit(branch, 'feat: Add search', {
+        'src/search.txt': 'a',
+        '.changeset/add-search.md': changeset(
+          '"e2e-demo": minor',
+          'Add search',
+        ),
+      });
+
+      const created = await sandbox.runRelwolf(branch, config);
+      const id = created.releaseRequests[0]!.id;
+
+      expect((await sandbox.releaseRequest(id)).title).toBe(
+        'chore(release): Create release v1.1.0',
+      );
+      expect(
+        await sandbox.fileContent(`relwolf/${branch}`, 'package.json'),
+      ).toContain('"version": "1.1.0"');
+      expect(
+        await sandbox.fileContent(
+          `relwolf/${branch}`,
+          '.changeset/add-search.md',
+        ),
+      ).toBeNull();
+      expect(
+        (await sandbox.runRelwolf(branch, config)).releaseRequests[0]?.action,
+      ).toBe('unchanged');
+
+      await sandbox.merge(id);
+      const result = await sandbox.runRelwolf(branch, config);
+
+      expect(result.tagged).toEqual(['v1.1.0']);
+      expect(await sandbox.releaseBody('v1.1.0')).toContain('Add search');
+      expect(result.releaseRequests[0]).toBeUndefined();
+    });
+
+    it('releases dependents in a monorepo with scoped package names', async () => {
+      const branch = await newBranch();
+
+      await sandbox.commit(branch, 'chore: Add packages', {
+        'package.json': '{"name": "e2e-root", "private": true}\n',
+        'pnpm-workspace.yaml': 'packages:\n  - packages/*\n',
+        'packages/a/package.json': '{"name": "@e2e/a", "version": "1.0.0"}\n',
+        'packages/b/package.json':
+          '{"name": "e2e-b", "version": "2.0.0", "dependencies": {"@e2e/a": "1.0.0"}}\n',
+        '.changeset/config.json': changesetsConfig,
+      });
+      await sandbox.commit(branch, 'feat: Add endpoint', {
+        'packages/a/endpoint.txt': 'a',
+        '.changeset/add-endpoint.md': changeset(
+          '"@e2e/a": minor',
+          'Add endpoint',
+        ),
+      });
+
+      const {releaseRequests} = await sandbox.runRelwolf(branch, config);
+      const mr = await sandbox.releaseRequest(releaseRequests[0]!.id);
+
+      expect(mr.title).toBe(
+        'chore(release): Create release @e2e/a@1.1.0, e2e-b@2.0.1',
+      );
+      expect(
+        await sandbox.fileContent(
+          `relwolf/${branch}`,
+          'packages/b/package.json',
+        ),
+      ).toContain('"@e2e/a": "1.1.0"');
+
+      await sandbox.merge(releaseRequests[0]!.id);
+      const result = await sandbox.runRelwolf(branch, config);
+
+      expect(result.tagged).toEqual(['@e2e/a@1.1.0', 'e2e-b@2.0.1']);
+      expect(await sandbox.releaseBody('@e2e/a@1.1.0')).toContain(
+        'Add endpoint',
+      );
+      expect(await sandbox.releaseBody('e2e-b@2.0.1')).toContain(
+        'Updated dependencies',
+      );
+    });
+  });
 }

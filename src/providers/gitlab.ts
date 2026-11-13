@@ -146,12 +146,16 @@ export class GitLabProvider implements Provider {
         start_sha: options.baseSha,
         force: true,
         commit_message: options.message,
-        actions: options.files.map(file => ({
-          action: file.exists ? 'update' : 'create',
-          file_path: file.path,
-          content: file.content,
-          encoding: 'text',
-        })),
+        actions: options.files.map(file =>
+          file.deleted
+            ? {action: 'delete', file_path: file.path}
+            : {
+                action: file.exists ? 'update' : 'create',
+                file_path: file.path,
+                content: file.content,
+                encoding: 'text',
+              },
+        ),
       },
     });
   }

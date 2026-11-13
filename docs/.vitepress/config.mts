@@ -151,6 +151,7 @@ export default defineConfig({
           {text: 'Monorepos', link: '/configuration/monorepos'},
           {text: 'Updaters', link: '/configuration/updaters'},
           {text: 'Changelog (git-cliff)', link: '/configuration/changelog'},
+          {text: 'Changesets', link: '/configuration/changesets'},
         ],
       },
       {

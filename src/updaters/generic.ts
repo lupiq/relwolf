@@ -41,10 +41,11 @@ const MARKERS: Array<Marker> = [
 
 /**
  * A marker counts only at the end of a line (optionally before a closing `-->` or `*\/`), so prose that merely
- * mentions it is ignored. An optional `:<component>` suffix selects the version of another package.
+ * mentions it is ignored. An optional `:<component>` suffix selects the version of another package; with changesets
+ * the component is the package name, which may have an npm scope (`@scope/name`).
  */
 const MARKER_AT_END =
-  /(?:^|\s)(x-relwolf-(?:version|minor|major))(?::([A-Za-z0-9][A-Za-z0-9._-]*))?(?:\s*(?:-->|\*\/))?\s*$/;
+  /(?:^|\s)(x-relwolf-(?:version|minor|major))(?::((?:@[A-Za-z0-9][A-Za-z0-9._-]*\/)?[A-Za-z0-9][A-Za-z0-9._-]*))?(?:\s*(?:-->|\*\/))?\s*$/;
 
 function markerOf(
   line: string,

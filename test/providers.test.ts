@@ -322,6 +322,7 @@ describe('GitLabProvider', () => {
       files: [
         {path: 'CHANGELOG.md', content: 'c', exists: false},
         {path: 'package.json', content: 'p', exists: true},
+        {path: '.changeset/a.md', content: '', exists: true, deleted: true},
       ],
     });
     expect(calls[0]!.url.pathname).toBe(
@@ -345,6 +346,7 @@ describe('GitLabProvider', () => {
           content: 'p',
           encoding: 'text',
         },
+        {action: 'delete', file_path: '.changeset/a.md'},
       ],
     });
   });
@@ -698,7 +700,10 @@ describe('GitHubProvider', () => {
       branch: 'relwolf/main',
       baseSha: 'base',
       message: 'msg',
-      files: [{path: 'a.txt', content: 'x', exists: false}],
+      files: [
+        {path: 'a.txt', content: 'x', exists: false},
+        {path: 'b.md', content: '', exists: true, deleted: true},
+      ],
     });
     expect(calls.map(c => `${c.method} ${c.url.pathname}`)).toEqual([
       'GET /repos/lupiq/relwolf/git/commits/base',
@@ -709,7 +714,10 @@ describe('GitHubProvider', () => {
     ]);
     expect(calls[1]!.body).toEqual({
       base_tree: 'basetree',
-      tree: [{path: 'a.txt', mode: '100644', type: 'blob', content: 'x'}],
+      tree: [
+        {path: 'a.txt', mode: '100644', type: 'blob', content: 'x'},
+        {path: 'b.md', mode: '100644', type: 'blob', sha: null},
+      ],
     });
     expect(calls[2]!.body).toEqual({
       message: 'msg',

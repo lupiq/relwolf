@@ -227,7 +227,11 @@ export function mergeLastRelease(
   }
 
   for (const file of last.files) {
-    repo.write(file.path, file.content);
+    if (file.deleted) {
+      rmSync(path.join(repo.dir, file.path));
+    } else {
+      repo.write(file.path, file.content);
+    }
   }
 
   repo.git('add', '-A');
