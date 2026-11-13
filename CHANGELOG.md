@@ -2,6 +2,16 @@
 
 <!-- git-cliff: end of header -->
 
+## 🌹 [0.14.0](https://github.com/lupiq/relwolf/releases/tag/v0.14.0) - 2026-11-13
+
+[See changes](https://github.com/lupiq/relwolf/compare/v0.13.0...v0.14.0)
+
+### 🚀 Features
+
+- Add possibility to use Changesets instead of conventional commits ([9335f86](https://github.com/lupiq/relwolf/commit/9335f864c8b8ef3039d96a1e0b5f1edd06f085db))
+
+---
+
 ## 🛹 [0.13.0](https://github.com/lupiq/relwolf/releases/tag/v0.13.0) - 2026-11-13
 
 [See changes](https://github.com/lupiq/relwolf/compare/v0.12.0...v0.13.0)
