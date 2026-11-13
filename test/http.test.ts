@@ -106,6 +106,65 @@ describe('HttpClient retries', () => {
   });
 });
 
+describe('HttpClient timeout', () => {
+  /** Never answers; rejects like fetch once the signal aborts. */
+  const hanging = vi.fn<FetchLike>(
+    (_input, init) =>
+      new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () => {
+          reject(init.signal?.reason as Error);
+        });
+      }),
+  );
+  const timeoutClient = (fetchImpl: FetchLike) =>
+    new HttpClient('https://api.test', {}, fetchImpl, {
+      sleep: () => Promise.resolve(),
+      timeoutMs: 5,
+    });
+
+  it('aborts hanging requests and retries them for idempotent methods', async () => {
+    hanging.mockClear();
+
+    await expect(timeoutClient(hanging).request('GET', '/x')).rejects.toThrow(
+      /GET \/x got no response from https:\/\/api\.test within 0\.005 s.*http-timeout/s,
+    );
+    expect(hanging).toHaveBeenCalledTimes(4);
+  });
+
+  it('does not retry a timed out POST', async () => {
+    hanging.mockClear();
+
+    await expect(
+      timeoutClient(hanging).request('POST', '/x', {body: {}}),
+    ).rejects.toThrow(/no response/);
+    expect(hanging).toHaveBeenCalledTimes(1);
+  });
+
+  it('also limits reading the response body', async () => {
+    const stalledBody = vi.fn<FetchLike>(
+      async (_input, init) =>
+        new Response(
+          new ReadableStream({
+            start(controller) {
+              init?.signal?.addEventListener('abort', () => {
+                controller.error(init.signal?.reason);
+              });
+            },
+          }),
+        ),
+    );
+    let calls = 0;
+    const fetchImpl = vi.fn<FetchLike>(async (input, init) =>
+      ++calls === 1 ? stalledBody(input, init) : json(200, {ok: true}),
+    );
+
+    expect((await timeoutClient(fetchImpl).request('GET', '/x')).data).toEqual({
+      ok: true,
+    });
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe('HttpClient.requestAll', () => {
   it('stops after 10 pages', async () => {
     const pages = Array.from({length: 20}, (_, i) =>

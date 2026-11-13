@@ -14,6 +14,8 @@ export interface GitLabOptions {
   projectId: string;
   token: string;
   fetch?: FetchLike;
+  /** Time limit of every HTTP request attempt. */
+  timeoutMs?: number;
 }
 
 interface GitLabMergeRequest {
@@ -101,7 +103,10 @@ export class GitLabProvider implements Provider {
       options.apiUrl,
       {'PRIVATE-TOKEN': options.token, 'Accept': 'application/json'},
       options.fetch,
-      {hint: gitlabHint},
+      {
+        hint: gitlabHint,
+        ...(options.timeoutMs ? {timeoutMs: options.timeoutMs} : {}),
+      },
     );
     this.project = `/projects/${encodeURIComponent(options.projectId)}`;
   }

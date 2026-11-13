@@ -126,6 +126,13 @@
         "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
       }
     },
+    "http-timeout": {
+      "default": 120,
+      "description": "Seconds an API request attempt may take before it is aborted (1 to 3600). Timed out requests are retried, except POST requests.",
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 3600
+    },
     "patch-types": {
       "default": [
         "fix"

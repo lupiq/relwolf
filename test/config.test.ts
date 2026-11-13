@@ -235,7 +235,9 @@ describe('new properties', () => {
       excludePaths: [],
       separatePullRequests: false,
       linkedGroups: [],
+      httpTimeout: 120,
     });
+    expect(parseConfig('http-timeout: 30').httpTimeout).toBe(30);
   });
 
   it('rejects invalid values', () => {
@@ -257,6 +259,9 @@ describe('new properties', () => {
       'linked-versions: [[a]]',
       'linked-tags: single',
       'linked-tags: nope',
+      'http-timeout: 0',
+      'http-timeout: 1.5',
+      'http-timeout: 3601',
       'tag-template: "${version}"\npackages:\n  a: {}\n  b: {component: b}',
     ];
 

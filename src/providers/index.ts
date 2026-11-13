@@ -50,12 +50,17 @@ export function detectProvider(env: NodeJS.ProcessEnv): 'gitlab' | 'github' {
   );
 }
 
+export interface ProviderOptions {
+  fetch?: FetchLike;
+  /** Time limit of every HTTP request attempt. */
+  timeoutMs?: number;
+}
+
 export function createProviderFromEnv(
   env: NodeJS.ProcessEnv,
-  fetch?: FetchLike,
+  options: ProviderOptions = {},
 ): ProviderContext {
   const token = required(env, 'RELWOLF_TOKEN');
-  const fetchOption = fetch ? {fetch} : {};
 
   if (detectProvider(env) === 'gitlab') {
     return {
@@ -63,7 +68,7 @@ export function createProviderFromEnv(
         apiUrl: required(env, 'CI_API_V4_URL'),
         projectId: required(env, 'CI_PROJECT_ID'),
         token,
-        ...fetchOption,
+        ...options,
       }),
       currentBranch: env.CI_COMMIT_BRANCH ?? '',
       defaultBranch: env.CI_DEFAULT_BRANCH,
@@ -75,7 +80,7 @@ export function createProviderFromEnv(
       apiUrl: env.GITHUB_API_URL ?? 'https://api.github.com',
       repository: required(env, 'GITHUB_REPOSITORY'),
       token,
-      ...fetchOption,
+      ...options,
     }),
     currentBranch:
       env.GITHUB_REF_TYPE === 'branch' ? (env.GITHUB_REF_NAME ?? '') : '',

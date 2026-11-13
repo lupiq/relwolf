@@ -19,7 +19,11 @@ export interface RetryOptions {
   sleep?: (ms: number) => Promise<void>;
   /** Advice appended to the error message of a failed request, e.g. which token permissions are missing. */
   hint?: (status: number, method: string, path: string) => string | undefined;
+  /** Time limit of every attempt, including reading the response body. */
+  timeoutMs?: number;
 }
+
+export const DEFAULT_TIMEOUT_MS = 120_000;
 
 const MAX_RETRY_DELAY_MS = 60_000;
 /** Upper bound for paginated lists, i.e. 1000 items at 100 per page. */
@@ -51,6 +55,7 @@ export class HttpClient {
   private readonly baseDelayMs: number;
   private readonly sleep: (ms: number) => Promise<void>;
   private readonly hint: NonNullable<RetryOptions['hint']>;
+  private readonly timeoutMs: number;
 
   constructor(
     private readonly baseUrl: string,
@@ -61,6 +66,7 @@ export class HttpClient {
     this.retries = retry.retries ?? 3;
     this.baseDelayMs = retry.baseDelayMs ?? 1000;
     this.hint = retry.hint ?? (() => undefined);
+    this.timeoutMs = retry.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     this.sleep =
       retry.sleep ?? (ms => new Promise(resolve => setTimeout(resolve, ms)));
   }
@@ -113,21 +119,25 @@ export class HttpClient {
 
   /**
    * Retries rate limiting (429, or 403 with `Retry-After`) for every method. Server errors and network
-   * failures are only retried for idempotent methods, because a POST may have been processed already.
+   * failures (including timeouts) are only retried for idempotent methods, because a POST may have been
+   * processed already. Returns the response together with its body text.
    */
   private async send(
     method: string,
     url: string,
     init: RequestInit,
-  ): Promise<Response> {
+  ): Promise<{response: Response; text: string}> {
     for (let attempt = 0; ; attempt++) {
       let delay: number | undefined;
 
       try {
-        const response = await this.fetchImpl(url, init);
+        const response = await this.fetchImpl(url, {
+          ...init,
+          signal: AbortSignal.timeout(this.timeoutMs),
+        });
 
         if (attempt >= this.retries || !this.isRetryable(method, response)) {
-          return response;
+          return {response, text: await response.text()};
         }
 
         delay = this.retryAfterMs(response);
@@ -157,8 +167,12 @@ export class HttpClient {
       url.searchParams.set(key, value);
     }
 
-    const response = await this.sendOrExplain(method, url, options.body);
-    const data = parseBody(await response.text());
+    const {response, text} = await this.sendOrExplain(
+      method,
+      url,
+      options.body,
+    );
+    const data = parseBody(text);
 
     if (!response.ok && !(options.allow ?? []).includes(response.status)) {
       const detail = typeof data === 'string' ? data : JSON.stringify(data);
@@ -174,12 +188,12 @@ export class HttpClient {
     return {status: response.status, data, headers: response.headers};
   }
 
-  /** Sends the request and turns network failures into a ProviderError with a hint. */
+  /** Sends the request and turns network failures and timeouts into a ProviderError with a hint. */
   private async sendOrExplain(
     method: string,
     url: URL,
     body: unknown,
-  ): Promise<Response> {
+  ): Promise<{response: Response; text: string}> {
     const hasBody = body !== undefined;
 
     try {
@@ -192,6 +206,13 @@ export class HttpClient {
         ...(hasBody ? {body: JSON.stringify(body)} : {}),
       });
     } catch (error) {
+      if (error instanceof Error && error.name === 'TimeoutError') {
+        throw new ProviderError(
+          `${method} ${url.pathname} got no response from ${url.origin} within ${this.timeoutMs / 1000} s\n` +
+            'Hint: check the network of the job, or raise http-timeout in relwolf.yaml.',
+        );
+      }
+
       const cause = (error as {cause?: {message?: string}}).cause?.message;
 
       throw new ProviderError(

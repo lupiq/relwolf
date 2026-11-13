@@ -13,6 +13,8 @@ export interface GitHubOptions {
   repository: string;
   token: string;
   fetch?: FetchLike;
+  /** Time limit of every HTTP request attempt. */
+  timeoutMs?: number;
 }
 
 interface GitHubPull {
@@ -100,7 +102,10 @@ export class GitHubProvider implements Provider {
         'X-GitHub-Api-Version': '2022-11-28',
       },
       options.fetch,
-      {hint: githubHint},
+      {
+        hint: githubHint,
+        ...(options.timeoutMs ? {timeoutMs: options.timeoutMs} : {}),
+      },
     );
   }
 

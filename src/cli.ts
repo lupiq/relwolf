@@ -24,6 +24,7 @@ async function main(): Promise<void> {
 
   const {provider, currentBranch, defaultBranch} = createProviderFromEnv(
     process.env,
+    {timeoutMs: config.httpTimeout * 1000},
   );
 
   await run({

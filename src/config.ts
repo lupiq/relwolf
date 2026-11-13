@@ -282,6 +282,15 @@ export const configSchema = z.strictObject({
   'reviewers': userNames
     .default([])
     .describe('Usernames requested as reviewers when the request is created.'),
+  'http-timeout': z
+    .number()
+    .int()
+    .positive()
+    .max(3600)
+    .default(120)
+    .describe(
+      'Seconds an API request attempt may take before it is aborted (1 to 3600). Timed out requests are retried, except POST requests.',
+    ),
   'patch-types': z
     .array(commitType)
     .default(['fix'])
@@ -401,6 +410,8 @@ export interface Config {
   changelogLinksText: string;
   assignees: Array<string>;
   reviewers: Array<string>;
+  /** Seconds every attempt of an API request may take. */
+  httpTimeout: number;
   /** Commit types (lower case) that trigger a minor or patch release; breaking changes always trigger a major one. */
   minorTypes: Array<string>;
   patchTypes: Array<string>;
@@ -818,6 +829,7 @@ export function parseConfig(source: string | undefined): Config {
     changelogLinksText: parsed['changelog-links-text'],
     assignees: parsed.assignees,
     reviewers: parsed.reviewers,
+    httpTimeout: parsed['http-timeout'],
     minorTypes,
     patchTypes,
     excludePaths,
