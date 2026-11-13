@@ -48,6 +48,18 @@ const updaterSchema = z.strictObject({
     .describe('Also update the lockfiles next to the manifest.'),
 });
 
+const componentUpdaterSchema = z.strictObject({
+  type: z
+    .literal('generic')
+    .describe('Kind of file to update; only "generic" is supported.'),
+  path: z
+    .string()
+    .min(1)
+    .describe(
+      'File to update, relative to the repository root. May be a glob.',
+    ),
+});
+
 const packageSchema = z.strictObject({
   'component': z
     .string()
@@ -337,6 +349,12 @@ export const configSchema = z.strictObject({
     .describe(
       'Breaking changes only bump the minor version before 1.0.0 (default for all packages).',
     ),
+  'updaters': z
+    .array(componentUpdaterSchema)
+    .default([])
+    .describe(
+      'Files with component markers (x-relwolf-version:<component>) that get the versions of several packages.',
+    ),
   'packages': z
     .record(z.string(), packageSchema)
     .default({'.': {updaters: []}})
@@ -426,6 +444,8 @@ export interface Config {
   /** `single`: a linked group gets one tag and release, named by `tagPackagePath`. */
   linkedTags: 'per-package' | 'single';
   packages: Array<PackageConfig>;
+  /** Repository-relative POSIX paths (or globs) of files with component markers. */
+  componentUpdaters: Array<{type: 'generic'; path: string}>;
 }
 
 export class ConfigError extends Error {
@@ -760,6 +780,21 @@ function checkPullRequestSettings(
   }
 }
 
+function checkComponentUpdaters(
+  parsed: ParsedConfig,
+  packages: ReadonlyArray<PackageConfig>,
+): void {
+  if (
+    parsed.updaters.length > 0 &&
+    packages.some(pkg => !pkg.component) &&
+    packages.some(pkg => pkg.component === ROOT_KEY)
+  ) {
+    throw new ConfigError(
+      `updaters: the component name "${ROOT_KEY}" is reserved for the package without a component`,
+    );
+  }
+}
+
 function checkReleaseEmoji(parsed: ParsedConfig): void {
   if (
     parsed['release-emoji'] &&
@@ -790,6 +825,7 @@ export function parseConfig(source: string | undefined): Config {
 
   checkTagFormats(packages, linkedGroups, parsed['linked-tags']);
   checkPullRequestSettings(parsed, packages);
+  checkComponentUpdaters(parsed, packages);
 
   const labels = parseLabels(parsed.labels);
 
@@ -838,6 +874,10 @@ export function parseConfig(source: string | undefined): Config {
     linkedGroups,
     linkedTags: parsed['linked-tags'],
     packages,
+    componentUpdaters: parsed.updaters.map(updater => ({
+      type: updater.type,
+      path: normalizeRepoPath(updater.path, 'Updater path'),
+    })),
   };
 }
 

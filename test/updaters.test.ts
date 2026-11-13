@@ -1,5 +1,10 @@
 import {describe, expect, it} from 'vitest';
-import {applyUpdater, companions, UpdaterError} from '../src/updaters/index.js';
+import {
+  applyUpdater,
+  companions,
+  updateComponentMarkers,
+  UpdaterError,
+} from '../src/updaters/index.js';
 
 describe('package-json updater', () => {
   it('updates the version and preserves indentation and trailing newline', () => {
@@ -235,6 +240,86 @@ describe('generic updater', () => {
         'f',
       ),
     ).toBe('a: 1.0.1 # x-relwolf-version\r\nb: 2\r\n');
+  });
+
+  it('ignores component markers', () => {
+    expect(
+      applyUpdater(
+        'generic',
+        'a: 1.0.0 # x-relwolf-version\nb: 1.0.0 # x-relwolf-version:api',
+        '2.0.0',
+        'f',
+      ),
+    ).toBe('a: 2.0.0 # x-relwolf-version\nb: 1.0.0 # x-relwolf-version:api');
+  });
+});
+
+describe('component markers', () => {
+  const known = new Set(['root', 'api', 'web', 'my.lib']);
+
+  it('uses the version of each component and keeps unreleased ones', () => {
+    const input = [
+      'app: 1.0.0 # x-relwolf-version:root',
+      'api: v0.1.0 # x-relwolf-version:api',
+      '- uses: org/api@v0 # x-relwolf-major:api',
+      'web: 2.3.4 <!-- x-relwolf-version:web -->',
+      'lib: 1.2 /* x-relwolf-minor:my.lib */',
+      'plain: 9.9.9',
+      'Use `x-relwolf-version:api` for 1.0.0 like this',
+    ].join('\r\n');
+    const versions = new Map([
+      ['root', '1.1.0'],
+      ['api', '1.0.0'],
+      ['my.lib', '3.0.0-beta.1'],
+    ]);
+
+    expect(updateComponentMarkers(input, versions, known, 'f')).toEqual({
+      content: [
+        'app: 1.1.0 # x-relwolf-version:root',
+        'api: v1.0.0 # x-relwolf-version:api',
+        '- uses: org/api@v1 # x-relwolf-major:api',
+        'web: 2.3.4 <!-- x-relwolf-version:web -->',
+        'lib: 1.2 /* x-relwolf-minor:my.lib */',
+        'plain: 9.9.9',
+        'Use `x-relwolf-version:api` for 1.0.0 like this',
+      ].join('\r\n'),
+      unreleased: ['web'],
+    });
+  });
+
+  it('fails on markers without or with an unknown component', () => {
+    const versions = new Map([['api', '1.0.0']]);
+
+    expect(() =>
+      updateComponentMarkers(
+        'a: 1.0.0 # x-relwolf-version',
+        versions,
+        known,
+        'f',
+      ),
+    ).toThrow(/needs a component/);
+    expect(() =>
+      updateComponentMarkers(
+        'a: 1.0.0 # x-relwolf-version:apu',
+        versions,
+        known,
+        'f',
+      ),
+    ).toThrow(/unknown component "apu"/);
+  });
+
+  it('fails on broken lines of unreleased components and files without markers', () => {
+    expect(() =>
+      updateComponentMarkers(
+        'a: latest # x-relwolf-version:web',
+        new Map(),
+        known,
+        'f',
+      ),
+    ).toThrow(UpdaterError);
+    expect(() =>
+      updateComponentMarkers('a: 1.0.0', new Map(), known, 'f'),
+    ).toThrow(/no line contains a component marker/);
   });
 });
 

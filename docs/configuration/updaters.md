@@ -23,6 +23,9 @@ Updaters change the version in your project files in the release commit.
 
 Each updater takes an optional `path`, relative to the package. The path may be a glob (e.g. `charts/*/Chart.yaml`); every tracked file that matches is updated, and a glob without match fails the run.
 
+In monorepos, a file with the versions of several components uses [component markers](#component-markers-monorepos)
+and the top-level `updaters`.
+
 All updaters keep the formatting, comments and indentation of the file; only the version is replaced.
 
 ## Lockfiles
@@ -105,3 +108,66 @@ Download version 1.2.3 <!-- x-relwolf-version -->
 :::
 
 Pre-releases leave partial markers unchanged, because no floating tag exists for them.
+
+## Component markers (monorepos)
+
+In a [monorepo](/configuration/monorepos) a single file can contain the versions of several components, for example a
+README with installation snippets or a deployment file with one image tag per service. Append `:<component>` to the
+marker and list the file in the **top-level** `updaters` (outside `packages`):
+
+```yaml [relwolf.yaml]
+updaters: # top level, not inside a package
+  - type: generic
+    path: README.md # relative to the repository root, may be a glob
+packages:
+  '.':
+    updaters: [{type: package-json}]
+  services/api:
+    component: api
+  services/web:
+    component: web
+```
+
+```markdown [README.md]
+Install the CLI 1.4.0 <!-- x-relwolf-version:root -->
+
+- API image `org/api:2.1.0` <!-- x-relwolf-version:api -->
+- Web action `org/web@v3` <!-- x-relwolf-major:web -->
+```
+
+When `api` is released as `2.2.0`, only the API line changes. The other lines keep their versions until their
+components are released. The job log names the components whose markers stayed unchanged.
+
+- `<component>` is the `component` of a package. Use `root` for the package without a `component` (usually `.`).
+  `root` is then reserved for that package, so no other package may be called `root`.
+- All three markers accept the suffix: `x-relwolf-version:api`, `x-relwolf-minor:api` and `x-relwolf-major:api`.
+  [Pre-releases](#partial-markers) leave the partial markers unchanged, as usual.
+- The same end-of-line rules apply. The suffix follows the marker directly, without spaces, e.g.
+  `# x-relwolf-version:api` or `<!-- x-relwolf-version:api -->`.
+- A file is updated whenever **any** package is released, independent of where the file lives. Markers of packages
+  that are not part of the release request stay unchanged.
+- With `linked-versions`, all linked components get the same version anyway. With `separate-pull-requests`, each
+  release request only updates the markers of its own packages.
+
+The run fails if a file listed in the top-level `updaters`
+
+- does not exist, or the glob matches no tracked file,
+- contains no component marker,
+- contains a marker without a component (`x-relwolf-version` alone is ambiguous there),
+- refers to an unknown component (catches typos), or
+- has a component marker on a line without a matching version, even if that component is not released now.
+
+Top-level `updaters` only support `type: generic`; `key` and `lockfiles` are not available.
+
+### Package updaters ignore component markers
+
+The `generic` updaters inside `packages` work as before. They update unsuffixed markers with the version of their own
+package and skip markers with a component suffix, and a file they handle still needs at least one unsuffixed marker.
+
+Do not list the same file both in a package and in the top-level `updaters`: the top-level updater rejects its
+unsuffixed markers. Give every marker in such a file a component instead and list it only in the top-level `updaters`:
+
+```yaml [services/api/deploy.yaml]
+api: 2.1.0 # x-relwolf-version:api
+web: 3.0.0 # x-relwolf-version:web
+```

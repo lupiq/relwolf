@@ -690,6 +690,40 @@ packages:
       'chore(release): Create release v0.1.0',
     );
   });
+
+  it('updates component markers of top-level updaters', async () => {
+    setup();
+    repo.write(
+      'README.md',
+      [
+        'app 0.0.0 <!-- x-relwolf-version:root -->',
+        'api 0.0.0 <!-- x-relwolf-version:api -->',
+        '',
+      ].join('\n'),
+    );
+    repo.commit('docs: readme');
+    repo.commit('fix: api fix', 'services/api/code.txt');
+    const messages: Array<string> = [];
+
+    await exec(`updaters: [{type: generic, path: README.md}]\n${config}`, {
+      log: message => messages.push(message),
+    });
+
+    const readme = provider.commits[0]!.files.find(
+      file => file.path === 'README.md',
+    );
+
+    expect(readme?.content).toBe(
+      [
+        'app 0.0.0 <!-- x-relwolf-version:root -->',
+        'api 0.0.1 <!-- x-relwolf-version:api -->',
+        '',
+      ].join('\n'),
+    );
+    expect(messages).toContain(
+      'README.md: markers of root left unchanged, not released in this request.',
+    );
+  });
 });
 
 describe('RELWOLF_RELEASE_AS', () => {

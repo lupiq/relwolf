@@ -22,6 +22,9 @@ packages:
   (`api-v1.2.3`).
 - Only commits touching a package's path count for that package.
 - Updater and changelog paths are relative to the package path.
+- A file with the versions of several components (e.g. a README) uses
+  [component markers](/configuration/updaters#component-markers-monorepos) such as `x-relwolf-version:api` and is
+  listed in the top-level `updaters`.
 
 ## Choosing a setup
 
@@ -58,6 +61,8 @@ of the group then no longer need a `component` for tags. `linked-tags: single` r
 
 With `separate-pull-requests: true` every package (or linked group) gets its own release request on the branch
 `<branch-prefix><branch>/<component>`. The package without a component uses `root`, so that name is reserved.
+Files of the top-level `updaters` are part of every request, but each request only updates the
+[component markers](/configuration/updaters#component-markers-monorepos) of its own packages.
 
 ## Example: multi-module Gradle project with axion-release
 

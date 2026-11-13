@@ -213,6 +213,31 @@
       "description": "Breaking changes only bump the minor version before 1.0.0 (default for all packages).",
       "type": "boolean"
     },
+    "updaters": {
+      "default": [],
+      "description": "Files with component markers (x-relwolf-version:<component>) that get the versions of several packages.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "generic",
+            "description": "Kind of file to update; only \"generic\" is supported."
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "description": "File to update, relative to the repository root. May be a glob."
+          }
+        },
+        "required": [
+          "type",
+          "path"
+        ],
+        "additionalProperties": false
+      }
+    },
     "packages": {
       "default": {
         ".": {

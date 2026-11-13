@@ -302,11 +302,23 @@ describe('new properties', () => {
       'packages:\n  a: {component: a}\n  ./a: {component: b}',
       'linked-versions: [[a, b], [b, c]]\npackages:\n  a: {component: a}\n  b: {component: b}\n  c: {component: c}',
       'separate-pull-requests: true\npackages:\n  ".": {}\n  x: {component: root}',
+      'updaters: [{type: generic, path: README.md}]\npackages:\n  ".": {}\n  x: {component: root}',
+      'updaters: [{type: json, path: a.json}]',
+      'updaters: [{type: generic, path: ../README.md}]',
     ];
 
     for (const yaml of bad) {
       expect(() => parseConfig(yaml), yaml).toThrow(ConfigError);
     }
+  });
+
+  it('parses top-level updaters relative to the repository root', () => {
+    expect(parseConfig(undefined).componentUpdaters).toEqual([]);
+    expect(
+      parseConfig(
+        'updaters: [{type: generic, path: ./docs//*.md}]\npackages:\n  a: {component: a}',
+      ).componentUpdaters,
+    ).toEqual([{type: 'generic', path: 'docs/*.md'}]);
   });
 
   it('enables release emojis only with a body that has the release block', () => {

@@ -3,7 +3,7 @@ import path from 'node:path';
 import type {UpdaterType} from '../config.js';
 import {updateDotnet} from './dotnet.js';
 import {UpdaterError} from './errors.js';
-import {updateGeneric} from './generic.js';
+import {updateComponentMarkers, updateGeneric} from './generic.js';
 import {updateGradle} from './gradle.js';
 import {updateJson, updatePackageLock} from './json.js';
 import {updatePackageJson} from './package-json.js';
@@ -17,7 +17,7 @@ import {
 } from './toml.js';
 import {updateHelm, updateYaml} from './yaml.js';
 
-export {UpdaterError};
+export {updateComponentMarkers, UpdaterError};
 
 export type UpdaterFn = (
   content: string,

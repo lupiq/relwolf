@@ -45,7 +45,11 @@ import {
   type ReleaseAs,
 } from './release-as.js';
 import {findReleaseTags, isValidReleaseTag, parseReleaseTag} from './tags.js';
-import {applyUpdater, companions} from './updaters/index.js';
+import {
+  applyUpdater,
+  companions,
+  updateComponentMarkers,
+} from './updaters/index.js';
 import {
   compareVersions,
   formatVersion,
@@ -559,6 +563,8 @@ async function buildFiles(
     await applyPlan(options, git, plan, load, notesByTag, emoji);
   }
 
+  await applyComponentUpdaters(options, git, plans, load);
+
   const entries = buildEntries(notesByTag, plans);
   const files = changedFiles(contents);
 
@@ -746,6 +752,40 @@ async function applyPlan(
   for (const updater of pkg.updaters) {
     for (const file of await expandPath(git, updater.path)) {
       await updateFile(updater, file, version, load);
+    }
+  }
+}
+
+/** Runs the top-level updaters: every component marker gets the version of its package if that is released now. */
+async function applyComponentUpdaters(
+  options: RunOptions,
+  git: Git,
+  plans: ReadonlyArray<PackagePlan>,
+  load: FileLoader,
+): Promise<void> {
+  const {componentUpdaters, packages} = options.config;
+  const known = new Set(packages.map(packageKey));
+  const versions = new Map(
+    plans.map(plan => [packageKey(plan.pkg), formatVersion(plan.version)]),
+  );
+
+  for (const updater of componentUpdaters) {
+    for (const file of await expandPath(git, updater.path)) {
+      const target = await load(file, true);
+      const result = updateComponentMarkers(
+        target.current,
+        versions,
+        known,
+        file,
+      );
+
+      target.current = result.content;
+
+      if (result.unreleased.length > 0) {
+        options.log?.(
+          `${file}: markers of ${result.unreleased.join(', ')} left unchanged, not released in this request.`,
+        );
+      }
     }
   }
 }

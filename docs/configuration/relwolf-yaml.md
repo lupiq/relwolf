@@ -38,6 +38,9 @@ pull-request-body: '...'
 separate-pull-requests: false
 linked-versions: false # true, or [[services/api, services/web]]
 linked-tags: per-package # or single: one tag and release per linked group
+updaters: # optional, files with component markers (x-relwolf-version:<component>), relative to the repository root
+  - type: generic # the only supported type here
+    path: README.md
 
 packages:
   '.':
@@ -55,7 +58,8 @@ packages:
         path: deploy/values.yaml
 ```
 
-Paths of updaters and the changelog are relative to the package path. Unknown keys are rejected.
+Paths of package updaters and the changelog are relative to the package path; paths of the top-level `updaters` are
+relative to the repository root. Unknown keys are rejected.
 
 ## Pre-commit script
 
@@ -124,6 +128,7 @@ To pin the schema explicitly (e.g. in editors without SchemaStore), add this as 
 | `separate-pull-requests`   | global          | `false`                                                       | One request per package, see [Monorepos](/configuration/monorepos)                                                                       |
 | `linked-versions`          | global          | `false`                                                       | Packages sharing one version, see [Monorepos](/configuration/monorepos)                                                                  |
 | `linked-tags`              | global          | `per-package`                                                 | `single`: one tag and release per linked group                                                                                           |
+| `updaters`                 | global          | none                                                          | `generic` updaters for [component markers](/configuration/updaters#component-markers-monorepos)                                          |
 | `prerelease`               | global, package | none                                                          | [Pre-release](/guide/pre-releases) identifier                                                                                            |
 | `bump-minor-pre-major`     | global, package | `true`                                                        | Breaking changes only bump minor before `1.0.0`                                                                                          |
 | `component`                | package         | none                                                          | Tag prefix, see [Monorepos](/configuration/monorepos)                                                                                    |
