@@ -1,5 +1,5 @@
 import {afterAll, afterEach, beforeAll, describe, expect, it} from 'vitest';
-import type {Sandbox} from './sandbox.js';
+import {PENDING_LABEL, type Sandbox} from './sandbox.js';
 
 /** The release flow scenarios, run once per provider against its sandbox. */
 export function defineReleaseScenarios(name: string, sandbox: Sandbox): void {
@@ -96,6 +96,25 @@ export function defineReleaseScenarios(name: string, sandbox: Sandbox): void {
 
       expect(again.tagged).toEqual([]);
       expect(again.releaseRequests[0]).toBeUndefined();
+    });
+
+    it('aborts when the release tag already exists on another commit', async () => {
+      const branch = await newBranch();
+      const sha = await sandbox.commit(branch, 'feat: Add search', {
+        'src/search.txt': 'a',
+      });
+      const {releaseRequests} = await sandbox.runRelwolf(branch);
+
+      await sandbox.createTag('v0.1.0', sha);
+      await sandbox.merge(releaseRequests[0]!.id);
+
+      await expect(sandbox.runRelwolf(branch)).rejects.toThrow(
+        `Tag v0.1.0 already exists but points to ${sha} instead of the merge commit`,
+      );
+      expect(await sandbox.releaseBody('v0.1.0')).toBeNull();
+      expect(
+        (await sandbox.releaseRequest(releaseRequests[0]!.id)).labels,
+      ).toContain(PENDING_LABEL);
     });
 
     it('releases the packages of a monorepo independently', async () => {

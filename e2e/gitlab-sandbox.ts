@@ -192,6 +192,12 @@ export class GitLabSandbox implements Sandbox {
     return response.status !== 404;
   }
 
+  async createTag(tag: string, sha: string): Promise<void> {
+    await this.http.request('POST', `${this.project}/repository/tags`, {
+      body: {tag_name: tag, ref: sha, message: `Manual tag ${tag}`},
+    });
+  }
+
   async releaseBody(tag: string): Promise<string | null> {
     const response = await this.http.request(
       'GET',

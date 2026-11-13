@@ -440,6 +440,18 @@ describe('tagging merged release requests', () => {
     expect(provider.requests[0]!.labels).toEqual(['relwolf: tagged']);
   });
 
+  it('aborts when an existing tag does not point to the merge commit', async () => {
+    await firstRelease();
+
+    provider.tags.set('v0.1.0', '0'.repeat(40));
+
+    await expect(exec(NODE_CONFIG)).rejects.toThrow(
+      /Tag v0\.1\.0 already exists but points to \w+ instead of the merge commit/,
+    );
+    expect(provider.releases).toHaveLength(0);
+    expect(provider.requests[0]!.labels).toEqual(['relwolf: pending']);
+  });
+
   it('does not create a release twice', async () => {
     await firstRelease();
     provider.releases.push({

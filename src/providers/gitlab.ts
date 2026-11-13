@@ -264,7 +264,10 @@ export class GitLabProvider implements Provider {
     });
   }
 
-  async createTag(name: string, sha: string): Promise<'created' | 'exists'> {
+  async createTag(
+    name: string,
+    sha: string,
+  ): Promise<{created: boolean; sha: string}> {
     const response = await this.http.request(
       'POST',
       `${this.project}/repository/tags`,
@@ -275,18 +278,31 @@ export class GitLabProvider implements Provider {
     );
 
     if (response.status < 300) {
-      return 'created';
+      return {created: true, sha};
     }
 
     if (/already exists/i.test(JSON.stringify(response.data))) {
-      return 'exists';
+      const existing = await this.http.request(
+        'GET',
+        `${this.project}/repository/tags/${encodeURIComponent(name)}`,
+      );
+      const commit = (existing.data as {commit?: {id?: string}} | null)?.commit
+        ?.id;
+
+      if (!commit) {
+        throw new ProviderError(
+          `Could not determine the commit of the existing tag ${name}.`,
+        );
+      }
+
+      return {created: false, sha: commit};
     }
 
     await this.http.request('POST', `${this.project}/repository/tags`, {
       body: {tag_name: name, ref: sha},
     });
 
-    return 'created';
+    return {created: true, sha};
   }
 
   async releaseExists(tag: string): Promise<boolean> {

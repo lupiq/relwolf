@@ -174,14 +174,19 @@ export class FakeProvider implements Provider {
     ];
   }
 
-  async createTag(name: string, sha: string): Promise<'created' | 'exists'> {
-    if (this.tags.has(name)) {
-      return 'exists';
+  async createTag(
+    name: string,
+    sha: string,
+  ): Promise<{created: boolean; sha: string}> {
+    const existing = this.tags.get(name);
+
+    if (existing !== undefined) {
+      return {created: false, sha: existing};
     }
 
     this.tags.set(name, sha);
 
-    return 'created';
+    return {created: true, sha};
   }
 
   async releaseExists(tag: string): Promise<boolean> {

@@ -300,23 +300,52 @@ export class GitHubProvider implements Provider {
     }
   }
 
-  async createTag(name: string, sha: string): Promise<'created' | 'exists'> {
+  async createTag(
+    name: string,
+    sha: string,
+  ): Promise<{created: boolean; sha: string}> {
     const response = await this.http.request('POST', `${this.repo}/git/refs`, {
       body: {ref: `refs/tags/${name}`, sha},
       allow: [422],
     });
 
     if (response.status < 300) {
-      return 'created';
+      return {created: true, sha};
     }
 
     if (/already exists/i.test(JSON.stringify(response.data))) {
-      return 'exists';
+      return {created: false, sha: await this.tagCommit(name)};
     }
 
     throw new Error(
       `Could not create tag ${name}: ${JSON.stringify(response.data)}`,
     );
+  }
+
+  /** The commit a tag points to, peeling annotated tags. */
+  private async tagCommit(name: string): Promise<string> {
+    const objectAt = async (path: string) =>
+      (
+        (await this.http.request('GET', `${this.repo}${path}`)).data as {
+          object?: {type?: string; sha?: string};
+        } | null
+      )?.object;
+    let target = await objectAt(`/git/ref/tags/${encodeRef(name)}`);
+
+    // Annotated tags may point to further tag objects; the depth limit guards against cycles.
+    for (let depth = 0; target?.type === 'tag' && depth < 10; depth++) {
+      target = await objectAt(
+        `/git/tags/${encodeURIComponent(target.sha ?? '')}`,
+      );
+    }
+
+    if (target?.type !== 'commit' || !target.sha) {
+      throw new Error(
+        `Could not determine the commit of the existing tag ${name}.`,
+      );
+    }
+
+    return target.sha;
   }
 
   async releaseExists(tag: string): Promise<boolean> {

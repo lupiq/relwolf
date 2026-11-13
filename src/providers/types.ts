@@ -80,8 +80,14 @@ export interface Provider {
     options: {add: Array<string>; remove: Array<string>},
   ): Promise<void>;
 
-  /** Creates a lightweight tag; resolves to "exists" if it is already present. */
-  createTag(name: string, sha: string): Promise<'created' | 'exists'>;
+  /**
+   * Creates a lightweight tag. If it is already present, nothing is changed and `sha` is the commit the
+   * existing tag points to (annotated tags are peeled), which may differ from the requested one.
+   */
+  createTag(
+    name: string,
+    sha: string,
+  ): Promise<{created: boolean; sha: string}>;
 
   releaseExists(tag: string): Promise<boolean>;
 

@@ -354,26 +354,33 @@ describe('GitLabProvider', () => {
     expect(present.calls.map(c => c.method)).toEqual(['GET']);
   });
 
-  it('creates tags and treats existing tags as success', async () => {
+  it('creates tags and reports the commit of existing tags', async () => {
     const created = make(() => ({status: 201, json: {}}));
 
-    expect(await created.provider.createTag('v1.0.0', 'sha')).toBe('created');
+    expect(await created.provider.createTag('v1.0.0', 'sha')).toEqual({
+      created: true,
+      sha: 'sha',
+    });
     expect(created.calls[0]!.body).toEqual({tag_name: 'v1.0.0', ref: 'sha'});
 
-    const exists = make(() => ({
-      status: 409,
-      json: {message: 'Tag v1.0.0 already exists'},
-    }));
+    const existing = (status: number) =>
+      make(call =>
+        call.method === 'POST'
+          ? {status, json: {message: 'Tag pkg/v1.0.0 already exists'}}
+          : {json: {name: 'pkg/v1.0.0', commit: {id: 'other'}}},
+      );
+    const exists = existing(409);
 
-    expect(await exists.provider.createTag('v1.0.0', 'sha')).toBe('exists');
+    expect(await exists.provider.createTag('pkg/v1.0.0', 'sha')).toEqual({
+      created: false,
+      sha: 'other',
+    });
+    expect(exists.calls[1]!.url.pathname).toBe(
+      '/api/v4/projects/group%2Fproject/repository/tags/pkg%2Fv1.0.0',
+    );
 
-    const existsAs400 = make(() => ({
-      status: 400,
-      json: {message: 'Tag v1.0.0 already exists'},
-    }));
-
-    expect(await existsAs400.provider.createTag('v1.0.0', 'sha')).toBe(
-      'exists',
+    expect(await existing(400).provider.createTag('pkg/v1.0.0', 'sha')).toEqual(
+      {created: false, sha: 'other'},
     );
 
     const broken = make(() => ({
@@ -706,15 +713,30 @@ describe('GitHubProvider', () => {
   it('creates tags, releases and labels', async () => {
     const tag = make(() => ({status: 201, json: {}}));
 
-    expect(await tag.provider.createTag('v1.0.0', 'sha')).toBe('created');
+    expect(await tag.provider.createTag('v1.0.0', 'sha')).toEqual({
+      created: true,
+      sha: 'sha',
+    });
     expect(tag.calls[0]!.body).toEqual({ref: 'refs/tags/v1.0.0', sha: 'sha'});
 
-    const exists = make(() => ({
-      status: 422,
-      json: {message: 'Reference already exists'},
-    }));
+    const exists = make(call => {
+      if (call.method === 'POST') {
+        return {status: 422, json: {message: 'Reference already exists'}};
+      }
 
-    expect(await exists.provider.createTag('v1.0.0', 'sha')).toBe('exists');
+      return call.url.pathname.endsWith('/git/ref/tags/pkg/v1.0.0')
+        ? {json: {object: {type: 'tag', sha: 'tagobject'}}}
+        : {json: {object: {type: 'commit', sha: 'other'}}};
+    });
+
+    expect(await exists.provider.createTag('pkg/v1.0.0', 'sha')).toEqual({
+      created: false,
+      sha: 'other',
+    });
+    expect(exists.calls.slice(1).map(c => c.url.pathname)).toEqual([
+      '/repos/lupiq/relwolf/git/ref/tags/pkg/v1.0.0',
+      '/repos/lupiq/relwolf/git/tags/tagobject',
+    ]);
 
     const broken = make(() => ({
       status: 422,

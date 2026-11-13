@@ -280,10 +280,17 @@ async function tagAndRelease(
   const {provider, config} = options;
   const result = await provider.createTag(entry.tag, mergeSha);
 
+  if (!result.created && result.sha !== mergeSha) {
+    throw new RunError(
+      `Tag ${entry.tag} already exists but points to ${result.sha} instead of the merge commit ${mergeSha}. ` +
+        'Delete the tag or move it to the merge commit, then re-run relwolf.',
+    );
+  }
+
   log(
-    result === 'created'
+    result.created
       ? `Created tag ${entry.tag}.`
-      : `Tag ${entry.tag} already exists.`,
+      : `Tag ${entry.tag} already exists on the merge commit.`,
   );
 
   if (!(await git.hasTag(entry.tag))) {

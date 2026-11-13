@@ -215,6 +215,16 @@ export class GitHubSandbox implements Sandbox {
     return response.status !== 404;
   }
 
+  async createTag(tag: string, sha: string): Promise<void> {
+    const {data} = await this.http.request('POST', `${this.repo}/git/tags`, {
+      body: {tag, message: `Manual tag ${tag}`, object: sha, type: 'commit'},
+    });
+
+    await this.http.request('POST', `${this.repo}/git/refs`, {
+      body: {ref: `refs/tags/${tag}`, sha: data.sha as string},
+    });
+  }
+
   async releaseBody(tag: string): Promise<string | null> {
     const response = await this.http.request(
       'GET',

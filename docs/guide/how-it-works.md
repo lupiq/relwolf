@@ -13,7 +13,8 @@ Merge requests labelled `relwolf: pending` that were merged into the default bra
 the merge produced (the squash commit) and a release published. The notes are taken from the merge request description,
 so you can edit them before merging. Afterwards the label is switched to `relwolf: tagged`.
 
-Every step is idempotent, so a failed job can simply be re-run.
+Every step is idempotent, so a failed job can simply be re-run. If the tag already exists on another commit, the run
+aborts instead of publishing a release for it.
 
 ## 2. Prepare the next release
 

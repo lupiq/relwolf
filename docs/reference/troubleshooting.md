@@ -36,6 +36,12 @@ relwolf needs the full history and all tags. Set `GIT_DEPTH: 0` (GitLab) or `fet
 relwolf tags the resulting commit on the default branch. If it is not an ancestor of the current `HEAD` yet, the merge
 request is skipped until a later run. Re-run the job; every step is idempotent.
 
+## The tag already exists but points to another commit
+
+The release tag was created before relwolf tagged the merge commit (by hand or by another tool). relwolf aborts
+instead of publishing a release for a commit that is not the merged release request. Check the tag, then delete it or
+move it to the merge commit named in the error and re-run the job.
+
 ## `RELWOLF_RELEASE_AS` is rejected
 
 The version must be greater than the last tag. To remove a stored request, run once with `RELWOLF_RELEASE_AS=auto`.

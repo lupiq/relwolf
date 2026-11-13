@@ -37,6 +37,8 @@ export interface Sandbox {
   /** Squash-merges the release request, waiting until the platform has finished checking it. */
   merge(id: number): Promise<void>;
   tagExists(tag: string): Promise<boolean>;
+  /** Creates an annotated tag on `sha`, like a tag pushed by hand would typically be. */
+  createTag(tag: string, sha: string): Promise<void>;
   /** The notes of the release of `tag`, or null if there is no release. */
   releaseBody(tag: string): Promise<string | null>;
   /** Runs relwolf against a fresh full clone of `branch`, like a CI job would. */
