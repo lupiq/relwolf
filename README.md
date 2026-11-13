@@ -28,14 +28,14 @@ relwolf is developed by [lupiq](https://lupiq.com) and released under the [MIT L
 
 ## Getting started
 
-relwolf runs as a single CI job on every push to your default branch. It needs the full git history, a personal
-access token and squash merging for release requests. Pick your platform:
+relwolf runs as a single CI job on every push to your default branch. It needs the full git history, an access token
+and squash merging for release requests. Pick your platform:
 
 - **GitLab:** [Setup guide for GitLab CI](https://relwolf.lupiq.io/guide/gitlab)
 - **GitHub:** [Setup guide for GitHub Actions](https://relwolf.lupiq.io/guide/github)
 
 New to relwolf? [Getting started](https://relwolf.lupiq.io/guide/getting-started) explains the concepts, and
-[GitLab vs. GitHub](https://relwolf.lupiq.io/reference/github-vs-gitlab) lists the differences between the two.
+[GitHub vs. GitLab](https://relwolf.lupiq.io/reference/github-vs-gitlab) lists the differences between the two.
 
 For configuration (`relwolf.yaml`), monorepos, updaters, pre-releases, forcing a version and everything else, see the
 [documentation](https://relwolf.lupiq.io).

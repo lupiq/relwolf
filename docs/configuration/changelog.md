@@ -7,7 +7,8 @@ description: Control the format of your release changelog with a cliff.toml. rel
 
 relwolf delegates all changelog formatting to [git-cliff](https://git-cliff.org/) (bundled via npm). Put a `cliff.toml`
 into your repository to control groups, templates, header and footer. Which commit types appear in the changelog is
-purely git-cliff configuration.
+purely git-cliff configuration. With [`strategy: changesets`](/configuration/changesets#changelog-generators),
+changesets writes the changelogs instead and this page does not apply.
 
 - relwolf passes the file with `--config` when you set `cliff-config`; otherwise git-cliff finds `cliff.toml` in the
   repository root on its own.
@@ -30,17 +31,17 @@ purely git-cliff configuration.
   Alternatively set `changelog-title` per package in `relwolf.yaml`; it replaces the leading `# ` heading produced by
   your header and also supports `${component}`.
 
+::: warning
+Release merge requests are titled `chore(release): Create release …` (see `pull-request-title`). Make sure your `cliff.toml` does not list that commit
+in the changelog (relwolf's own `cliff.toml` skips all `chore` commits).
+:::
+
 ## Links to component changelogs
 
 With `changelog-links: true` (monorepos), relwolf writes a list of links to the changelogs of all other packages below
 the title of the changelog of the root package (path `.`), labelled with the `component`. The text above the list is
 `changelog-links-text`. The block sits between `<!-- relwolf:changelog-links:start -->` and `…:end -->` and is replaced on
 every release of the root package.
-
-::: warning
-Release merge requests are titled `chore(release): Create release …` (see `pull-request-title`). Make sure your `cliff.toml` does not list that commit
-in the changelog (relwolf's own `cliff.toml` skips all `chore` commits).
-:::
 
 ## Rewrite the whole changelog
 

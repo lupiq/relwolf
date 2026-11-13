@@ -10,7 +10,7 @@ Works with gitlab.com and self-managed instances.
 ## 1. Create a token
 
 Create a **personal or project access token** with the `api` scope and role Developer or higher. It must be able to push
-the branch `relwolf/main`, create merge requests, tags and releases.
+the release branch (`relwolf/<branch>`, e.g. `relwolf/main`), create merge requests, tags and releases.
 
 Store it as a masked CI/CD variable named **`RELWOLF_TOKEN`** (required; relwolf aborts without it). GitLab exposes
 CI/CD variables to the job as environment variables, so the job needs no further configuration for it.
@@ -25,7 +25,7 @@ CI/CD variables to the job as environment variables, so the job needs no further
 ```yaml [.gitlab-ci.yml]
 relwolf:
   image: ghcr.io/lupiq/relwolf:0 # x-relwolf-major
-  stage: release
+  stage: release # add it to your `stages:` or use an existing stage such as deploy
   resource_group: relwolf
   variables:
     GIT_DEPTH: 0 # relwolf needs the full history and all tags

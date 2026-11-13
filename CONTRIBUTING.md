@@ -39,10 +39,10 @@ subject starts with a capital letter, e.g. `feat: Add dry-run mode`. relwolf rel
 | Type                    | Release |
 | ----------------------- | ------- |
 | `feat`                  | minor   |
-| `fix`, `build`          | patch   |
+| `fix`, `build`, `docs`  | patch   |
 | `!` / `BREAKING CHANGE` | major   |
 
-Other types (`docs`, `test`, `chore`, `ci`, `refactor`, …) do not trigger a release.
+Other types (`test`, `chore`, `ci`, `refactor`, …) do not trigger a release.
 
 The `commit-msg` hook also spell-checks the message with [cspell](https://cspell.org) and rejects the commit on
 unknown words. Add legitimate project terms to `words` in `cspell.json`.

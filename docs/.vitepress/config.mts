@@ -2,7 +2,7 @@ import {defineConfig} from 'vitepress';
 
 const hostname = 'https://relwolf.lupiq.io';
 const siteDescription =
-  'Release bot for GitLab and GitHub, driven by Conventional Commits.';
+  'Release bot for GitLab and GitHub, driven by Conventional Commits or Changesets.';
 
 export default defineConfig({
   title: 'relwolf',
@@ -116,7 +116,7 @@ export default defineConfig({
   themeConfig: {
     logo: '/logo.svg',
     nav: [
-      {text: 'Guide', link: '/guide/getting-started', activeMatch: '/guide/'},
+      {text: 'Guide', link: '/guide/', activeMatch: '/guide/'},
       {
         text: 'Configuration',
         link: '/configuration/',
@@ -124,7 +124,7 @@ export default defineConfig({
       },
       {
         text: 'Reference',
-        link: '/reference/github-vs-gitlab',
+        link: '/reference/',
         activeMatch: '/reference/',
       },
       {text: 'Changelog', link: '/changelog'},
@@ -133,6 +133,7 @@ export default defineConfig({
     sidebar: [
       {
         text: 'Guide',
+        link: '/guide/',
         items: [
           {text: 'Getting started', link: '/guide/getting-started'},
           {text: 'GitLab', link: '/guide/gitlab'},
@@ -146,6 +147,7 @@ export default defineConfig({
       },
       {
         text: 'Configuration',
+        link: '/configuration/',
         items: [
           {text: 'relwolf.yaml', link: '/configuration/relwolf-yaml'},
           {text: 'Monorepos', link: '/configuration/monorepos'},
@@ -156,6 +158,7 @@ export default defineConfig({
       },
       {
         text: 'Reference',
+        link: '/reference/',
         items: [
           {text: 'GitHub vs. GitLab', link: '/reference/github-vs-gitlab'},
           {
@@ -168,6 +171,7 @@ export default defineConfig({
       },
       {
         text: 'Development',
+        link: '/development/',
         items: [{text: 'Contributing', link: '/development/contributing'}],
       },
       {text: 'Changelog', link: '/changelog'},

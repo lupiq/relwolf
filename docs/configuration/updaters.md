@@ -21,7 +21,7 @@ Updaters change the version in your project files in the release commit.
 | `toml`         | – (`path` + `key`) | the string at a key path of any TOML file                                                       |
 | `generic`      | – (`path` needed)  | the first version on every line containing a marker (see below)                                 |
 
-Each updater takes an optional `path`, relative to the package. The path may be a glob (e.g. `charts/*/Chart.yaml`); every tracked file that matches is updated, and a glob without match fails the run.
+Each updater takes a `path`, relative to the package; it is optional for types with a default path. The path may be a glob (e.g. `charts/*/Chart.yaml`); every tracked file that matches is updated, and a glob without match fails the run.
 
 In monorepos, a file with the versions of several components uses [component markers](#component-markers-monorepos)
 and the top-level `updaters`.
@@ -62,15 +62,6 @@ updaters:
     key: tool.mytool.version
 ```
 
-## Not needed or covered by `generic`
-
-- **Go, Swift, Terraform modules:** the version lives only in the git tag; nothing to update.
-- **Ruby gemspec / `version.rb`, Python `setup.py` / `setup.cfg` / `__init__.py`, Elixir `mix.exs`:** put the marker on the line with the version and list the file as `generic`:
-
-  ```ruby
-  VERSION = '1.2.3' # x-relwolf-version
-  ```
-
 ## Generic updater
 
 ```yaml
@@ -80,6 +71,15 @@ image:
 
 The marker has to be the **last thing on the line** (usually in a comment, optionally before a closing `-->` or `*/`).
 Its name selects the granularity of the first matching version on that line. A leading `v` is kept.
+
+## Not needed or covered by `generic`
+
+- **Go, Swift, Terraform modules:** the version lives only in the git tag; nothing to update.
+- **Ruby gemspec / `version.rb`, Python `setup.py` / `setup.cfg` / `__init__.py`, Elixir `mix.exs`:** put the marker on the line with the version and list the file as `generic`:
+
+  ```ruby
+  VERSION = '1.2.3' # x-relwolf-version
+  ```
 
 ## Partial markers
 
@@ -161,7 +161,7 @@ Top-level `updaters` only support `type: generic`; `key` and `lockfiles` are not
 
 ### Package updaters ignore component markers
 
-The `generic` updaters inside `packages` work as before. They update unsuffixed markers with the version of their own
+The `generic` updaters inside `packages` are not affected by component markers. They update unsuffixed markers with the version of their own
 package and skip markers with a component suffix, and a file they handle still needs at least one unsuffixed marker.
 
 Do not list the same file both in a package and in the top-level `updaters`: the top-level updater rejects its

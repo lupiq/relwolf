@@ -6,7 +6,7 @@ name: Release
 # The token is created from a GitHub App (variable RELWOLF_APP_CLIENT_ID, secret RELWOLF_APP_PRIVATE_KEY), so the
 # release pull requests are not authored by a maintainer. It must not be GITHUB_TOKEN, otherwise the tag push would
 # not trigger the "Publish image" workflow.
-# Required app permissions: contents: write, pull requests: write, issues: write (labels and assignees).
+# Required app permissions: contents: write, pull requests: write (also covers labels and assignees).
 
 on:
   push:

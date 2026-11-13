@@ -12,7 +12,7 @@ Failed API calls print a `Hint:` with the likely cause:
 - **401**: the token is invalid, expired or revoked, or belongs to another instance.
 - **403**: the token lacks permissions. GitLab needs the `api` scope and the role Developer or higher; check protected
   branches (`relwolf/*`) and protected tags. GitHub needs _contents_ and _pull requests_ write access, see
-  [GitHub](/guide/github#_1-create-a-token).
+  [GitHub](/guide/github#_1-create-a-token); branch protection and rulesets can block the request, too.
 - **404**: the project or repository was not found, or the token cannot access it (both platforms answer 404 then).
   Check `CI_PROJECT_ID` / `GITHUB_REPOSITORY`.
 
@@ -48,7 +48,8 @@ The version must be greater than the last tag. To remove a stored request, run o
 
 ## No CI on the release pull request (GitHub)
 
-Events created with `GITHUB_TOKEN` do not trigger workflows. Use a personal access token as `RELWOLF_TOKEN`.
+Events created with `GITHUB_TOKEN` do not trigger workflows. Use a personal access token or a
+[GitHub App](/guide/github#alternative-github-app) token as `RELWOLF_TOKEN`.
 
 ## The release commit shows up in the changelog
 

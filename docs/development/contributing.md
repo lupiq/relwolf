@@ -31,5 +31,5 @@ Design decisions, architecture and extension notes are documented in
 [Renovate](https://docs.renovatebot.com/) (`renovate.json`) keeps dependencies, GitHub Actions and the Docker base image
 up to date. Install the [Renovate GitHub App](https://github.com/apps/renovate) for the repository and allow squash
 merging. Updates use the commit type `build`, which relwolf is configured to release as a patch
-(`patch-types: [fix, build]`). Minor and patch updates are merged automatically once CI is green; major updates need a manual merge. Related
+(`patch-types: [fix, build, docs]`). Minor and patch updates are merged automatically once CI is green; major updates need a manual merge. Related
 packages (TypeScript, ESLint, Vitest, commitlint, Prettier, pnpm) are updated together.

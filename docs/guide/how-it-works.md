@@ -27,11 +27,15 @@ relwolf
 
 - generates the new changelog entry with [git-cliff](https://git-cliff.org/),
 - updates the version in the configured files,
-- force-pushes a single commit to `relwolf/<branch>` through the API (the working tree is never modified),
+- force-pushes a single commit to `relwolf/<branch>` through the API (the working tree is only touched by a
+  [`pre-commit-script`](/configuration/relwolf-yaml#pre-commit-script) and reset afterwards),
 - creates or updates the merge request `chore(release): Create release v1.2.3` labelled `relwolf: pending`.
 
 Branch prefix, labels, title and body are [configurable](/configuration/relwolf-yaml#release-request). With several packages they
 share one request by default; see [Monorepos](/configuration/monorepos) for separate requests and linked versions.
+
+With [`strategy: changesets`](/configuration/changesets), the pending changesets replace the commit analysis and
+git-cliff; the rest of the run is the same.
 
 ## Customising a release
 
@@ -74,7 +78,8 @@ recommitted. There is no database and no other state.
 ## Git access
 
 The CI job provides a full git clone. Git is used **read-only**; all writes (branch commit, merge request, labels, tags,
-releases) go through the provider API.
+releases) go through the provider API. Only the [`pre-commit-script`](/configuration/relwolf-yaml#pre-commit-script)
+and the [Changesets](/configuration/changesets) strategy write to the working tree, which is reset afterwards.
 
 ## Example timeline
 

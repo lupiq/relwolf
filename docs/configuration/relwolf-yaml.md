@@ -29,6 +29,7 @@ release-emoji: false # true: prefix the default release title with a random emoj
 branch-prefix: relwolf/
 labels: {pending: 'relwolf: pending', tagged: 'relwolf: tagged'}
 draft: false
+http-timeout: 120 # seconds per API request attempt
 no-changes-text: 'No changes, version bumped to stay in sync.' # '' to add nothing
 changelog-links: false # true: link the changelogs of all other packages in the root changelog
 changelog-links-text: 'For changes to individual components, see their changelogs:'
@@ -48,7 +49,7 @@ packages:
     component: app # optional for one package; required for every other package (used as tag prefix)
     changelog-path: CHANGELOG.md # relative to the package path
     changelog-title: 'Changelog ${component}' # optional, replaces the git-cliff header title
-    initial-version: 1.0.0 # optional, first stable version if no tag exists
+    initial-version: 1.0.0 # optional, first version if no stable tag exists
     prerelease: rc # optional, overrides the global value
     bump-minor-pre-major: false # optional, overrides the global value
     updaters:
@@ -136,7 +137,7 @@ To pin the schema explicitly (e.g. in editors without SchemaStore), add this as 
 | `component`                | package         | none                                                          | Tag prefix, see [Monorepos](/configuration/monorepos)                                                                                    |
 | `changelog-path`           | package         | `CHANGELOG.md`                                                | Changelog file, relative to the package                                                                                                  |
 | `changelog-title`          | package         | from the git-cliff header                                     | Replaces the leading `# ` heading of the changelog; `${component}` is replaced by the component                                          |
-| `initial-version`          | package         | computed from `0.0.0`                                         | First stable version if no tag exists                                                                                                    |
+| `initial-version`          | package         | computed from `0.0.0`                                         | First version if no stable tag exists                                                                                                    |
 | `updaters`                 | package         | none                                                          | [Files to update](/configuration/updaters)                                                                                               |
 
 ## Commit types
@@ -150,7 +151,8 @@ it). A type may only be in one list. Breaking changes (`!` or `BREAKING CHANGE`)
 
 `tag-template` contains `${version}` exactly once and may contain `${component}` (once). Without a component, the
 placeholder and the separator behind it are dropped, so the default yields `v1.2.3` or `api-v1.2.3`. With several
-packages the template must contain `${component}`. Only letters, digits and `._/@-` are allowed as literal characters.
+packages the template must contain `${component}`, unless
+[`linked-tags: single`](/configuration/monorepos#linked-versions) leaves only one package that gets tags. Only letters, digits and `._/@-` are allowed as literal characters.
 
 `release-name` supports `${tag}`, `${version}` (without prefix) and `${component}`.
 

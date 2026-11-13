@@ -11,10 +11,11 @@ relwolf is available as a Docker container action. It runs on **Linux runners** 
 
 Store a token as the repository secret **`RELWOLF_TOKEN`**.
 
-| Token                   | Permissions                                                                                                                          | Notes                                                                                      |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
-| Personal access token   | _contents_ and _pull requests_ write                                                                                                 | Recommended: CI runs on the release pull request and the tag push triggers other workflows |
-| Built-in `GITHUB_TOKEN` | `contents: write`, `pull-requests: write`, and _Allow GitHub Actions to create and approve pull requests_ in the repository settings | Events created with it do not trigger other workflows                                      |
+| Token                   | Permissions                                                                                                                          | Notes                                                                                        |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------- |
+| Personal access token   | _contents_ and _pull requests_ write                                                                                                 | Recommended: CI runs on the release pull request and the tag push triggers other workflows   |
+| GitHub App token        | _Contents_ and _Pull requests_ read and write                                                                                        | Like a personal access token, but not tied to a person, see [below](#alternative-github-app) |
+| Built-in `GITHUB_TOKEN` | `contents: write`, `pull-requests: write`, and _Allow GitHub Actions to create and approve pull requests_ in the repository settings | Events created with it do not trigger other workflows                                        |
 
 ### Alternative: GitHub App
 
@@ -26,7 +27,7 @@ workflows.
    if the repository belongs to one, otherwise the app can only be installed on your personal account.
 2. Enter a unique name (e.g. `acme-relwolf`, the name of your organization plus `relwolf`) and any homepage URL.
 3. Disable _Webhook → Active_.
-4. Set the repository permissions _Contents_, _Pull requests_ and _Issues_ (labels and assignees) to _Read and write_.
+4. Set the repository permissions _Contents_ and _Pull requests_ (also covers labels and assignees) to _Read and write_.
 5. Under _Where can this GitHub App be installed?_ choose _Only on this account_ and create the app.
 6. Copy the **Client ID** from the app page and store it as the repository variable `RELWOLF_APP_CLIENT_ID`.
 7. Click _Generate a private key_ and store the content of the downloaded `.pem` file as the repository secret
@@ -76,8 +77,13 @@ jobs:
           token: ${{ secrets.RELWOLF_TOKEN }}
 ```
 
-The action runs the Docker image of the same version. The major tag (`@v1` above) follows the latest stable release of
+The action runs the Docker image of the same version. A major tag such as `@v1` follows the latest stable release of
 that major version; use an exact tag such as `@v1.2.3` to pin.
+
+## 4. Configure (optional)
+
+Add a [`relwolf.yaml`](/configuration/relwolf-yaml) to the repository root to update version files, set a pre-release
+channel or configure a monorepo.
 
 ## Action inputs
 
@@ -106,10 +112,6 @@ on:
 ```
 
 Then start the workflow from the _Actions_ tab, or with `gh workflow run release.yml -f release-as=1.0.0`.
-
-## Configure (optional)
-
-Add a [`relwolf.yaml`](/configuration/relwolf-yaml) to the repository root.
 
 ## What you will see
 

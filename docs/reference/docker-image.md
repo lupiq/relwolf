@@ -8,13 +8,13 @@ description: The public relwolf Docker image on ghcr.io - tags, platforms and us
 `ghcr.io/lupiq/relwolf` (linux/amd64, linux/arm64), built by GitHub Actions on every release tag. The image is public and
 contains Node.js 26, git and relwolf with git-cliff. When running relwolf without the image, Node.js 26 or newer is required.
 
-| Tag            | Meaning                         |
-| -------------- | ------------------------------- |
-| `latest`       | latest release                  |
-| `X.Y.Z`        | exact version                   |
-| `X.Y`          | latest patch of a minor version |
-| `X`            | latest minor of a major version |
-| `sha-<commit>` | a specific build                |
+| Tag            | Meaning                                |
+| -------------- | -------------------------------------- |
+| `latest`       | latest stable release                  |
+| `X.Y.Z`        | exact version (also pre-releases)      |
+| `X.Y`          | latest stable patch of a minor version |
+| `X`            | latest stable minor of a major version |
+| `sha-<commit>` | a specific build                       |
 
 ```yaml
 image: ghcr.io/lupiq/relwolf:0 # x-relwolf-major

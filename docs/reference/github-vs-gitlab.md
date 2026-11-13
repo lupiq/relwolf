@@ -13,7 +13,7 @@ relwolf's hosting platform is an interface with two implementations. The provide
 | Run relwolf with      | Docker image as `image:` of a CI job            | `lupiq/relwolf` GitHub Action (Linux runners)        |
 | Release request       | Merge request                                   | Pull request                                         |
 | Token variable        | CI/CD variable `RELWOLF_TOKEN` (masked)         | Repository secret `RELWOLF_TOKEN`, passed as `token` |
-| Token type            | Personal/project access token, scope `api`      | Personal access token or `GITHUB_TOKEN`              |
+| Token type            | Personal/project access token, scope `api`      | Personal access token, GitHub App or `GITHUB_TOKEN`  |
 | Full clone            | `GIT_DEPTH: 0`                                  | `fetch-depth: 0`                                     |
 | Prevent parallel runs | `resource_group: relwolf`                       | `concurrency: group: release`                        |
 | Merge method          | Fast-forward merge + Squash                     | Squash merging only                                  |
@@ -29,7 +29,7 @@ relwolf's hosting platform is an interface with two implementations. The provide
 ```yaml [GitLab]
 relwolf:
   image: ghcr.io/lupiq/relwolf:0 # x-relwolf-major
-  stage: release
+  stage: release # add it to your `stages:` or use an existing stage such as deploy
   resource_group: relwolf
   variables:
     GIT_DEPTH: 0

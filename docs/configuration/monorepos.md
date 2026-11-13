@@ -54,8 +54,9 @@ A package can be in one group only, and a group needs at least two packages.
 
 By default every linked package still gets its own tag and release. With `linked-tags: single` a group gets **one** tag
 and **one** release, named by the group's first package (the root package `.` if it is a member); its `tag-template`
-applies. The release notes contain one section per package, and every package keeps its own changelog file. Packages
-of the group then no longer need a `component` for tags. `linked-tags: single` requires `linked-versions`.
+applies. The release notes contain one section per package, and every package keeps its own changelog file. Since the
+other packages of the group get no tags, `tag-template` does not need `${component}` to keep their tags apart; the rule
+that only one package may omit `component` still applies. `linked-tags: single` requires `linked-versions`.
 
 ## Separate release requests
 

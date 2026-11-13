@@ -18,6 +18,10 @@ relwolf follows the workflow of Google's [release-please](https://github.com/goo
 relwolf runs once per job (no daemon, no webhooks) and is shipped as a Docker image, so it can be used directly as the
 `image:` of a GitLab CI job or through the GitHub Action.
 
+Prefer to describe changes in changeset files instead of commit messages? With
+[`strategy: changesets`](/configuration/changesets), [Changesets](https://changesets.dev) decides versions and
+changelogs, and relwolf takes care of the release merge request, tags and releases.
+
 ## Choose your platform
 
 |             | GitLab                             | GitHub                        |
@@ -33,7 +37,8 @@ See [GitHub vs. GitLab](/reference/github-vs-gitlab) for all differences.
 - Squash merging (GitLab: _Fast-forward merge_ with _Squash_). relwolf assumes there are no merge commits.
 - A full git clone with all tags. relwolf aborts with a clear error on shallow clones.
 - An access token with permission to push the branch `relwolf/<branch>`, create merge requests, tags and releases.
-- Commits following [Conventional Commits](https://www.conventionalcommits.org/).
+- Commits following [Conventional Commits](https://www.conventionalcommits.org/) (not needed with
+  [Changesets](/configuration/changesets)).
 
 ## Next steps
 

@@ -25,3 +25,5 @@ prerelease: beta
 | `feat:` after `v1.2.0` with `beta`  | `1.3.0-beta.1` |
 | another `fix:`                      | `1.3.0-beta.2` |
 | remove `prerelease` and run relwolf | `1.3.0`        |
+
+With [Changesets](/configuration/changesets#pre-releases), use the pre mode of changesets instead.

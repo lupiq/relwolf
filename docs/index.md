@@ -2,12 +2,12 @@
 layout: home
 title: relwolf - Semantic releases, on autopilot.
 titleTemplate: false
-description: relwolf automates releases from Conventional Commits. It opens a release merge request with changelog and version bump, tags merged releases and publishes them. For GitLab CI and GitHub Actions.
+description: relwolf automates releases from Conventional Commits or Changesets. It opens a release merge request with changelog and version bump, tags merged releases and publishes them. For GitLab CI and GitHub Actions.
 
 hero:
   name: relwolf
   text: Semantic releases, on autopilot.
-  tagline: A release bot for GitLab and GitHub, driven by Conventional Commits. It opens a release merge request, tags merged releases and publishes the changelog, in a single CI job.
+  tagline: A release bot for GitLab and GitHub, driven by Conventional Commits or Changesets. It opens a release merge request, tags merged releases and publishes the changelog, in a single CI job.
   image:
     src: /logo.svg
     alt: relwolf
@@ -28,13 +28,13 @@ features:
     link: /guide/version-rules
     linkText: Version rules
   - title: Release merge request
-    details: The changelog and the new version in your project files arrive as a reviewable merge (pull) request. Edit the notes before merging; the request is the only state.
+    details: The changelog and the new version in your project files arrive as a reviewable merge (pull) request. Once it is merged, relwolf tags the commit and creates a release with the changelog entry.
     link: /guide/how-it-works
     linkText: How it works
-  - title: Tag and release on merge
-    details: When the release request is merged, relwolf tags the commit and creates a release with the changelog entry.
-    link: /guide/how-it-works#_1-tag-merged-releases
-    linkText: Tagging
+  - title: Changesets, if you prefer
+    details: Let Changesets decide versions and changelogs instead of commit messages. relwolf still opens the release request, tags and releases.
+    link: /configuration/changesets
+    linkText: Changesets
   - title: GitLab and GitHub
     details: Use the Docker image as the image of a GitLab CI job or the GitHub Action. One run per job, no daemon, no webhooks.
     link: /reference/github-vs-gitlab
@@ -48,7 +48,7 @@ features:
     link: /configuration/changelog
     linkText: Changelog
   - title: Version files, updated
-    details: Keep package.json, pom.xml, Gradle files and any text file in sync with the release, including floating tags like v1.
+    details: Keep package.json, pom.xml, Gradle, pyproject.toml, Cargo.toml, .NET, Helm, JSON, YAML, TOML and any text file in sync with the release, including floating tags like v1.
     link: /configuration/updaters
     linkText: Updaters
   - title: Pre-releases and manual control
@@ -56,7 +56,7 @@ features:
     link: /guide/pre-releases
     linkText: Pre-releases
   - title: Configurable to the last detail
-    details: Tag format, release names, labels, branch prefix, draft requests, assignees, reviewers and the request body are all options in relwolf.yaml.
+    details: Tag format, release names, labels, branch prefix, draft requests, assignees, reviewers, the request body and a pre-commit script are all options in relwolf.yaml.
     link: /configuration/relwolf-yaml
     linkText: Configuration
 ---

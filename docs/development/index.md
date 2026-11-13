@@ -5,4 +5,5 @@ description: Information for contributors to relwolf, the release bot for GitLab
 
 # Development
 
-- [Contributing](/development/contributing): set up the repository, run tests and linters
+- [Contributing](/development/contributing): set up the repository, run tests and linters, dependency updates
+- [Other platforms](/reference/github-vs-gitlab#other-platforms): add a provider besides GitLab and GitHub
