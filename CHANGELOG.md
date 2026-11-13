@@ -2,6 +2,16 @@
 
 <!-- git-cliff: end of header -->
 
+## 🎉 [0.14.1](https://github.com/lupiq/relwolf/releases/tag/v0.14.1) - 2026-11-13
+
+[See changes](https://github.com/lupiq/relwolf/compare/v0.14.0...v0.14.1)
+
+### 📚 Documentation
+
+- Improve docs in regards of correctness and readability ([a922e75](https://github.com/lupiq/relwolf/commit/a922e75dabb896c5b006a2a5b1785c323a52783e))
+
+---
+
 ## 🌹 [0.14.0](https://github.com/lupiq/relwolf/releases/tag/v0.14.0) - 2026-11-13
 
 [See changes](https://github.com/lupiq/relwolf/compare/v0.13.0...v0.14.0)
