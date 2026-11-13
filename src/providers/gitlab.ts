@@ -27,6 +27,9 @@ interface GitLabMergeRequest {
   squash_commit_sha: string | null;
   sha: string | null;
   draft?: boolean;
+  source_branch: string;
+  source_project_id: number;
+  target_project_id: number;
 }
 
 const DRAFT_PREFIX = /^(?:draft:\s*|\[draft\]\s*|\(draft\)\s*)/i;
@@ -52,6 +55,8 @@ function toReleaseRequest(mr: GitLabMergeRequest): ReleaseRequest {
     draft: mr.draft ?? DRAFT_PREFIX.test(mr.title),
     mergeSha:
       mr.merge_commit_sha ?? mr.squash_commit_sha ?? mr.sha ?? undefined,
+    sourceBranch: mr.source_branch,
+    fork: mr.source_project_id !== mr.target_project_id,
   };
 }
 

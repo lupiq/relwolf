@@ -30,6 +30,7 @@ const exec = (
     currentBranch?: string;
     releaseAs?: string;
     env?: NodeJS.ProcessEnv;
+    log?: (message: string) => void;
   } = {},
 ) =>
   run({
@@ -39,6 +40,7 @@ const exec = (
     currentBranch: overrides.currentBranch ?? 'main',
     releaseAs: overrides.releaseAs,
     env: {...process.env, NO_COLOR: '1', ...overrides.env},
+    ...(overrides.log ? {log: overrides.log} : {}),
   });
 
 const PACKAGE_JSON = '{\n  "name": "demo",\n  "version": "0.0.0"\n}\n';
@@ -506,6 +508,36 @@ describe('tagging merged release requests', () => {
     expect(result.tagged).toEqual([]);
     expect(provider.tags.size).toBe(0);
     expect(provider.requests[0]!.labels).toEqual(['relwolf: pending']);
+  });
+
+  it('skips requests from other branches or forks and keeps their label', async () => {
+    await firstRelease();
+    const request = provider.mustFind(1);
+
+    for (const untrusted of [
+      {sourceBranch: 'feature/x'},
+      {sourceBranch: 'relwolf/main-other'},
+      {sourceBranch: 'relwolf/main/'},
+      {fork: true},
+    ]) {
+      Object.assign(request, {sourceBranch: 'relwolf/main', fork: false});
+      Object.assign(request, untrusted);
+      const messages: Array<string> = [];
+      const result = await exec(NODE_CONFIG, {
+        log: message => messages.push(message),
+      });
+
+      expect(result.tagged).toEqual([]);
+      expect(provider.tags.size).toBe(0);
+      expect(provider.releases).toHaveLength(0);
+      expect(request.labels).toEqual(['relwolf: pending']);
+      expect(messages).toContainEqual(
+        expect.stringMatching(/^Skipping release request #1 /),
+      );
+    }
+
+    Object.assign(request, {sourceBranch: 'relwolf/main/api', fork: false});
+    expect((await exec(NODE_CONFIG)).tagged).toEqual(['v0.1.0']);
   });
 
   it('fails loudly on merged requests without release information', async () => {

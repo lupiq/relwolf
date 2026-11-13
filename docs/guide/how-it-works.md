@@ -13,6 +13,10 @@ Merge requests labelled `relwolf: pending` that were merged into the default bra
 the merge produced (the squash commit) and a release published. The notes are taken from the merge request description,
 so you can edit them before merging. Afterwards the label is switched to `relwolf: tagged`.
 
+Only merge requests from relwolf's own release branches (`relwolf/<branch>` or `relwolf/<branch>/<unit>`) in the same
+project are tagged, because anyone who may set labels could otherwise publish a release for an arbitrary merge request.
+Labelled merge requests from other branches or forks are skipped with a message in the job log.
+
 Every step is idempotent, so a failed job can simply be re-run. If the tag already exists on another commit, the run
 aborts instead of publishing a release for it.
 

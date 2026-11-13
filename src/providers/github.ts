@@ -25,7 +25,9 @@ interface GitHubPull {
   draft?: boolean;
   merge_commit_sha?: string | null;
   labels: Array<{name: string}>;
-  base?: {ref: string};
+  /** `repo` is null if the fork was deleted. */
+  head: {ref: string; repo: {id: number} | null};
+  base: {ref: string; repo: {id: number}};
 }
 
 const encodeRef = (ref: string): string =>
@@ -47,6 +49,8 @@ function toReleaseRequest(pull: GitHubPull): ReleaseRequest {
     labels: pull.labels.map(label => label.name),
     draft: pull.draft ?? false,
     mergeSha: pull.merge_commit_sha ?? undefined,
+    sourceBranch: pull.head.ref,
+    fork: pull.head.repo?.id !== pull.base.repo.id,
   };
 }
 

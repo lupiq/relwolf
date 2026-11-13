@@ -50,6 +50,9 @@ const gitlabMr = (overrides: object = {}) => ({
   merge_commit_sha: null,
   squash_commit_sha: null,
   sha: 'headsha',
+  source_branch: 'relwolf/main',
+  source_project_id: 1,
+  target_project_id: 1,
   ...overrides,
 });
 
@@ -116,7 +119,24 @@ describe('GitLabProvider', () => {
       labels: ['relwolf: pending'],
       draft: false,
       mergeSha: 'headsha',
+      sourceBranch: 'relwolf/main',
+      fork: false,
     });
+  });
+
+  it('detects merge requests from forks', async () => {
+    const {provider} = make(() => ({
+      json: [
+        gitlabMr({state: 'merged'}),
+        gitlabMr({iid: 8, state: 'merged', source_project_id: 2}),
+      ],
+    }));
+    const result = await provider.listMergedReleaseRequests({
+      targetBranch: 'main',
+      label: 'relwolf: pending',
+    });
+
+    expect(result.map(r => r.fork)).toEqual([false, true]);
   });
 
   it('strips the draft prefix and keeps drafts on update', async () => {
@@ -442,7 +462,8 @@ const ghPull = (overrides: object = {}) => ({
   merged_at: null,
   merge_commit_sha: null,
   labels: [{name: 'relwolf: pending'}],
-  base: {ref: 'main'},
+  head: {ref: 'relwolf/main', repo: {id: 1}},
+  base: {ref: 'main', repo: {id: 1}},
   ...overrides,
 });
 
@@ -584,6 +605,31 @@ describe('GitHubProvider', () => {
       state: 'closed',
       base: 'main',
     });
+  });
+
+  it('maps the head branch and detects pull requests from forks', async () => {
+    const merged = {state: 'closed', merged_at: '2026-01-01'};
+    const {provider} = make(() => ({
+      json: [
+        ghPull({number: 1, ...merged}),
+        ghPull({
+          number: 2,
+          ...merged,
+          head: {ref: 'relwolf/main', repo: {id: 2}},
+        }),
+        ghPull({number: 3, ...merged, head: {ref: 'x', repo: null}}),
+      ],
+    }));
+    const result = await provider.listMergedReleaseRequests({
+      targetBranch: 'main',
+      label: 'relwolf: pending',
+    });
+
+    expect(result.map(r => [r.sourceBranch, r.fork])).toEqual([
+      ['relwolf/main', false],
+      ['relwolf/main', true],
+      ['x', true],
+    ]);
   });
 
   it('follows the Link header when listing closed pull requests', async () => {

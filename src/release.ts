@@ -203,10 +203,45 @@ async function tagMergedReleases(
   );
 
   for (const request of merged) {
+    const untrusted = untrustedReason(request, config.branchPrefix, branch);
+
+    if (untrusted) {
+      log(
+        `Skipping release request #${request.id} (${request.url}): ${untrusted}. ` +
+          `Remove the label "${config.labels.pending}" from it.`,
+      );
+      continue;
+    }
+
     created.push(...(await tagMergedRequest(options, git, request, log)));
   }
 
   return created;
+}
+
+/** Labels and bodies can be edited by others; only requests from relwolf's own release branches are tagged. */
+function untrustedReason(
+  request: ReleaseRequest,
+  branchPrefix: string,
+  branch: string,
+): string | undefined {
+  if (request.fork) {
+    return 'it comes from a fork';
+  }
+
+  const releaseBranch = `${branchPrefix}${branch}`;
+
+  if (
+    request.sourceBranch !== releaseBranch &&
+    !(
+      request.sourceBranch.startsWith(`${releaseBranch}/`) &&
+      request.sourceBranch.length > releaseBranch.length + 1
+    )
+  ) {
+    return `its source branch "${request.sourceBranch}" is not the release branch "${releaseBranch}" or "${releaseBranch}/<unit>"`;
+  }
+
+  return undefined;
 }
 
 /** Tags and releases one merged release request; returns no tags if its merge commit is not checked out yet. */

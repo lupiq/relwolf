@@ -25,7 +25,8 @@ Only things that are not enforced by ESLint, Prettier, commitlint or the type ch
 - The release MR body is the state store (notes, base sha, release-as, editable title/text between hidden
   `relwolf:*` markers). Identical title and body means "up to date".
 - Merged MRs are found via the `relwolf: pending` label; the tag goes on the merge sha if it is an ancestor of HEAD,
-  otherwise the MR is skipped until a later run.
+  otherwise the MR is skipped until a later run. Labels are untrusted: MRs from forks or from source branches other
+  than `<branch-prefix><branch>[/<unit>]` are skipped with a log message.
 - The bump level comes from commits since the last **stable** tag; the changelog range starts at the last tag in
   pre-release mode, otherwise at the last stable tag.
 - Tag and commit text from MR bodies is untrusted: tags go through `isValidReleaseTag`, `<!--` is escaped in notes.

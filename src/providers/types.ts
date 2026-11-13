@@ -12,6 +12,10 @@ export interface ReleaseRequest {
   draft: boolean;
   /** Commit on the target branch that contains the merged changes (merged requests only). */
   mergeSha?: string | undefined;
+  /** Branch the changes come from (GitLab `source_branch`, GitHub `head.ref`). */
+  sourceBranch: string;
+  /** Whether the source branch lives in another project/repository than the target branch. */
+  fork: boolean;
 }
 
 export interface FileChange {

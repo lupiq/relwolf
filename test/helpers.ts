@@ -129,6 +129,7 @@ export class FakeProvider implements Provider {
       reviewers: options.reviewers ?? [],
       sourceBranch: options.sourceBranch,
       targetBranch: options.targetBranch,
+      fork: false,
     };
 
     this.requests.push(request);
