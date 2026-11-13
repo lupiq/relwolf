@@ -152,8 +152,9 @@ packages the template must contain `${component}`. Only letters, digits and `._/
 applied when the request is created; relwolf keeps a draft state and never touches assignees afterwards.
 Usernames are resolved by the provider; unknown users fail the run.
 
-`no-changes-text` is written below the changelog entry and into the release notes of a package that was only released
-to follow the version of linked packages. Set it to an empty string to leave such entries as git-cliff renders them.
+`no-changes-text` is written below the changelog entry (above a horizontal rule that ends the entry) and into the
+release notes of a package that was only released to follow the version of linked packages. Set it to an empty string
+to leave such entries as git-cliff renders them.
 
 ### Release title and text
 

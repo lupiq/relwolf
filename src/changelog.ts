@@ -128,6 +128,28 @@ function commonSuffixLength(a: string, b: string): number {
   return length;
 }
 
+const TRAILING_RULE = /(?:^|\n)( {0,3})([-*_])[ \t]*(?:\2[ \t]*){2,}$/;
+
+/**
+ * Appends the placeholder to a rendered entry, but above a trailing horizontal rule that separates it from the next
+ * release. `---` directly below a text line is a setext heading underline, not a rule.
+ */
+function addPlaceholder(entry: string, placeholder: string): string {
+  const trimmed = entry.trimEnd();
+  const rule = TRAILING_RULE.exec(trimmed);
+  const before = rule ? trimmed.slice(0, rule.index) : trimmed;
+  const previousLine = before.slice(before.lastIndexOf('\n') + 1);
+
+  if (
+    !rule ||
+    (rule[2] === '-' && previousLine.trim() && !/^ {0,3}#/.test(previousLine))
+  ) {
+    return `${trimmed}\n\n${placeholder}`;
+  }
+
+  return `${before.trimEnd()}\n\n${placeholder}\n\n${rule[0].replace(/^\n/, '')}`;
+}
+
 /** Returns `existing` with the new release entry prepended, following the user's git-cliff config. */
 export async function prependToChangelog(
   options: CliffInvocation,
@@ -154,7 +176,7 @@ export async function prependToChangelog(
     const added = result.slice(0, result.length - kept).trimEnd();
     const rest = result.slice(result.length - kept).trimStart();
 
-    return `${added}\n\n${placeholder}\n\n${rest}`.trimEnd() + '\n';
+    return `${addPlaceholder(added, placeholder)}\n\n${rest}`.trimEnd() + '\n';
   } finally {
     await rm(dir, {recursive: true, force: true});
   }
@@ -300,10 +322,10 @@ export async function rewriteChangelog(
       continue;
     }
 
-    const entry = text.trimEnd();
-
     rendered.push(
-      placeholder ? `${entry}\n\n${placeholder}\n\n` : `${entry}\n`,
+      placeholder
+        ? `${addPlaceholder(text, placeholder)}\n\n`
+        : `${text.trimEnd()}\n`,
     );
   }
 

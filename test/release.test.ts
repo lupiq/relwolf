@@ -1045,6 +1045,29 @@ packages:
     expect(core.content).not.toContain('OLD');
   });
 
+  it('puts the text above a horizontal rule between releases', async () => {
+    const cliffToml = (label: string) =>
+      `[changelog]\nheader = "# Log\\n"\nbody = "## ${label} {{ version }}\\n{% for c in commits %}\\n- {{ c.message }}{% endfor %}\\n\\n---\\n"\ntrim = true\n\n[git]\nconventional_commits = true\ncommit_parsers = [{message = '^chore', skip = true}]\n`;
+    const config = `rewrite-changelog: true\nno-changes-text: "Nothing here."${yaml}`;
+    const core = () =>
+      provider.commits
+        .at(-1)!
+        .files.find(f => f.path === 'common/core/CHANGELOG.md')!.content;
+
+    repo.write('cliff.toml', cliffToml('OLD'));
+    await releaseThenChangeOrders(config);
+    expect(core()).toMatch(/## OLD v0\.1\.1\n+Nothing here\.\n\n---\n/);
+
+    mergeLastRelease(repo, provider, 2);
+    await exec(config);
+    repo.write('cliff.toml', cliffToml('NEW'));
+    repo.commit('fix: orders again', 'services/orders/a.txt');
+    await exec(config);
+    expect(core()).toMatch(
+      /## NEW v0\.1\.2\n+Nothing here\.\n\n---\n+## NEW v0\.1\.1\n+Nothing here\.\n\n---\n/,
+    );
+  });
+
   it('can customise the text', async () => {
     const files = await releaseThenChangeOrders(
       `no-changes-text: "Nothing here."${yaml}`,
