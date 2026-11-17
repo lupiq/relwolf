@@ -1,4 +1,4 @@
-/* lupiq brand colours; everything else derives from these */
+/* lupiq brand colours (night-violet, teal, grey, beige, black, white); everything else derives from these */
 :root {
   --lupiq-teal: #2bb3a3;
   --lupiq-teal-dark: #228f82;
@@ -6,6 +6,13 @@
   --lupiq-violet: #3a2e5e;
   --lupiq-violet-dark: #2e254b;
   --lupiq-violet-light: #b9aee0;
+  --lupiq-grey: #5e5e63;
+  --lupiq-beige: #f5f2ed;
+
+  --vp-c-bg-alt: var(--lupiq-beige);
+  --vp-c-bg-soft: color-mix(in srgb, var(--lupiq-beige) 60%, #fff);
+  --vp-c-text-2: var(--lupiq-grey);
+  --vp-c-text-3: var(--lupiq-grey);
 
   --vp-c-brand-1: var(--lupiq-teal-dark);
   --vp-c-brand-2: var(--lupiq-teal);
@@ -46,6 +53,8 @@
   --vp-c-bg-alt: color-mix(in srgb, var(--lupiq-violet-dark) 55%, #161618);
   --vp-c-bg-elv: color-mix(in srgb, var(--lupiq-violet-dark) 45%, #202127);
   --vp-c-bg-soft: color-mix(in srgb, var(--lupiq-violet-dark) 50%, #202127);
+  --vp-c-text-2: color-mix(in srgb, var(--lupiq-beige) 75%, transparent);
+  --vp-c-text-3: color-mix(in srgb, var(--lupiq-beige) 55%, transparent);
 }
 
 .only-dark,
@@ -150,4 +159,13 @@
   .rw-steps {
     grid-template-columns: repeat(3, 1fr);
   }
+}
+
+.rw-flow-dark,
+.dark .rw-flow-light {
+  display: none;
+}
+
+.dark .rw-flow-dark {
+  display: block;
 }

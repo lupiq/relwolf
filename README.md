@@ -111,25 +111,12 @@ More details: [GitLab guide](https://relwolf.lupiq.io/guide/gitlab).
 
 ## How it works
 
-```mermaid
-flowchart TD
-    push([Push to the default branch]) --> job[relwolf CI job]
-    job --> p1
-    subgraph phase1 [Phase 1: Tag merged releases]
-        p1{Merged release request<br/>labelled relwolf: pending?}
-        p1 -- yes --> tag[Tag the merge commit<br/>and create the release]
-    end
-    tag --> p2
-    p1 -- no --> p2
-    subgraph phase2 [Phase 2: Prepare the next release]
-        p2{Releasable commits<br/>since the last release?}
-        p2 -- yes --> prepare[Compute version, changelog<br/>and version files]
-        prepare --> request[Create or update the release request<br/>from relwolf/branch]
-    end
-    p2 -- no --> done([Nothing to release])
-    request --> review{Review and merge}
-    review -- merged, or more commits arrive --> push
-```
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/public/img/relwolf-flow-dark.svg" />
+    <img src="docs/public/img/relwolf-flow.svg" width="720" alt="Flowchart of a relwolf run in two phases: phase 1 tags a merged release request and creates the release; phase 2 prepares or updates the release request if there are releasable commits. A human reviews and merges it, and the next push starts the cycle again." />
+  </picture>
+</p>
 
 Every run has two phases:
 
