@@ -386,4 +386,64 @@ packages:
       );
     });
   });
+
+  // Calls the real GitHub Copilot CLI (npm install --global @github/copilot) with COPILOT_GITHUB_TOKEN.
+  describe.skipIf(!process.env.COPILOT_GITHUB_TOKEN)(
+    `${name} AI release notes`,
+    () => {
+      const config = [
+        'ai-release-notes:',
+        '  enabled: true',
+        '  context: full-diff',
+        '  audience: developers',
+        '  exclude-paths: ["**/*.lock"]',
+        '  targets: [changelog, file]',
+        '  file: RELEASE_NOTES.md',
+        '',
+      ].join('\n');
+
+      it('adds Copilot release notes to the merge request, the file and the release', async () => {
+        const branch = await newBranch();
+
+        await sandbox.commit(branch, 'feat: Add search', {
+          'src/search.txt': 'search\n',
+          'deps.lock': 'ignored\n',
+        });
+
+        const created = await sandbox.runRelwolf(branch, config);
+        const id = created.releaseRequests[0]!.id;
+        const mr = await sandbox.releaseRequest(id);
+        const notes =
+          /<!-- relwolf:summary [^>]*-->\r?\n([\s\S]*?)\r?\n<!-- \/relwolf:summary -->/.exec(
+            mr.body,
+          )?.[1];
+
+        expect(notes?.trim().length).toBeGreaterThan(20);
+
+        const file = await sandbox.fileContent(
+          `relwolf/${branch}`,
+          'RELEASE_NOTES.md',
+        );
+
+        expect(file).toMatch(/^# /);
+        expect(file).toContain('## ');
+        expect(file).toContain(notes!.trim());
+        expect(
+          await sandbox.fileContent(`relwolf/${branch}`, 'CHANGELOG.md'),
+        ).toContain(notes!.trim());
+
+        // The stored notes are reused as long as the release input is unchanged.
+        expect(
+          (await sandbox.runRelwolf(branch, config)).releaseRequests[0]?.action,
+        ).toBe('unchanged');
+
+        await sandbox.merge(id);
+
+        expect((await sandbox.runRelwolf(branch, config)).tagged).toEqual([
+          'v0.1.0',
+        ]);
+        expect(await sandbox.releaseBody('v0.1.0')).toContain(notes!.trim());
+      });
+    },
+  );
 }

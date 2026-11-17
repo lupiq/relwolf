@@ -48,10 +48,11 @@ Only things that are not enforced by ESLint, Prettier, commitlint or the type ch
 - `pnpm test:e2e` runs the same scenarios (`e2e/scenarios.ts`) against a sandbox project on gitlab.com
   (`GITLAB_E2E_TOKEN`, `GITLAB_E2E_PROJECT_ID`) and a sandbox repository on github.com (`GH_E2E_TOKEN`,
   `GH_E2E_REPOSITORY` as `owner/name`; Actions secrets cannot start with `GITHUB_`); see `e2e/`. Pass a test file to
-  run one provider only. It is not part of `pnpm test`.
+  run one provider only. The AI release notes scenarios call the real Copilot CLI and are skipped without
+  `COPILOT_GITHUB_TOKEN`. It is not part of `pnpm test`.
 - Renovate (`renovate.json`) uses `build(deps)` commits for everything; related packages are grouped.
 
 ## Manual setup that cannot be committed
 
-Pages source "GitHub Actions" + custom domain, GitHub App for the release token (variable `RELWOLF_APP_CLIENT_ID`, secret `RELWOLF_APP_PRIVATE_KEY`), secrets `GITLAB_E2E_TOKEN` and `GH_E2E_TOKEN` (fine-grained PAT on the sandbox repository: contents, pull requests and issues read/write; the repository needs squash merging enabled), secret `COPILOT_GITHUB_TOKEN` (fine-grained PAT of a Copilot subscriber with "Copilot Requests", for the AI summary), public GHCR package,
+Pages source "GitHub Actions" + custom domain, GitHub App for the release token (variable `RELWOLF_APP_CLIENT_ID`, secret `RELWOLF_APP_PRIVATE_KEY`), secrets `GITLAB_E2E_TOKEN` and `GH_E2E_TOKEN` (fine-grained PAT on the sandbox repository: contents, pull requests and issues read/write; the repository needs squash merging enabled), secret `COPILOT_GITHUB_TOKEN` (fine-grained PAT of a Copilot subscriber with "Copilot Requests", for the AI release notes and their E2E scenarios), public GHCR package,
 auto-delete head branches, Renovate GitHub App, squash merging.
