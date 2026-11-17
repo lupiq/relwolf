@@ -1545,4 +1545,66 @@ describe('AI summary', () => {
     expect(provider.requests[0]!.body).not.toMatch(/⚠️/);
     expect(file('CHANGELOG.md')).toMatch(/Now it works/);
   });
+
+  it('summarizes every package of a monorepo from its own commits', async () => {
+    const prompts: Array<string> = [];
+
+    vi.stubGlobal('fetch', async (_url: string, init: RequestInit) => {
+      const user = (
+        JSON.parse(init.body as string) as {
+          messages: Array<{content: string}>;
+        }
+      ).messages[1]!.content;
+
+      prompts.push(user);
+
+      return Response.json({
+        choices: [
+          {
+            message: {
+              content: user.includes('api change')
+                ? 'API summary'
+                : 'Root summary',
+            },
+          },
+        ],
+      });
+    });
+    repo.write('package.json', PACKAGE_JSON);
+    repo.write('services/api/VERSION', '0.0.0 # x-relwolf-version\n');
+    repo.commit('chore: scaffold');
+    repo.commit('feat: root change', 'root.txt');
+    repo.commit('feat: api change', 'services/api/code.txt');
+    await exec(
+      `packages:
+  ".":
+    updaters: [{ type: package-json }]
+  services/api:
+    component: api
+    updaters: []
+ai-summary:
+  enabled: true
+  base-url: https://llm.example.com/v1
+  model: m
+`,
+      {env},
+    );
+
+    expect(prompts).toHaveLength(2);
+    expect(prompts.find(prompt => prompt.includes('root change'))).not.toMatch(
+      /api change/,
+    );
+    expect(file('CHANGELOG.md')).toMatch(/Root summary/);
+    expect(file('CHANGELOG.md')).not.toMatch(/API summary/);
+    expect(file('services/api/CHANGELOG.md')).toMatch(/API summary/);
+
+    const {body} = provider.requests[0]!;
+
+    expect(body).toMatch(/relwolf:summary tag="v0\.1\.0" key="root"/);
+    expect(body).toMatch(/relwolf:summary tag="api-v0\.1\.0" key="api"/);
+
+    mergeLastRelease(repo, provider, 1);
+    await exec(undefined, {env});
+    expect(prompts).toHaveLength(2);
+  });
 });
