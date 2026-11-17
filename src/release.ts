@@ -8,7 +8,7 @@ import {
   renderFileEntry,
   type StoredSummary,
   type SummaryInput,
-} from './ai-summary.js';
+} from './ai-release-notes.js';
 import {
   DEFAULT_RELEASE_TEXT,
   parseBody,
@@ -326,7 +326,7 @@ async function tagMergedRequest(
 
   const details = parseDetails(request.body);
   const intro = releaseText(details.text ?? '');
-  const summaries = config.aiSummary.targets.includes('changelog')
+  const summaries = config.aiReleaseNotes.targets.includes('changelog')
     ? parseSummaries(request.body, tag =>
         isValidReleaseTag(tag, config.packages),
       )
@@ -795,7 +795,7 @@ async function rewriteReleases(
   return releases.reverse();
 }
 
-/** AI summaries of a release request: the ones stored in it so far, the ones for the new body and warnings. */
+/** AI release notes of a release request: stored notes, new notes, and warnings. */
 interface SummaryState {
   previous: Array<StoredSummary>;
   stored: Array<StoredSummary>;
@@ -823,13 +823,13 @@ async function summaryInput(
     commits: commits
       .filter(commit => !reverted.has(commit.sha))
       .map(commit => commit.message),
-    ...(options.config.aiSummary.context === 'full-diff'
+    ...(options.config.aiReleaseNotes.context === 'full-diff'
       ? {
           diff: await git.diff(
             plan.range ?? 'HEAD',
             pathspecsFor(plan.pkg, packages, [
               ...excludePaths,
-              ...options.config.aiSummary.excludePaths,
+              ...options.config.aiReleaseNotes.excludePaths,
             ]),
           ),
         }
@@ -838,7 +838,7 @@ async function summaryInput(
 }
 
 /**
- * The AI summary of a release, or undefined if disabled or unavailable. A summary stored in the release request is
+ * The AI release notes of a release, or undefined if disabled or unavailable. Notes stored in the release request are
  * kept if it was edited there or the commits did not change; otherwise it is generated again. Failures only add a
  * warning to the release request.
  */
@@ -849,14 +849,14 @@ async function resolveSummary(
   notes: string,
   state: SummaryState,
 ): Promise<string | undefined> {
-  const settings = options.config.aiSummary;
+  const settings = options.config.aiReleaseNotes;
 
   if (!settings.enabled || plan.empty) {
     return undefined;
   }
 
   const key = packageKey(plan.pkg);
-  const label = `AI summary of ${plan.tag}${plan.pkg.component ? ` (${plan.pkg.component})` : ''}`;
+  const label = `AI release notes for ${plan.tag}${plan.pkg.component ? ` (${plan.pkg.component})` : ''}`;
   const input = await summaryInput(options, git, plan, notes);
   const current = inputHash(settings, input);
   const old = state.previous.find(
@@ -944,7 +944,7 @@ async function applyPlan(
   const summary = placeholder
     ? undefined
     : await resolveSummary(options, git, plan, notes, summaries);
-  const {targets} = options.config.aiSummary;
+  const {targets} = options.config.aiReleaseNotes;
   const sections = notesByTag.get(plan.tag) ?? [];
 
   sections.push({pkg, notes});
@@ -979,7 +979,7 @@ async function applyPlan(
     );
   }
 
-  const {file, fileTitle} = options.config.aiSummary;
+  const {file, fileTitle} = options.config.aiReleaseNotes;
 
   if (summary && file && targets.includes('file')) {
     const target = await load(file, false);

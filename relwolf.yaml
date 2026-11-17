@@ -6,8 +6,8 @@ patch-types: [fix, build, docs]
 
 release-emoji: true
 
-# AI summary of every release in the release request, the changelog, release notes and the GitHub release (GitHub Copilot CLI)
-ai-summary:
+# AI release notes for every release in the release request, the changelog, release notes and the GitHub release (GitHub Copilot CLI)
+ai-release-notes:
   enabled: true
   context: full-diff
   audience: developers

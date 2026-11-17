@@ -4,7 +4,7 @@ import {mkdtemp, rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {promisify} from 'node:util';
-import type {AiSummaryConfig} from './config.js';
+import type {AiReleaseNotesConfig} from './config.js';
 import {
   DEFAULT_TIMEOUT_MS,
   HttpClient,
@@ -63,7 +63,7 @@ export const sanitizeSummary = (text: string): string =>
   text.trim().replaceAll('<!--', '&lt;!--');
 
 export function renderPrompt(
-  settings: AiSummaryConfig,
+  settings: AiReleaseNotesConfig,
   input: SummaryInput,
 ): string {
   return (settings.prompt ?? DEFAULT_PROMPT)
@@ -75,7 +75,7 @@ export function renderPrompt(
 }
 
 export function renderInput(
-  settings: AiSummaryConfig,
+  settings: AiReleaseNotesConfig,
   input: SummaryInput,
 ): string {
   if (settings.context === 'changelog') {
@@ -113,7 +113,7 @@ export function renderInput(
 
 /** Hash of everything that influences the generated text. */
 export function inputHash(
-  settings: AiSummaryConfig,
+  settings: AiReleaseNotesConfig,
   input: SummaryInput,
 ): string {
   return hash(
@@ -136,11 +136,11 @@ export interface Endpoint {
 
 /** The configured OpenAI-compatible API with `RELWOLF_AI_API_KEY`, or a message about what is missing. */
 export function resolveEndpoint(
-  settings: AiSummaryConfig,
+  settings: AiReleaseNotesConfig,
   env: NodeJS.ProcessEnv,
 ): Endpoint | string {
   if (!settings.baseUrl) {
-    return 'ai-summary.base-url is not set';
+    return 'ai-release-notes.base-url is not set';
   }
 
   return env.RELWOLF_AI_API_KEY
@@ -193,7 +193,7 @@ const SECRET_VARIABLES = new Set([
  * `RELWOLF_AI_API_KEY` or `COPILOT_GITHUB_TOKEN`.
  */
 async function generateWithCopilot(
-  settings: AiSummaryConfig,
+  settings: AiReleaseNotesConfig,
   input: SummaryInput,
   env: NodeJS.ProcessEnv,
   options: {timeoutMs?: number; runner?: CommandRunner},
@@ -252,7 +252,7 @@ async function generateWithCopilot(
 
 /** Asks the model for the summary. Never throws: failures are returned so that the release can go on without it. */
 export async function generateSummary(
-  settings: AiSummaryConfig,
+  settings: AiReleaseNotesConfig,
   input: SummaryInput,
   env: NodeJS.ProcessEnv,
   options: {

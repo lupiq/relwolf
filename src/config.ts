@@ -329,13 +329,13 @@ export const configSchema = z.strictObject({
   'reviewers': userNames
     .default([])
     .describe('Usernames requested as reviewers when the request is created.'),
-  'ai-summary': z
+  'ai-release-notes': z
     .strictObject({
       'enabled': z
         .boolean()
         .default(false)
         .describe(
-          'Generate an AI summary of every release. Disabled by default; commit messages are sent to the configured endpoint.',
+          'Generate AI release notes for every release. Disabled by default; release context is sent to the configured endpoint.',
         ),
       'provider': z
         .enum(AI_PROVIDERS)
@@ -366,7 +366,7 @@ export const configSchema = z.strictObject({
         .enum(AI_AUDIENCES)
         .default('users')
         .describe(
-          'Audience of the summary: developers for a technical summary or users for a feature-focused summary.',
+          'Audience of the release notes: developers for technical notes or users for feature-focused notes.',
         ),
       'exclude-paths': z
         .array(z.string().min(1))
@@ -378,7 +378,7 @@ export const configSchema = z.strictObject({
         .string()
         .min(1)
         .default('English')
-        .describe('Language of the summary.'),
+        .describe('Language of the release notes.'),
       'prompt': z
         .string()
         .min(1)
@@ -391,7 +391,7 @@ export const configSchema = z.strictObject({
         .min(1)
         .default(['changelog'])
         .describe(
-          'Where the summary is written: the changelog (and release notes), a separate Markdown file, or both.',
+          'Where the release notes are written: the changelog (and release notes), a separate Markdown file, or both.',
         ),
       'file': z
         .string()
@@ -404,10 +404,10 @@ export const configSchema = z.strictObject({
         .string()
         .min(1)
         .default('Release summaries')
-        .describe('First-level heading of the summary file.'),
+        .describe('First-level heading of the release notes file.'),
     })
     .prefault({})
-    .describe('AI generated release summaries.'),
+    .describe('AI generated release notes.'),
   'http-timeout': z
     .number()
     .int()
@@ -496,7 +496,7 @@ export interface UpdaterConfig {
   lockfiles: boolean;
 }
 
-export interface AiSummaryConfig {
+export interface AiReleaseNotesConfig {
   enabled: boolean;
   provider: (typeof AI_PROVIDERS)[number];
   /** OpenAI-compatible API, with provider openai. */
@@ -509,7 +509,7 @@ export interface AiSummaryConfig {
   language: string;
   prompt?: string;
   targets: Array<(typeof AI_TARGETS)[number]>;
-  /** Repository-relative path of the summary file. */
+  /** Repository-relative path of the release notes file. */
   file?: string;
   fileTitle: string;
 }
@@ -562,7 +562,7 @@ export interface Config {
   changelogLinksText: string;
   assignees: Array<string>;
   reviewers: Array<string>;
-  aiSummary: AiSummaryConfig;
+  aiReleaseNotes: AiReleaseNotesConfig;
   /** Seconds every attempt of an API request may take. */
   httpTimeout: number;
   /** Commit types (lower case) that trigger a minor or patch release; breaking changes always trigger a major one. */
@@ -945,37 +945,39 @@ function checkReleaseEmoji(parsed: ParsedConfig): void {
   }
 }
 
-function parseAiSummary(parsed: ParsedConfig): AiSummaryConfig {
-  const settings = parsed['ai-summary'];
+function parseAiReleaseNotes(parsed: ParsedConfig): AiReleaseNotesConfig {
+  const settings = parsed['ai-release-notes'];
   const targets = [...new Set(settings.targets)];
   const baseUrl = settings['base-url'];
 
   if (settings.enabled) {
     if (parsed.strategy === 'changesets') {
       throw new ConfigError(
-        'ai-summary: not supported with strategy changesets yet',
+        'ai-release-notes: not supported with strategy changesets yet',
       );
     }
 
     if (targets.includes('file') && !settings.file) {
-      throw new ConfigError('ai-summary: the target "file" requires "file"');
+      throw new ConfigError(
+        'ai-release-notes: the target "file" requires "file"',
+      );
     }
 
     if (targets.includes('changelog') && parsed['rewrite-changelog']) {
       throw new ConfigError(
-        'ai-summary: the target "changelog" cannot be combined with rewrite-changelog, which would drop the summaries of older releases',
+        'ai-release-notes: the target "changelog" cannot be combined with rewrite-changelog, which would drop the release notes of older releases',
       );
     }
 
     if (settings.provider === 'openai' && !(baseUrl && settings.model)) {
       throw new ConfigError(
-        'ai-summary: the provider "openai" requires "base-url" and "model"',
+        'ai-release-notes: the provider "openai" requires "base-url" and "model"',
       );
     }
 
     if (settings.provider === 'copilot-cli' && baseUrl) {
       throw new ConfigError(
-        'ai-summary: "base-url" only works with the provider "openai"',
+        'ai-release-notes: "base-url" only works with the provider "openai"',
       );
     }
   }
@@ -989,13 +991,13 @@ function parseAiSummary(parsed: ParsedConfig): AiSummaryConfig {
     audience: settings.audience,
     excludePaths: parseExcludePaths(
       settings['exclude-paths'],
-      'ai-summary.exclude-paths',
+      'ai-release-notes.exclude-paths',
     ),
     language: settings.language,
     ...(settings.prompt ? {prompt: settings.prompt} : {}),
     targets,
     ...(settings.file
-      ? {file: normalizeRepoPath(settings.file, 'ai-summary.file')}
+      ? {file: normalizeRepoPath(settings.file, 'ai-release-notes.file')}
       : {}),
     fileTitle: settings['file-title'],
   };
@@ -1077,7 +1079,7 @@ export function parseConfig(source: string | undefined): Config {
     changelogLinksText: parsed['changelog-links-text'],
     assignees: parsed.assignees,
     reviewers: parsed.reviewers,
-    aiSummary: parseAiSummary(parsed),
+    aiReleaseNotes: parseAiReleaseNotes(parsed),
     httpTimeout: parsed['http-timeout'],
     minorTypes,
     patchTypes,

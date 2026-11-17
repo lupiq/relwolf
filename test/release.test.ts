@@ -1428,9 +1428,9 @@ describe('pre-commit-script', () => {
   });
 });
 
-describe('AI summary', () => {
+describe('AI release notes', () => {
   const AI_CONFIG = (extra = '') =>
-    `${NODE_CONFIG}ai-summary:\n  enabled: true\n  provider: openai\n  base-url: https://llm.example.com/v1\n  model: m\n${extra}`;
+    `${NODE_CONFIG}ai-release-notes:\n  enabled: true\n  provider: openai\n  base-url: https://llm.example.com/v1\n  model: m\n${extra}`;
   const env = {RELWOLF_AI_API_KEY: 'key'};
   let answers: Array<string | Error>;
   let calls: number;
@@ -1559,7 +1559,7 @@ describe('AI summary', () => {
     await exec(AI_CONFIG(), {env});
 
     expect(provider.requests[0]!.body).toMatch(
-      /> ⚠️ The AI summary of v0\.1\.0 could not be generated: .*400/,
+      /> ⚠️ The AI release notes for v0\.1\.0 could not be generated: .*400/,
     );
     expect(provider.requests[0]!.body).not.toMatch(/relwolf:summary/);
     expect(file('CHANGELOG.md')).toMatch(/### .*Features/);
@@ -1606,7 +1606,7 @@ describe('AI summary', () => {
   services/api:
     component: api
     updaters: []
-ai-summary:
+ai-release-notes:
   enabled: true
   provider: openai
   base-url: https://llm.example.com/v1

@@ -6,16 +6,16 @@ import {
   renderFileEntry,
   renderInput,
   resolveEndpoint,
-} from '../src/ai-summary.js';
+} from '../src/ai-release-notes.js';
 import {parseConfig} from '../src/config.js';
 
 const settings = (yaml = 'enabled: true') =>
   parseConfig(
-    `ai-summary:\n${yaml
+    `ai-release-notes:\n${yaml
       .split('\n')
       .map(line => `  ${line}`)
       .join('\n')}\n`,
-  ).aiSummary;
+  ).aiReleaseNotes;
 
 const input = {
   tag: 'v1.0.0',
@@ -24,9 +24,9 @@ const input = {
   commits: ['feat: a\n\nLong body'],
 };
 
-describe('ai-summary config', () => {
+describe('ai-release-notes config', () => {
   it('is disabled by default', () => {
-    expect(parseConfig(undefined).aiSummary).toMatchObject({
+    expect(parseConfig(undefined).aiReleaseNotes).toMatchObject({
       enabled: false,
       context: 'commits',
       audience: 'users',
@@ -46,7 +46,7 @@ describe('ai-summary config', () => {
       excludePaths: ['docs/**', '**/*.lock'],
     });
     expect(() => settings('exclude-paths: ["../secrets"]')).toThrow(
-      /ai-summary\.exclude-paths/,
+      /ai-release-notes\.exclude-paths/,
     );
   });
 
@@ -60,10 +60,10 @@ describe('ai-summary config', () => {
 
   it('rejects the changelog target with rewrite-changelog and strategy changesets', () => {
     expect(() =>
-      parseConfig('rewrite-changelog: true\nai-summary: {enabled: true}'),
+      parseConfig('rewrite-changelog: true\nai-release-notes: {enabled: true}'),
     ).toThrow(/rewrite-changelog/);
     expect(() =>
-      parseConfig('strategy: changesets\nai-summary: {enabled: true}'),
+      parseConfig('strategy: changesets\nai-release-notes: {enabled: true}'),
     ).toThrow(/changesets/);
   });
 });

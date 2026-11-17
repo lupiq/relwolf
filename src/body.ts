@@ -1,4 +1,4 @@
-import type {StoredSummary} from './ai-summary.js';
+import type {StoredSummary} from './ai-release-notes.js';
 
 export const LABEL_PENDING = 'relwolf: pending';
 export const LABEL_TAGGED = 'relwolf: tagged';
@@ -111,7 +111,7 @@ export interface RenderBodyOptions {
   template?: string | undefined;
   /** Bare versions, for the `${version}` placeholder. */
   versions?: ReadonlyArray<string> | undefined;
-  /** AI summaries, editable in the release request. */
+  /** AI release notes, editable in the release request. */
   summaries?: ReadonlyArray<StoredSummary> | undefined;
   /** Why a summary could not be generated; shown as a warning. */
   summaryWarnings?: ReadonlyArray<string> | undefined;
@@ -123,7 +123,7 @@ function summarySection(options: RenderBodyOptions): string {
   );
   const blocks = (options.summaries ?? []).map(
     summary =>
-      `**AI summary** of \`${summary.tag}\` (editable; clear the text to leave it out)\n\n` +
+      `**AI release notes** for \`${summary.tag}\` (editable; clear the text to leave it out)\n\n` +
       `<!-- relwolf:summary tag="${summary.tag}" key="${summary.key}" input="${summary.input}" output="${summary.output}" -->\n${sanitize(summary.text)}\n<!-- /relwolf:summary -->`,
   );
 
@@ -196,7 +196,7 @@ export function parseBody(
   return entries;
 }
 
-/** The AI summaries stored in the release request, as edited there. */
+/** The AI release notes stored in the release request, as edited there. */
 export function parseSummaries(
   body: string,
   isValidTag: (tag: string) => boolean,

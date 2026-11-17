@@ -168,7 +168,7 @@ export async function prependToChangelog(
   env: NodeJS.ProcessEnv = process.env,
   /** Text added below the new entry, for releases without any change. */
   placeholder?: string,
-  /** AI summary added to the new entry. */
+  /** AI release notes added to the new entry. */
   summary?: string,
 ): Promise<string> {
   const dir = await mkdtemp(path.join(tmpdir(), 'relwolf-'));

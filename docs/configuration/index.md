@@ -15,4 +15,4 @@ secrets and CI context come from [environment variables](/reference/environment-
 - [Changelog (git-cliff)](/configuration/changelog): format of the changelog and release notes
 - [Changesets](/configuration/changesets): let Changesets decide versions and changelogs instead of Conventional
   Commits
-- [AI release summary](/configuration/ai-summary): optional AI generated summary of every release
+- [AI release notes](/configuration/ai-release-notes): optional AI generated release notes for every release
