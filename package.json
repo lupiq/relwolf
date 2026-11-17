@@ -1,7 +1,7 @@
 {
   "name": "relwolf",
   "version": "0.14.0",
-  "description": "Release bot for GitLab (and GitHub) driven by Conventional Commits, inspired by release-please",
+  "description": "Releases, without the release hassle. Automate your releases with Conventional Commits. Review every change before it ships.",
   "type": "module",
   "packageManager": "pnpm@12.16.1",
   "repository": "https://github.com/lupiq/relwolf",
