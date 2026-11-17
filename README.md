@@ -114,16 +114,21 @@ More details: [GitLab guide](https://relwolf.lupiq.io/guide/gitlab).
 ```mermaid
 flowchart TD
     push([Push to the default branch]) --> job[relwolf CI job]
-    job --> p1{Merged release request<br/>labelled relwolf: pending?}
-    p1 -- yes --> tag[Tag the merge commit<br/>and create the release]
+    job --> p1
+    subgraph phase1 [Phase 1: Tag merged releases]
+        p1{Merged release request<br/>labelled relwolf: pending?}
+        p1 -- yes --> tag[Tag the merge commit<br/>and create the release]
+    end
     tag --> p2
-    p1 -- no --> p2{Releasable commits<br/>since the last release?}
+    p1 -- no --> p2
+    subgraph phase2 [Phase 2: Prepare the next release]
+        p2{Releasable commits<br/>since the last release?}
+        p2 -- yes --> prepare[Compute version, changelog<br/>and version files]
+        prepare --> request[Create or update the release request<br/>from relwolf/branch]
+    end
     p2 -- no --> done([Nothing to release])
-    p2 -- yes --> prepare[Compute version, changelog<br/>and version files]
-    prepare --> request[Create or update the release request<br/>from relwolf/branch]
     request --> review{Review and merge}
-    review -- merged --> push
-    review -- more commits --> push
+    review -- merged, or more commits arrive --> push
 ```
 
 Every run has two phases:

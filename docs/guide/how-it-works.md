@@ -7,6 +7,8 @@ description: Understand the two phases of a relwolf run - tagging merged release
 
 Each run executes two phases.
 
+<img src="/img/relwolf-flow.svg" width="720" height="612" decoding="async" style="max-width:100%;height:auto" alt="Flowchart of a relwolf run: a push starts the CI job, which tags a merged release request if there is one, then prepares or updates the release request if there are releasable commits, and waits for a human to review and merge it." />
+
 ## 1. Tag merged releases
 
 Merge requests labelled `relwolf: pending` that were merged into the default branch get their tag created on the commit

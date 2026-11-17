@@ -97,6 +97,10 @@ on every push to your default branch.
   </li>
 </ol>
 
+Every run follows the same path:
+
+<img src="/img/relwolf-flow.svg" width="720" height="612" loading="lazy" decoding="async" alt="Flowchart of a relwolf run: a push starts the CI job, which tags a merged release request if there is one, then prepares or updates the release request if there are releasable commits, and waits for a human to review and merge it." style="max-width:100%;height:auto" />
+
 <p class="rw-note">The screenshots show relwolf releasing itself: <a href="https://github.com/lupiq/relwolf/pull/33">release request #33</a>.</p>
 
 ```text
