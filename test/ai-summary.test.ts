@@ -106,6 +106,7 @@ describe('generateSummary', () => {
     expect(calls[0]!.url).toBe('https://llm.example.com/v1/chat/completions');
     expect(calls[0]!.body.model).toBe('m');
     expect(calls[0]!.body.messages[0].content).toMatch(/Write in German/);
+    expect(calls[0]!.body.messages[0].content).toMatch(/bold/);
     expect(calls[0]!.body.messages[1].content).toMatch(/Long body/);
   });
 

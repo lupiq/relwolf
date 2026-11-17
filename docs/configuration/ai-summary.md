@@ -89,6 +89,8 @@ which commits or changelog entries are used for the release itself.
 
 `prompt` replaces the built-in instructions. The placeholders `${language}`, `${tag}`, `${version}`, `${component}` and
 `${audience}` are replaced. The model gets the selected context (up to 30,000 characters) as input.
+The built-in prompt uses Markdown without headings and bolds important features, breaking changes, APIs, options, and
+compatibility details.
 
 ## Options
 

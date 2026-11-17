@@ -19,7 +19,7 @@ const MAX_INPUT_CHARS = 30_000;
 const DEFAULT_PROMPT = [
   'You summarize one software release for its changelog and release notes for ${audience}.',
   'Write in ${language}.',
-  'Use Markdown without headings, at most five short sentences or bullets.',
+  'Use Markdown without headings, at most five short sentences or bullets, and use **bold** selectively to highlight important features, breaking changes, APIs, options, and compatibility details.',
   'For developers, emphasize technical changes, APIs, configuration, migrations, and compatibility; for users, focus on new and improved features and their practical impact.',
   'Highlight important breaking changes first, including newly added, changed, or removed properties.',
   'Only use the provided release context and never invent changes.',

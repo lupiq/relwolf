@@ -6,9 +6,27 @@ patch-types: [fix, build, docs]
 
 release-emoji: true
 
-# AI summary of every release in the release request, the changelog and the GitHub release (GitHub Copilot CLI)
+# AI summary of every release in the release request, the changelog, release notes and the GitHub release (GitHub Copilot CLI)
 ai-summary:
   enabled: true
+  context: full-diff
+  audience: developers
+  prompt: |
+    Summarize this software release in ${language} for ${audience}.
+    Write a concise but substantive release summary: usually one to three short paragraphs or four to eight bullets,
+    with more detail when the release contains several meaningful changes and less detail for a small release.
+    Use Markdown without headings and use **bold** selectively to highlight important features, breaking changes, APIs,
+    options, commands, and compatibility details.
+    Explain the important changes and their practical or technical impact instead of merely repeating commit messages.
+    Group related changes and describe the resulting behavior, APIs, configuration, integrations, and migration implications.
+    Highlight breaking changes first, especially newly added, changed, or removed properties, options, commands, or interfaces.
+    Mention notable fixes, compatibility changes, and improvements when they materially affect developers.
+    Do not enumerate every changed file or low-level implementation detail unless it helps explain the change.
+    Use only evidence from the provided release context, do not invent motivation or behavior, and answer with the summary only.
+  targets:
+    - changelog
+    - file
+  file: RELEASE_NOTES.md
 
 assignees:
   - nioe

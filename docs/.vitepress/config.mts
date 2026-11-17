@@ -1,6 +1,8 @@
 import {defineConfig} from 'vitepress';
+import packageJson from '../../package.json' with {type: 'json'};
 
 const hostname = 'https://relwolf.lupiq.io';
+const releaseVersion = `v${packageJson.version}`;
 const siteDescription =
   'Automate your releases with Conventional Commits. Review every change before it ships. Release bot for GitLab and GitHub.';
 
@@ -134,7 +136,13 @@ export default defineConfig({
         link: '/reference/',
         activeMatch: '/reference/',
       },
-      {text: 'Changelog', link: '/changelog'},
+      {
+        text: releaseVersion,
+        items: [
+          {text: 'Changelog', link: '/changelog'},
+          {text: 'Release notes', link: '/release-notes'},
+        ],
+      },
       {text: 'About', link: '/about'},
     ],
     sidebar: [
@@ -186,7 +194,13 @@ export default defineConfig({
         link: '/development/',
         items: [{text: 'Contributing', link: '/development/contributing'}],
       },
-      {text: 'Changelog', link: '/changelog'},
+      {
+        text: releaseVersion,
+        items: [
+          {text: 'Changelog', link: '/changelog'},
+          {text: 'Release notes', link: '/release-notes'},
+        ],
+      },
       {text: 'Logos', link: '/logos'},
       {text: 'About lupiq', link: '/about'},
     ],
