@@ -164,6 +164,34 @@
           "type": "string",
           "minLength": 1
         },
+        "context": {
+          "default": "commits",
+          "description": "Release context sent to the model: generated changelog content, all commits, or the full code diff since the previous release.",
+          "type": "string",
+          "enum": [
+            "changelog",
+            "commits",
+            "full-diff"
+          ]
+        },
+        "audience": {
+          "default": "users",
+          "description": "Audience of the summary: developers for a technical summary or users for a feature-focused summary.",
+          "type": "string",
+          "enum": [
+            "developers",
+            "users"
+          ]
+        },
+        "exclude-paths": {
+          "default": [],
+          "description": "Globs from the repository root excluded from the full-diff context.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
         "language": {
           "default": "English",
           "description": "Language of the summary.",
@@ -171,7 +199,7 @@
           "minLength": 1
         },
         "prompt": {
-          "description": "Instructions for the model instead of the built-in ones. Placeholders: ${language}, ${tag}, ${version}, ${component}.",
+          "description": "Instructions for the model instead of the built-in ones. Placeholders: ${language}, ${tag}, ${version}, ${component}, ${audience}.",
           "type": "string",
           "minLength": 1
         },

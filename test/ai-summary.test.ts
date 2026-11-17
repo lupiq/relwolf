@@ -4,6 +4,7 @@ import {
   inputHash,
   prependFileEntry,
   renderFileEntry,
+  renderInput,
   resolveEndpoint,
 } from '../src/ai-summary.js';
 import {parseConfig} from '../src/config.js';
@@ -27,8 +28,26 @@ describe('ai-summary config', () => {
   it('is disabled by default', () => {
     expect(parseConfig(undefined).aiSummary).toMatchObject({
       enabled: false,
+      context: 'commits',
+      audience: 'users',
+      excludePaths: [],
       targets: ['changelog'],
     });
+  });
+
+  it('parses the context and audience', () => {
+    expect(
+      settings('enabled: true\ncontext: full-diff\naudience: developers'),
+    ).toMatchObject({context: 'full-diff', audience: 'developers'});
+  });
+
+  it('parses AI context exclusions', () => {
+    expect(settings('exclude-paths: [docs/**, "**/*.lock"]')).toMatchObject({
+      excludePaths: ['docs/**', '**/*.lock'],
+    });
+    expect(() => settings('exclude-paths: ["../secrets"]')).toThrow(
+      /ai-summary\.exclude-paths/,
+    );
   });
 
   it.each([
@@ -88,6 +107,41 @@ describe('generateSummary', () => {
     expect(calls[0]!.body.model).toBe('m');
     expect(calls[0]!.body.messages[0].content).toMatch(/Write in German/);
     expect(calls[0]!.body.messages[1].content).toMatch(/Long body/);
+  });
+
+  it.each([
+    ['changelog', 'Generated changelog:\n### Features\n\n- A'],
+    ['commits', 'Commit:\nfeat: a\n\nLong body'],
+    ['full-diff', 'Code diff since the previous release:\n@@ -1 +1 @@'],
+  ] as const)('uses the %s context', (context, expected) => {
+    const configured = settings(`enabled: true\ncontext: ${context}`);
+
+    expect(renderInput(configured, {...input, diff: '@@ -1 +1 @@'})).toContain(
+      expected,
+    );
+  });
+
+  it('renders the configured audience in the default prompt', async () => {
+    const calls: Array<{body: any}> = [];
+
+    await generateSummary(
+      settings(
+        'enabled: true\nprovider: openai\nbase-url: https://llm.example.com/v1\nmodel: m\naudience: developers',
+      ),
+      input,
+      env,
+      {
+        fetchImpl: async (_url, init) => {
+          calls.push({body: JSON.parse(init?.body as string)});
+
+          return Response.json({
+            choices: [{message: {content: 'Summary'}}],
+          });
+        },
+      },
+    );
+
+    expect(calls[0]!.body.messages[0].content).toMatch(/developers/);
   });
 
   it('returns failures instead of throwing', async () => {

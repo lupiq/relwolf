@@ -1434,11 +1434,19 @@ describe('AI summary', () => {
   const env = {RELWOLF_AI_API_KEY: 'key'};
   let answers: Array<string | Error>;
   let calls: number;
+  let inputs: Array<string>;
 
   beforeEach(() => {
     answers = ['Generated summary'];
     calls = 0;
-    vi.stubGlobal('fetch', async () => {
+    inputs = [];
+    vi.stubGlobal('fetch', async (_url: string, init: RequestInit) => {
+      const body = JSON.parse(init.body as string) as {
+        messages: Array<{content: string}>;
+      };
+
+      inputs.push(body.messages[1]!.content);
+
       const answer = answers[Math.min(calls++, answers.length - 1)]!;
 
       return answer instanceof Error
@@ -1477,6 +1485,22 @@ describe('AI summary', () => {
     await exec(AI_CONFIG(), {env});
     expect(provider.releases[0]!.body).toMatch(/^Generated summary\n\n/);
     expect(calls).toBe(1);
+  });
+
+  it('excludes configured paths from the full-diff context', async () => {
+    repo.write('package.json', PACKAGE_JSON);
+    repo.commit('chore: initial');
+    repo.tag('v0.0.0');
+    repo.commit('feat: included', 'src/feature.ts');
+    repo.commit('feat: ignored', 'generated/output.ts');
+
+    await exec(
+      AI_CONFIG('  context: full-diff\n  exclude-paths: ["generated/**"]\n'),
+      {env},
+    );
+
+    expect(inputs[0]).toContain('src/feature.ts');
+    expect(inputs[0]).not.toContain('generated/output.ts');
   });
 
   it('writes a separate file without touching the changelog', async () => {

@@ -124,6 +124,8 @@ export type Strategy = (typeof STRATEGIES)[number];
 
 /** Options that changesets decides itself, via `.changeset/config.json` or the workspace. */
 const AI_PROVIDERS = ['copilot-cli', 'openai'] as const;
+const AI_CONTEXTS = ['changelog', 'commits', 'full-diff'] as const;
+const AI_AUDIENCES = ['developers', 'users'] as const;
 const AI_TARGETS = ['changelog', 'file'] as const;
 
 const CHANGESETS_REJECTED_OPTIONS = [
@@ -354,6 +356,24 @@ export const configSchema = z.strictObject({
         .describe(
           'Model name; the default of the Copilot CLI if omitted, required with provider openai.',
         ),
+      'context': z
+        .enum(AI_CONTEXTS)
+        .default('commits')
+        .describe(
+          'Release context sent to the model: generated changelog content, all commits, or the full code diff since the previous release.',
+        ),
+      'audience': z
+        .enum(AI_AUDIENCES)
+        .default('users')
+        .describe(
+          'Audience of the summary: developers for a technical summary or users for a feature-focused summary.',
+        ),
+      'exclude-paths': z
+        .array(z.string().min(1))
+        .default([])
+        .describe(
+          'Globs from the repository root excluded from the full-diff context.',
+        ),
       'language': z
         .string()
         .min(1)
@@ -364,7 +384,7 @@ export const configSchema = z.strictObject({
         .min(1)
         .optional()
         .describe(
-          'Instructions for the model instead of the built-in ones. Placeholders: ${language}, ${tag}, ${version}, ${component}.',
+          'Instructions for the model instead of the built-in ones. Placeholders: ${language}, ${tag}, ${version}, ${component}, ${audience}.',
         ),
       'targets': z
         .array(z.enum(AI_TARGETS))
@@ -482,6 +502,10 @@ export interface AiSummaryConfig {
   /** OpenAI-compatible API, with provider openai. */
   baseUrl?: string;
   model?: string;
+  context: (typeof AI_CONTEXTS)[number];
+  audience: (typeof AI_AUDIENCES)[number];
+  /** Globs from the repository root excluded from the full-diff context. */
+  excludePaths: Array<string>;
   language: string;
   prompt?: string;
   targets: Array<(typeof AI_TARGETS)[number]>;
@@ -778,13 +802,16 @@ function parseTypes(parsed: ParsedConfig): {
   return {minorTypes, patchTypes};
 }
 
-function parseExcludePaths(patterns: ReadonlyArray<string>): Array<string> {
+function parseExcludePaths(
+  patterns: ReadonlyArray<string>,
+  option = 'exclude-paths',
+): Array<string> {
   return patterns.map(pattern => {
     const normalized = pattern.replaceAll('\\', '/').replace(/^\.\//, '');
 
     if (normalized.startsWith('/') || normalized.split('/').includes('..')) {
       throw new ConfigError(
-        `exclude-paths: "${pattern}" must be a relative path inside the repository`,
+        `${option}: "${pattern}" must be a relative path inside the repository`,
       );
     }
 
@@ -958,6 +985,12 @@ function parseAiSummary(parsed: ParsedConfig): AiSummaryConfig {
     provider: settings.provider,
     ...(baseUrl ? {baseUrl} : {}),
     ...(settings.model ? {model: settings.model} : {}),
+    context: settings.context,
+    audience: settings.audience,
+    excludePaths: parseExcludePaths(
+      settings['exclude-paths'],
+      'ai-summary.exclude-paths',
+    ),
     language: settings.language,
     ...(settings.prompt ? {prompt: settings.prompt} : {}),
     targets,

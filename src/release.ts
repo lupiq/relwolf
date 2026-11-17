@@ -823,6 +823,17 @@ async function summaryInput(
     commits: commits
       .filter(commit => !reverted.has(commit.sha))
       .map(commit => commit.message),
+    ...(options.config.aiSummary.context === 'full-diff'
+      ? {
+          diff: await git.diff(
+            plan.range ?? 'HEAD',
+            pathspecsFor(plan.pkg, packages, [
+              ...excludePaths,
+              ...options.config.aiSummary.excludePaths,
+            ]),
+          ),
+        }
+      : {}),
   };
 }
 

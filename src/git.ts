@@ -221,4 +221,15 @@ export class Git {
         return {sha: sha.trim(), message: message.join('\x1f')};
       });
   }
+
+  /** Unified diff of a range, optionally limited to pathspecs. */
+  async diff(range: string, pathspecs: Array<string>): Promise<string> {
+    const args = ['diff', '--no-ext-diff', range];
+
+    if (pathspecs.length > 0) {
+      args.push('--', ...pathspecs);
+    }
+
+    return this.git(...args);
+  }
 }

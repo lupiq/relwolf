@@ -11,14 +11,18 @@ can read and edit it before you merge. It is **disabled by default**.
 ```yaml [relwolf.yaml]
 ai-summary:
   enabled: true
+  context: changelog # changelog, commits (default) or full-diff
+  audience: users # users (default) or developers
+  exclude-paths: ['**/*.lock', 'generated/**'] # applies to full-diff
   targets: [changelog, file] # changelog (default), file or both
   file: docs/release-summaries.md # required for the target "file"
   language: English
 ```
 
 ::: warning Data leaves your repository
-The release notes and the full commit messages of the release are sent to the Copilot CLI or the configured AI endpoint. Only enable
-this with an endpoint you trust with that content.
+The configured release context is sent to the Copilot CLI or the configured AI endpoint. `changelog` sends only the generated
+changelog content, `commits` sends all commit messages and bodies, and `full-diff` sends the code diff since the previous release.
+Only enable this with an endpoint you trust with that content.
 :::
 
 ## Provider
@@ -64,21 +68,41 @@ The summary is rendered between hidden `relwolf:summary` markers in the release 
 - If the model cannot be reached or answers with an error, the release goes on without a (new) summary and the request
   shows a warning with the reason. The next run tries again.
 
+## Context and audience
+
+`context` controls what the model sees:
+
+| Context     | Content                                                                                     |
+| ----------- | ------------------------------------------------------------------------------------------- |
+| `changelog` | Only the generated changelog content, excluding commits that do not appear in the changelog |
+| `commits`   | All commit messages and bodies since the previous release (default)                         |
+| `full-diff` | The full package-scoped code diff since the previous release                                |
+
+`audience` is `users` by default. Set it to `developers` for a more technical summary focused on APIs,
+configuration, migrations, and compatibility. Both audiences get important breaking changes highlighted first,
+including newly added, changed, or removed properties.
+
+`exclude-paths` removes matching repository-relative glob paths from the `full-diff` context. It does not change
+which commits or changelog entries are used for the release itself.
+
 ## Prompt
 
-`prompt` replaces the built-in instructions. The placeholders `${language}`, `${tag}`, `${version}` and `${component}`
-are replaced. The model gets the release notes and the commit messages (up to 30,000 characters) as input.
+`prompt` replaces the built-in instructions. The placeholders `${language}`, `${tag}`, `${version}`, `${component}` and
+`${audience}` are replaced. The model gets the selected context (up to 30,000 characters) as input.
 
 ## Options
 
-| Key          | Default             | Description                               |
-| ------------ | ------------------- | ----------------------------------------- |
-| `enabled`    | `false`             | Turn the feature on                       |
-| `provider`   | `copilot-cli`       | `copilot-cli` or `openai`                 |
-| `base-url`   | none                | OpenAI-compatible API; only with `openai` |
-| `model`      | CLI default         | Model name; required with `openai`        |
-| `language`   | `English`           | Language of the summary                   |
-| `prompt`     | built in            | Instructions for the model                |
-| `targets`    | `[changelog]`       | `changelog`, `file` or both               |
-| `file`       | none                | Markdown file for the target `file`       |
-| `file-title` | `Release summaries` | First-level heading of that file          |
+| Key             | Default             | Description                                 |
+| --------------- | ------------------- | ------------------------------------------- |
+| `enabled`       | `false`             | Turn the feature on                         |
+| `provider`      | `copilot-cli`       | `copilot-cli` or `openai`                   |
+| `base-url`      | none                | OpenAI-compatible API; only with `openai`   |
+| `model`         | CLI default         | Model name; required with `openai`          |
+| `context`       | `commits`           | `changelog`, `commits` or `full-diff`       |
+| `audience`      | `users`             | `users` or `developers`                     |
+| `exclude-paths` | `[]`                | Globs excluded from the `full-diff` context |
+| `language`      | `English`           | Language of the summary                     |
+| `prompt`        | built in            | Instructions for the model                  |
+| `targets`       | `[changelog]`       | `changelog`, `file` or both                 |
+| `file`          | none                | Markdown file for the target `file`         |
+| `file-title`    | `Release summaries` | First-level heading of that file            |
