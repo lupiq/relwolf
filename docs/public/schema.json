@@ -135,6 +135,66 @@
         "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
       }
     },
+    "ai-summary": {
+      "description": "AI generated release summaries.",
+      "default": {},
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "default": false,
+          "description": "Generate an AI summary of every release. Disabled by default; commit messages are sent to the configured endpoint.",
+          "type": "boolean"
+        },
+        "base-url": {
+          "description": "Base URL of an OpenAI-compatible API (`/chat/completions` is appended). Defaults to GitHub Models on GitHub; required on GitLab.",
+          "type": "string",
+          "format": "uri"
+        },
+        "model": {
+          "description": "Model name. Defaults to openai/gpt-4.1-mini for GitHub Models; required with base-url.",
+          "type": "string",
+          "minLength": 1
+        },
+        "language": {
+          "default": "English",
+          "description": "Language of the summary.",
+          "type": "string",
+          "minLength": 1
+        },
+        "prompt": {
+          "description": "Instructions for the model instead of the built-in ones. Placeholders: ${language}, ${tag}, ${version}, ${component}.",
+          "type": "string",
+          "minLength": 1
+        },
+        "targets": {
+          "default": [
+            "changelog"
+          ],
+          "description": "Where the summary is written: the changelog (and release notes), a separate Markdown file, or both.",
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "changelog",
+              "file"
+            ]
+          }
+        },
+        "file": {
+          "description": "Markdown file (repository-relative) that gets a new entry per release; required for the target \"file\".",
+          "type": "string",
+          "minLength": 1
+        },
+        "file-title": {
+          "default": "Release summaries",
+          "description": "First-level heading of the summary file.",
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
     "http-timeout": {
       "default": 120,
       "description": "Seconds an API request attempt may take before it is aborted (1 to 3600). Timed out requests are retried, except POST requests.",

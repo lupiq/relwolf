@@ -8,7 +8,7 @@ import {
 } from 'node:fs';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
-import {afterEach, beforeEach, describe, expect, it} from 'vitest';
+import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import {parseBody as parse} from '../src/body.js';
 import {parseConfig} from '../src/config.js';
 import {run, RunError} from '../src/release.js';
@@ -1425,5 +1425,124 @@ describe('pre-commit-script', () => {
     repo.write('CHANGELOG.md', 'local edit\n');
 
     await expect(exec(CONFIG)).rejects.toThrow(/uncommitted changes/);
+  });
+});
+
+describe('AI summary', () => {
+  const AI_CONFIG = (extra = '') =>
+    `${NODE_CONFIG}ai-summary:\n  enabled: true\n  base-url: https://llm.example.com/v1\n  model: m\n${extra}`;
+  const env = {RELWOLF_AI_API_KEY: 'key'};
+  let answers: Array<string | Error>;
+  let calls: number;
+
+  beforeEach(() => {
+    answers = ['Generated summary'];
+    calls = 0;
+    vi.stubGlobal('fetch', async () => {
+      const answer = answers[Math.min(calls++, answers.length - 1)]!;
+
+      return answer instanceof Error
+        ? new Response('nope', {status: 400})
+        : Response.json({choices: [{message: {content: answer}}]});
+    });
+  });
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  const file = (name: string) =>
+    provider.commits.at(-1)!.files.find(entry => entry.path === name)?.content;
+
+  it('does nothing unless enabled', async () => {
+    repo.write('package.json', PACKAGE_JSON);
+    repo.commit('feat: a');
+    await exec(NODE_CONFIG, {env});
+
+    expect(calls).toBe(0);
+    expect(provider.requests[0]!.body).not.toMatch(/relwolf:summary/);
+  });
+
+  it('writes the summary into the changelog, the request and the release', async () => {
+    repo.write('package.json', PACKAGE_JSON);
+    repo.commit('feat: a');
+    await exec(AI_CONFIG(), {env});
+
+    expect(file('CHANGELOG.md')).toMatch(
+      /Generated summary\n\n### .* Features/,
+    );
+    expect(provider.requests[0]!.body).toMatch(
+      /<!-- relwolf:summary tag="v0.1.0" key="root" [^>]*-->\nGenerated summary\n/,
+    );
+
+    mergeLastRelease(repo, provider, 1);
+    await exec(AI_CONFIG(), {env});
+    expect(provider.releases[0]!.body).toMatch(/^Generated summary\n\n/);
+    expect(calls).toBe(1);
+  });
+
+  it('writes a separate file without touching the changelog', async () => {
+    repo.write('package.json', PACKAGE_JSON);
+    repo.commit('feat: a');
+    await exec(
+      AI_CONFIG(
+        '  targets: [file]\n  file: docs/summaries.md\n  file-title: Summaries\n',
+      ),
+      {env},
+    );
+
+    expect(file('docs/summaries.md')).toMatch(
+      /^# Summaries\n\n## 0\.1\.0 - \d{4}-\d\d-\d\d\n\nGenerated summary\n$/,
+    );
+    expect(file('CHANGELOG.md')).not.toMatch(/Generated summary/);
+  });
+
+  it('keeps it while the commits are unchanged and regenerates it for new commits', async () => {
+    repo.write('package.json', PACKAGE_JSON);
+    repo.commit('feat: a');
+    await exec(AI_CONFIG(), {env});
+    const result = await exec(AI_CONFIG(), {env});
+
+    expect(result.releaseRequests[0]!.action).toBe('unchanged');
+    expect(calls).toBe(1);
+
+    answers = ['Second summary'];
+    repo.commit('fix: b');
+    await exec(AI_CONFIG(), {env});
+
+    expect(calls).toBe(2);
+    expect(file('CHANGELOG.md')).toMatch(/Second summary/);
+  });
+
+  it('keeps a summary edited in the release request', async () => {
+    repo.write('package.json', PACKAGE_JSON);
+    repo.commit('feat: a');
+    await exec(AI_CONFIG(), {env});
+
+    const request = provider.requests[0]!;
+
+    request.body = request.body.replace('Generated summary', 'My own words');
+    repo.commit('fix: b');
+    await exec(AI_CONFIG(), {env});
+
+    expect(calls).toBe(1);
+    expect(file('CHANGELOG.md')).toMatch(/My own words/);
+    expect(provider.requests[0]!.body).toMatch(/My own words/);
+  });
+
+  it('warns in the request and releases without a summary on failures', async () => {
+    answers = [new Error('boom')];
+    repo.write('package.json', PACKAGE_JSON);
+    repo.commit('feat: a');
+    await exec(AI_CONFIG(), {env});
+
+    expect(provider.requests[0]!.body).toMatch(
+      /> ⚠️ The AI summary of v0\.1\.0 could not be generated: .*400/,
+    );
+    expect(provider.requests[0]!.body).not.toMatch(/relwolf:summary/);
+    expect(file('CHANGELOG.md')).toMatch(/### .*Features/);
+
+    answers = ['Now it works'];
+    await exec(AI_CONFIG(), {env});
+    expect(provider.requests[0]!.body).not.toMatch(/⚠️/);
+    expect(file('CHANGELOG.md')).toMatch(/Now it works/);
   });
 });

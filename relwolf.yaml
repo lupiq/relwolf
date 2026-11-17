@@ -6,6 +6,10 @@ patch-types: [fix, build, docs]
 
 release-emoji: true
 
+# AI summary of every release in the release request, the changelog and the GitHub release (GitHub Models)
+ai-summary:
+  enabled: true
+
 assignees:
   - nioe
 

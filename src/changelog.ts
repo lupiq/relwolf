@@ -150,6 +150,17 @@ function addPlaceholder(entry: string, placeholder: string): string {
   return `${before.trimEnd()}\n\n${placeholder}\n\n${rule[0].replace(/^\n/, '')}`;
 }
 
+/** Puts the summary above the first `###` section of the entry, or at its end if there is none. */
+export function insertSummary(entry: string, summary: string): string {
+  const section = /^### /m.exec(entry);
+
+  if (!section) {
+    return addPlaceholder(entry, summary.trim());
+  }
+
+  return `${entry.slice(0, section.index)}${summary.trim()}\n\n${entry.slice(section.index)}`;
+}
+
 /** Returns `existing` with the new release entry prepended, following the user's git-cliff config. */
 export async function prependToChangelog(
   options: CliffInvocation,
@@ -157,6 +168,8 @@ export async function prependToChangelog(
   env: NodeJS.ProcessEnv = process.env,
   /** Text added below the new entry, for releases without any change. */
   placeholder?: string,
+  /** AI summary added to the new entry. */
+  summary?: string,
 ): Promise<string> {
   const dir = await mkdtemp(path.join(tmpdir(), 'relwolf-'));
   const file = path.join(dir, 'CHANGELOG.md');
@@ -167,7 +180,7 @@ export async function prependToChangelog(
 
     const result = await readFile(file, 'utf8');
 
-    if (!placeholder) {
+    if (!placeholder && !summary) {
       return result;
     }
 
@@ -175,8 +188,12 @@ export async function prependToChangelog(
     const kept = commonSuffixLength(result, existing);
     const added = result.slice(0, result.length - kept).trimEnd();
     const rest = result.slice(result.length - kept).trimStart();
+    const summarized = summary ? insertSummary(added, summary) : added;
+    const entry = placeholder
+      ? addPlaceholder(summarized, placeholder)
+      : summarized;
 
-    return `${addPlaceholder(added, placeholder)}\n\n${rest}`.trimEnd() + '\n';
+    return `${entry}\n\n${rest}`.trimEnd() + '\n';
   } finally {
     await rm(dir, {recursive: true, force: true});
   }

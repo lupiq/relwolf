@@ -1,10 +1,20 @@
 import {mkdir, readFile, stat, writeFile} from 'node:fs/promises';
 import path from 'node:path';
 import {
+  generateSummary,
+  inputHash,
+  outputHash,
+  prependFileEntry,
+  renderFileEntry,
+  type StoredSummary,
+  type SummaryInput,
+} from './ai-summary.js';
+import {
   DEFAULT_RELEASE_TEXT,
   parseBody,
   parseDetails,
   parseOverrides,
+  parseSummaries,
   releaseText,
   renderBody,
   renderReleaseName,
@@ -316,6 +326,11 @@ async function tagMergedRequest(
 
   const details = parseDetails(request.body);
   const intro = releaseText(details.text ?? '');
+  const summaries = config.aiSummary.targets.includes('changelog')
+    ? parseSummaries(request.body, tag =>
+        isValidReleaseTag(tag, config.packages),
+      )
+    : [];
   const created: Array<string> = [];
 
   for (const entry of entries) {
@@ -325,7 +340,9 @@ async function tagMergedRequest(
       entry,
       request.mergeSha,
       details,
-      intro,
+      [intro, releaseSummary(summaries, entry.tag)]
+        .filter(Boolean)
+        .join('\n\n'),
       log,
     );
     created.push(entry.tag);
@@ -387,6 +404,22 @@ async function tagAndRelease(
     prerelease: entry.prerelease,
   });
   log(`Created release ${entry.tag}.`);
+}
+
+/** The summary text for a release; one section per package if several share the tag. */
+function releaseSummary(
+  summaries: ReadonlyArray<StoredSummary>,
+  tag: string,
+): string {
+  const texts = summaries
+    .filter(summary => summary.tag === tag)
+    .map(summary => ({key: summary.key, text: releaseText(summary.text)}))
+    .filter(summary => summary.text);
+  const [only] = texts;
+
+  return texts.length === 1 && only
+    ? only.text
+    : texts.map(({key, text}) => `## ${key}\n\n${text}`).join('\n\n');
 }
 
 async function readIfExists(file: string): Promise<string | undefined> {
@@ -632,13 +665,25 @@ async function buildFiles(
   git: Git,
   plans: Array<PackagePlan>,
   emoji: string,
-): Promise<{files: Array<FileChange>; entries: Array<BodyEntry>}> {
+  existing: ReleaseRequest | null,
+): Promise<{
+  files: Array<FileChange>;
+  entries: Array<BodyEntry>;
+  summaries: SummaryState;
+}> {
   const contents = new Map<string, FileState>();
   const load = createLoader(options.cwd, contents);
   const notesByTag: NotesByTag = new Map();
+  const summaries: SummaryState = {
+    previous: parseSummaries(existing?.body ?? '', tag =>
+      plans.some(plan => plan.tag === tag),
+    ),
+    stored: [],
+    warnings: [],
+  };
 
   for (const plan of plans) {
-    await applyPlan(options, git, plan, load, notesByTag, emoji);
+    await applyPlan(options, git, plan, load, notesByTag, emoji, summaries);
   }
 
   await applyComponentUpdaters(
@@ -653,7 +698,11 @@ async function buildFiles(
   const entries = buildEntries(notesByTag, plans);
   const files = changedFiles(contents);
 
-  return {files: await applyPreCommitScript(options, git, files), entries};
+  return {
+    files: await applyPreCommitScript(options, git, files),
+    entries,
+    summaries,
+  };
 }
 
 /** Whether `rewrite-changelog` applies: the git-cliff config differs from the one of the previous release. */
@@ -746,6 +795,106 @@ async function rewriteReleases(
   return releases.reverse();
 }
 
+/** AI summaries of a release request: the ones stored in it so far, the ones for the new body and warnings. */
+interface SummaryState {
+  previous: Array<StoredSummary>;
+  stored: Array<StoredSummary>;
+  warnings: Array<string>;
+}
+
+async function summaryInput(
+  options: RunOptions,
+  git: Git,
+  plan: PackagePlan,
+  notes: string,
+): Promise<SummaryInput> {
+  const {packages, excludePaths} = options.config;
+  const reverted = new Set(plan.revertedCommits);
+  const commits = await git.log(
+    plan.range,
+    pathspecsFor(plan.pkg, packages, excludePaths),
+  );
+
+  return {
+    tag: plan.tag,
+    version: formatVersion(plan.version),
+    component: plan.pkg.component,
+    notes,
+    commits: commits
+      .filter(commit => !reverted.has(commit.sha))
+      .map(commit => commit.message),
+  };
+}
+
+/**
+ * The AI summary of a release, or undefined if disabled or unavailable. A summary stored in the release request is
+ * kept if it was edited there or the commits did not change; otherwise it is generated again. Failures only add a
+ * warning to the release request.
+ */
+async function resolveSummary(
+  options: RunOptions,
+  git: Git,
+  plan: PackagePlan,
+  notes: string,
+  state: SummaryState,
+): Promise<string | undefined> {
+  const settings = options.config.aiSummary;
+
+  if (!settings.enabled || plan.empty) {
+    return undefined;
+  }
+
+  const key = packageKey(plan.pkg);
+  const label = `AI summary of ${plan.tag}${plan.pkg.component ? ` (${plan.pkg.component})` : ''}`;
+  const input = await summaryInput(options, git, plan, notes);
+  const current = inputHash(settings, input);
+  const old = state.previous.find(
+    summary => summary.tag === plan.tag && summary.key === key,
+  );
+  const edited = old !== undefined && outputHash(old.text) !== old.output;
+
+  if (old && (edited || old.input === current)) {
+    options.log?.(
+      edited
+        ? `${label} was edited in the release request, keeping it.`
+        : `${label} is up to date.`,
+    );
+    state.stored.push(old);
+
+    return releaseText(old.text) || undefined;
+  }
+
+  options.log?.(`Generating the ${label} with ${settings.model}.`);
+
+  const result = await generateSummary(
+    settings,
+    input,
+    options.env ?? process.env,
+    {timeoutMs: options.config.httpTimeout * 1000},
+  );
+
+  if (!result.ok) {
+    options.log?.(`The ${label} failed: ${result.error}`);
+    state.warnings.push(`The ${label} could not be generated: ${result.error}`);
+
+    if (old) {
+      state.stored.push(old);
+    }
+
+    return old ? releaseText(old.text) || undefined : undefined;
+  }
+
+  state.stored.push({
+    tag: plan.tag,
+    key,
+    input: current,
+    output: outputHash(result.text),
+    text: result.text,
+  });
+
+  return result.text;
+}
+
 /** Generates the notes of a plan, prepends them to the changelog and runs the updaters. */
 async function applyPlan(
   options: RunOptions,
@@ -754,6 +903,7 @@ async function applyPlan(
   load: FileLoader,
   notesByTag: NotesByTag,
   emoji: string,
+  summaries: SummaryState,
 ): Promise<void> {
   const {pkg} = plan;
   const nested = nestedPackagePaths(pkg, options.config.packages);
@@ -778,6 +928,10 @@ async function applyPlan(
   const placeholder = plan.empty ? options.config.noChangesText : '';
   const notes = placeholder || (await generateNotes(cliff, env));
 
+  const summary = placeholder
+    ? undefined
+    : await resolveSummary(options, git, plan, notes, summaries);
+  const {targets} = options.config.aiSummary;
   const sections = notesByTag.get(plan.tag) ?? [];
 
   sections.push({pkg, notes});
@@ -808,6 +962,24 @@ async function applyPlan(
       changelog.current,
       env,
       placeholder,
+      targets.includes('changelog') ? summary : undefined,
+    );
+  }
+
+  const {file, fileTitle} = options.config.aiSummary;
+
+  if (summary && file && targets.includes('file')) {
+    const target = await load(file, false);
+    const version = formatVersion(plan.version);
+
+    target.current = prependFileEntry(
+      target.current,
+      fileTitle,
+      renderFileEntry(
+        pkg.component ? `${pkg.component} ${version}` : version,
+        summary,
+        new Date(),
+      ),
     );
   }
 
@@ -1183,6 +1355,7 @@ interface PreparedRelease {
   /** Versions requested with RELWOLF_RELEASE_AS, stored in the body. */
   versions: Map<string, Version>;
   emoji: string;
+  summaries?: SummaryState;
 }
 
 async function prepareConventional(
@@ -1207,9 +1380,15 @@ async function prepareConventional(
   }
 
   const emoji = releaseEmoji(config, existing, options.random);
-  const {files, entries} = await buildFiles(options, git, plans, emoji);
+  const {files, entries, summaries} = await buildFiles(
+    options,
+    git,
+    plans,
+    emoji,
+    existing,
+  );
 
-  return {released: plans, files, entries, versions, emoji};
+  return {released: plans, files, entries, versions, emoji, summaries};
 }
 
 /** Paths in the working tree that changesets may write. */
@@ -1460,7 +1639,7 @@ function renderRequest(
   existing: ReleaseRequest | null,
 ): {title: string; message: string; body: string} {
   const {config} = options;
-  const {released: plans, entries, versions, emoji} = prepared;
+  const {released: plans, entries, versions, emoji, summaries} = prepared;
   const unique = plans.filter(
     (plan, index) => plans.findIndex(other => other.tag === plan.tag) === index,
   );
@@ -1481,6 +1660,8 @@ function renderRequest(
   const body = renderBody(entries, baseSha, overrides, {
     template: config.pullRequestBody,
     versions: planVersions,
+    summaries: summaries?.stored,
+    summaryWarnings: summaries?.warnings,
     details: {
       title:
         previous.title ??

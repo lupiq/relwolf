@@ -3,6 +3,7 @@ import {
   applyChangelogLinks,
   applyChangelogTitle,
   cliffEnv,
+  insertSummary,
 } from '../src/changelog.js';
 
 describe('applyChangelogTitle', () => {
@@ -101,5 +102,19 @@ describe('cliffEnv', () => {
     const env = {GITLAB_CI: 'true'};
 
     expect(cliffEnv(env)).toBe(env);
+  });
+});
+
+describe('insertSummary', () => {
+  it('puts the summary above the first section', () => {
+    expect(insertSummary('## 1.0.0\n\n### Features\n\n- A\n', 'Summary ')).toBe(
+      '## 1.0.0\n\nSummary\n\n### Features\n\n- A\n',
+    );
+  });
+
+  it('appends it to an entry without sections', () => {
+    expect(insertSummary('## 1.0.0\n\n- A', 'Summary')).toBe(
+      '## 1.0.0\n\n- A\n\nSummary',
+    );
   });
 });

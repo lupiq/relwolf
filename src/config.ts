@@ -123,6 +123,9 @@ export const STRATEGIES = ['conventional-commits', 'changesets'] as const;
 export type Strategy = (typeof STRATEGIES)[number];
 
 /** Options that changesets decides itself, via `.changeset/config.json` or the workspace. */
+const DEFAULT_AI_MODEL = 'openai/gpt-4.1-mini';
+const AI_TARGETS = ['changelog', 'file'] as const;
+
 const CHANGESETS_REJECTED_OPTIONS = [
   'patch-types',
   'minor-types',
@@ -324,6 +327,61 @@ export const configSchema = z.strictObject({
   'reviewers': userNames
     .default([])
     .describe('Usernames requested as reviewers when the request is created.'),
+  'ai-summary': z
+    .strictObject({
+      'enabled': z
+        .boolean()
+        .default(false)
+        .describe(
+          'Generate an AI summary of every release. Disabled by default; commit messages are sent to the configured endpoint.',
+        ),
+      'base-url': z
+        .url()
+        .optional()
+        .describe(
+          'Base URL of an OpenAI-compatible API (`/chat/completions` is appended). Defaults to GitHub Models on GitHub; required on GitLab.',
+        ),
+      'model': z
+        .string()
+        .min(1)
+        .optional()
+        .describe(
+          `Model name. Defaults to ${DEFAULT_AI_MODEL} for GitHub Models; required with base-url.`,
+        ),
+      'language': z
+        .string()
+        .min(1)
+        .default('English')
+        .describe('Language of the summary.'),
+      'prompt': z
+        .string()
+        .min(1)
+        .optional()
+        .describe(
+          'Instructions for the model instead of the built-in ones. Placeholders: ${language}, ${tag}, ${version}, ${component}.',
+        ),
+      'targets': z
+        .array(z.enum(AI_TARGETS))
+        .min(1)
+        .default(['changelog'])
+        .describe(
+          'Where the summary is written: the changelog (and release notes), a separate Markdown file, or both.',
+        ),
+      'file': z
+        .string()
+        .min(1)
+        .optional()
+        .describe(
+          'Markdown file (repository-relative) that gets a new entry per release; required for the target "file".',
+        ),
+      'file-title': z
+        .string()
+        .min(1)
+        .default('Release summaries')
+        .describe('First-level heading of the summary file.'),
+    })
+    .prefault({})
+    .describe('AI generated release summaries.'),
   'http-timeout': z
     .number()
     .int()
@@ -412,6 +470,19 @@ export interface UpdaterConfig {
   lockfiles: boolean;
 }
 
+export interface AiSummaryConfig {
+  enabled: boolean;
+  /** OpenAI-compatible API; GitHub Models if omitted. */
+  baseUrl?: string;
+  model: string;
+  language: string;
+  prompt?: string;
+  targets: Array<(typeof AI_TARGETS)[number]>;
+  /** Repository-relative path of the summary file. */
+  file?: string;
+  fileTitle: string;
+}
+
 export interface PackageConfig {
   /** Repository-relative POSIX path, "." for the root. */
   path: string;
@@ -460,6 +531,7 @@ export interface Config {
   changelogLinksText: string;
   assignees: Array<string>;
   reviewers: Array<string>;
+  aiSummary: AiSummaryConfig;
   /** Seconds every attempt of an API request may take. */
   httpTimeout: number;
   /** Commit types (lower case) that trigger a minor or patch release; breaking changes always trigger a major one. */
@@ -839,6 +911,47 @@ function checkReleaseEmoji(parsed: ParsedConfig): void {
   }
 }
 
+function parseAiSummary(parsed: ParsedConfig): AiSummaryConfig {
+  const settings = parsed['ai-summary'];
+  const targets = [...new Set(settings.targets)];
+  const baseUrl = settings['base-url'];
+
+  if (settings.enabled) {
+    if (parsed.strategy === 'changesets') {
+      throw new ConfigError(
+        'ai-summary: not supported with strategy changesets yet',
+      );
+    }
+
+    if (targets.includes('file') && !settings.file) {
+      throw new ConfigError('ai-summary: the target "file" requires "file"');
+    }
+
+    if (targets.includes('changelog') && parsed['rewrite-changelog']) {
+      throw new ConfigError(
+        'ai-summary: the target "changelog" cannot be combined with rewrite-changelog, which would drop the summaries of older releases',
+      );
+    }
+
+    if (baseUrl && !settings.model) {
+      throw new ConfigError('ai-summary: "model" is required with "base-url"');
+    }
+  }
+
+  return {
+    enabled: settings.enabled,
+    ...(baseUrl ? {baseUrl} : {}),
+    model: settings.model ?? DEFAULT_AI_MODEL,
+    language: settings.language,
+    ...(settings.prompt ? {prompt: settings.prompt} : {}),
+    targets,
+    ...(settings.file
+      ? {file: normalizeRepoPath(settings.file, 'ai-summary.file')}
+      : {}),
+    fileTitle: settings['file-title'],
+  };
+}
+
 function checkStrategy(raw: unknown, parsed: ParsedConfig): void {
   if (parsed.strategy !== 'changesets' || !raw || typeof raw !== 'object') {
     return;
@@ -915,6 +1028,7 @@ export function parseConfig(source: string | undefined): Config {
     changelogLinksText: parsed['changelog-links-text'],
     assignees: parsed.assignees,
     reviewers: parsed.reviewers,
+    aiSummary: parseAiSummary(parsed),
     httpTimeout: parsed['http-timeout'],
     minorTypes,
     patchTypes,

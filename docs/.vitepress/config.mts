@@ -164,6 +164,7 @@ export default defineConfig({
           {text: 'Updaters', link: '/configuration/updaters'},
           {text: 'Changelog (git-cliff)', link: '/configuration/changelog'},
           {text: 'Changesets', link: '/configuration/changesets'},
+          {text: 'AI release summary', link: '/configuration/ai-summary'},
         ],
       },
       {

@@ -1,3 +1,5 @@
+import type {StoredSummary} from './ai-summary.js';
+
 export const LABEL_PENDING = 'relwolf: pending';
 export const LABEL_TAGGED = 'relwolf: tagged';
 
@@ -18,6 +20,9 @@ const OVERRIDE_PATTERN =
 
 const NOTES_PATTERN =
   /<!-- relwolf:notes tag="([^"\s]+)" prerelease="(true|false)" -->\r?\n([\s\S]*?)\r?\n<!-- \/relwolf:notes -->/g;
+
+const SUMMARY_PATTERN =
+  /<!-- relwolf:summary tag="([^"\s]+)" key="([^"\n]*)" input="([0-9a-f]+)" output="([0-9a-f]+)" -->\r?\n([\s\S]*?)\r?\n<!-- \/relwolf:summary -->/g;
 
 export const DEFAULT_TITLE_TEMPLATE = 'chore(release): Create release ${tags}';
 
@@ -106,6 +111,23 @@ export interface RenderBodyOptions {
   template?: string | undefined;
   /** Bare versions, for the `${version}` placeholder. */
   versions?: ReadonlyArray<string> | undefined;
+  /** AI summaries, editable in the release request. */
+  summaries?: ReadonlyArray<StoredSummary> | undefined;
+  /** Why a summary could not be generated; shown as a warning. */
+  summaryWarnings?: ReadonlyArray<string> | undefined;
+}
+
+function summarySection(options: RenderBodyOptions): string {
+  const warnings = (options.summaryWarnings ?? []).map(
+    warning => `> ⚠️ ${sanitize(warning).replace(/\s*\n\s*/g, ' ')}`,
+  );
+  const blocks = (options.summaries ?? []).map(
+    summary =>
+      `**AI summary** of \`${summary.tag}\` (editable; clear the text to leave it out)\n\n` +
+      `<!-- relwolf:summary tag="${summary.tag}" key="${summary.key}" input="${summary.input}" output="${summary.output}" -->\n${sanitize(summary.text)}\n<!-- /relwolf:summary -->`,
+  );
+
+  return [...warnings, ...blocks].map(part => `${part}\n\n`).join('');
 }
 
 /** The relwolf markers (notes, requested versions, base commit) are always part of the body, whatever the template. */
@@ -149,7 +171,7 @@ export function renderBody(
   ).split('${notes}');
 
   return [
-    fill(before) + sections + fill(after),
+    fill(before) + summarySection(options) + sections + fill(after),
     ...requested,
     `<!-- relwolf:base ${baseSha} -->`,
   ].join('\n\n');
@@ -172,6 +194,24 @@ export function parseBody(
   }
 
   return entries;
+}
+
+/** The AI summaries stored in the release request, as edited there. */
+export function parseSummaries(
+  body: string,
+  isValidTag: (tag: string) => boolean,
+): Array<StoredSummary> {
+  const summaries: Array<StoredSummary> = [];
+
+  for (const match of body.matchAll(SUMMARY_PATTERN)) {
+    const [, tag = '', key = '', input = '', output = '', text = ''] = match;
+
+    if (isValidTag(tag)) {
+      summaries.push({tag, key, input, output, text});
+    }
+  }
+
+  return summaries;
 }
 
 export function parseOverrides(body: string): Array<BodyOverride> {
