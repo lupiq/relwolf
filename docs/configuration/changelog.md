@@ -36,6 +36,20 @@ Release merge requests are titled `chore(release): Create release …` (see `pul
 in the changelog (relwolf's own `cliff.toml` skips all `chore` commits).
 :::
 
+## Do I need a `cliff.toml`?
+
+No. Without one, git-cliff logs `"cliff.toml" is not found, using the default configuration` and uses its built-in
+default. You get a working changelog from the first release:
+
+- Entries are grouped by commit type under headings such as "Features", "Bug Fixes" and "Documentation".
+- The scope is shown in front of the description, e.g. _(PROJ-1)_ Fix typo.
+- Commits that are not Conventional Commits are left out (git-cliff warns about the skipped commits in the job log).
+
+Add a `cliff.toml` when you want to change something: which types appear, the group names, links to commits, diffs or
+merge requests, or the whole layout. A good starting point is [`git-cliff --init`](https://git-cliff.org/docs/usage/initializing),
+which writes git-cliff's default config into `cliff.toml` for you to edit. The [example below](#example-everything-except-chores)
+shows the smallest useful change.
+
 ## Links to component changelogs
 
 With `changelog-links: true` (monorepos), relwolf writes a list of links to the changelogs of all other packages below

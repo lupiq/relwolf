@@ -172,7 +172,8 @@ The emoji, the heading and the layout come from the repository's own `cliff.toml
 
 `relwolf.yaml` in the repository root is optional. Without it relwolf releases a single root package and updates no
 files. There are no CLI flags; secrets and CI context come from environment variables. Unknown keys are rejected, and a
-[JSON schema](https://relwolf.lupiq.io/schema.json) provides editor completion.
+[JSON schema](https://relwolf.lupiq.io/schema.json) provides editor completion. A `cliff.toml` is optional as well:
+without one, git-cliff's built-in default produces the changelog.
 
 ```yaml
 # yaml-language-server: $schema=https://relwolf.lupiq.io/schema.json

@@ -180,6 +180,8 @@ packages:
       - type: pom-xml
 ```
 
+A `cliff.toml` is optional too: without one, git-cliff's built-in default produces the changelog.
+
 - [relwolf.yaml reference](/configuration/relwolf-yaml): all options
 - [Updaters](/configuration/updaters): version files, markers and lockfiles
 - [Monorepos](/configuration/monorepos): linked versions, separate requests, one tag per group
