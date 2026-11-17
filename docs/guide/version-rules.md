@@ -49,6 +49,11 @@ Use [`RELWOLF_RELEASE_AS`](/guide/release-as) to override the computed version.
 relwolf only needs a valid header (`type(scope)!: Description`). Everything else is up to your team; these conventions
 keep a history readable and the changelog useful.
 
+::: info Opinionated
+These rules are the maintainers' opinion, not part of the Conventional Commits specification. relwolf only requires a
+valid header; for example, a capitalised description is a team convention that you can drop or change.
+:::
+
 ```text
 type(optional scope)!: Description
 
@@ -62,6 +67,8 @@ BREAKING CHANGE: what breaks and how to migrate
   Only the types in [`minor-types` and `patch-types`](/configuration/relwolf-yaml#commit-types) trigger a release.
 - **Description.** Write it so that it completes the sentence "If applied, this commit will …": imperative, present
   tense, starts with a capital letter, no full stop. `Add search` rather than `added search` or `Adds search`.
+- **Code in backticks.** Wrap class, function, file and option names in backticks, for example
+  ``fix(cart): Handle null in `OrderService.submit` ``. Markdown renders them as code in changelogs and release notes.
 - **Keep it short.** Aim for about 70 characters in the header. Put details in the body, not in the description.
 - **Body.** Explain the motivation and contrast it with the previous behaviour. Separate it from the header with an empty
   line.
@@ -69,8 +76,10 @@ BREAKING CHANGE: what breaks and how to migrate
   a `BREAKING CHANGE:` footer if the header is not enough. Either one bumps the major version.
 - **One logical change per commit.** The bump level and the changelog are derived per commit, so mixed commits end up
   in the wrong place.
-- **Squash merges.** If you squash, the squash commit message is what relwolf sees. Write the merge request title in
-  the same format.
+- **Squash merges.** relwolf analyses the commits on the default branch, so with squash merging the squash commit
+  message counts, not the individual commits and not necessarily the merge request title. Check what your platform
+  proposes as the default squash message. Configuring the repository to use the first commit of the feature branch
+  works well; then that commit has to follow the format.
 
 ### Scopes and ticket references
 
@@ -152,6 +161,7 @@ binary), [Commitizen](https://commitizen-tools.github.io/commitizen/) (Python), 
 stack and check that it can enforce a capitalised description.
 
 ::: tip Hooks are a convenience, not a guarantee
-Contributors can skip hooks with `git commit --no-verify`. If you squash-merge, the merge request or pull request title
-becomes the commit message, so check it in your CI as well, for example with `commitlint` on the title.
+Contributors can skip hooks with `git commit --no-verify`. With squash merging, only the squash commit message ends up
+on the default branch, so make sure it is validated too, for example by running `commitlint` on the first commit of
+the branch in your CI.
 :::
