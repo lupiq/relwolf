@@ -236,6 +236,8 @@ GitHub only. relwolf brings the same review-first workflow to **GitLab** and run
 | Custom steps      | `pre-commit-script` modifies any file before the release commit                                                                                                             | No equivalent in its documentation                                                                                                   |
 | Configuration     | One `relwolf.yaml` with a JSON schema; no CLI flags                                                                                                                         | JSON config and manifest files, CLI flags                                                                                            |
 
+See the [full comparison](https://relwolf.lupiq.io/guide/comparison) in the documentation.
+
 Like [semantic-release](https://github.com/semantic-release/semantic-release), relwolf derives versions from commit
 messages. In relwolf, every release passes through a reviewable merge request before anything is tagged or published.
 

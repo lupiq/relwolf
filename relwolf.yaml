@@ -26,6 +26,8 @@ packages:
       - type: generic
         path: README.md
       - type: generic
+        path: docs/index.md
+      - type: generic
         path: docs/guide/gitlab.md
       - type: generic
         path: docs/guide/github.md

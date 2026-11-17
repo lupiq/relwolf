@@ -2,7 +2,7 @@ import {defineConfig} from 'vitepress';
 
 const hostname = 'https://relwolf.lupiq.io';
 const siteDescription =
-  'Release bot for GitLab and GitHub, driven by Conventional Commits or Changesets.';
+  'Automate your releases with Conventional Commits. Review every change before it ships. Release bot for GitLab and GitHub.';
 
 export default defineConfig({
   title: 'relwolf',
@@ -69,6 +69,13 @@ export default defineConfig({
     ['meta', {property: 'og:image', content: `${hostname}/og-image.png`}],
     ['meta', {property: 'og:image:width', content: '1200'}],
     ['meta', {property: 'og:image:height', content: '630'}],
+    [
+      'meta',
+      {
+        property: 'og:image:alt',
+        content: 'relwolf - Releases, without the release hassle.',
+      },
+    ],
     ['meta', {name: 'twitter:card', content: 'summary_large_image'}],
     ['meta', {name: 'twitter:image', content: `${hostname}/og-image.png`}],
   ],
@@ -139,6 +146,7 @@ export default defineConfig({
           {text: 'GitLab', link: '/guide/gitlab'},
           {text: 'GitHub', link: '/guide/github'},
           {text: 'How it works', link: '/guide/how-it-works'},
+          {text: 'relwolf vs. release-please', link: '/guide/comparison'},
           {text: 'Version rules', link: '/guide/version-rules'},
           {text: 'Controlling the next version', link: '/guide/release-as'},
           {text: 'Pre-releases', link: '/guide/pre-releases'},

@@ -79,3 +79,75 @@
 .changelog-page .vp-doc hr {
   display: none;
 }
+
+/* Landing page: "How it works" steps */
+.rw-steps {
+  display: grid;
+  gap: 1.5rem;
+  margin: 1.5rem 0;
+  padding: 0;
+  list-style: none;
+}
+
+.vp-doc .rw-steps li {
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 12px;
+  background: var(--vp-c-bg-soft);
+}
+
+.rw-steps img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1000 / 530;
+  border-bottom: 1px solid var(--vp-c-divider);
+  background: var(--vp-c-bg-alt);
+}
+
+.vp-doc .rw-steps h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 1rem 1rem 0.4rem;
+  border: 0;
+  padding: 0;
+  font-size: 1.05rem;
+  line-height: 1.4;
+}
+
+.rw-steps h3 span {
+  flex: none;
+  width: 1.7rem;
+  height: 1.7rem;
+  border-radius: 50%;
+  background: var(--lupiq-violet);
+  color: #fff;
+  font-size: 0.9rem;
+  line-height: 1.7rem;
+  text-align: center;
+}
+
+.dark .rw-steps h3 span {
+  background: var(--lupiq-teal);
+  color: var(--lupiq-violet-dark);
+}
+
+.vp-doc .rw-steps p {
+  margin: 0 1rem 1rem;
+  color: var(--vp-c-text-2);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.vp-doc .rw-note {
+  color: var(--vp-c-text-2);
+  font-size: 0.85rem;
+}
+
+@media (min-width: 960px) {
+  .rw-steps {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}

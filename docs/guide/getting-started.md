@@ -30,7 +30,8 @@ changelogs, and relwolf takes care of the release merge request, tags and releas
 | Release     | Merge request                      | Pull request                  |
 | Setup guide | [GitLab guide](/guide/gitlab)      | [GitHub guide](/guide/github) |
 
-See [GitHub vs. GitLab](/reference/github-vs-gitlab) for all differences.
+See [GitHub vs. GitLab](/reference/github-vs-gitlab) for all differences. Coming from release-please? See
+[relwolf vs. release-please](/guide/comparison).
 
 ## Requirements
 

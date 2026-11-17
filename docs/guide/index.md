@@ -17,6 +17,7 @@ Everything you need to automate releases with relwolf.
 
 - [How it works](/guide/how-it-works): the two phases of a run, the job log and where the state is kept
 - [Version rules](/guide/version-rules): how Conventional Commits map to SemVer
+- [relwolf vs. release-please](/guide/comparison): what is different and which one fits your project
 
 ## Go further
 
