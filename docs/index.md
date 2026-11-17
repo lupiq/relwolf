@@ -105,10 +105,10 @@ Every run follows the same path:
 <p class="rw-note">The screenshots show relwolf releasing itself: <a href="https://github.com/lupiq/relwolf/pull/33">release request #33</a>.</p>
 
 ```text
-feat: add search         → release request "Create release v0.1.0" opened
-fix: typo                → release request updated (still v0.1.0, changelog has both)
+feat: Add search         → release request "Create release v0.1.0" opened
+fix: Fix typo                → release request updated (still v0.1.0, changelog has both)
 (release request merged) → tag v0.1.0 + release created
-fix: crash on start      → release request "Create release v0.1.1" opened
+fix: Fix crash on start      → release request "Create release v0.1.1" opened
 ```
 
 Git is used read-only, every step is idempotent and the release request is the only state. See

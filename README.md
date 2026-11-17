@@ -127,10 +127,10 @@ Every run has two phases:
    `relwolf/<branch>`.
 
 ```text
-feat: add search        → release request "Create release v0.1.0" opened
-fix: typo               → release request updated (still v0.1.0, changelog has both)
+feat: Add search        → release request "Create release v0.1.0" opened
+fix: Fix typo               → release request updated (still v0.1.0, changelog has both)
 (release request merged) → tag v0.1.0 + release created
-fix: crash on start     → release request "Create release v0.1.1" opened
+fix: Fix crash on start     → release request "Create release v0.1.1" opened
 ```
 
 Git is used read-only; every write (release commit, request, labels, tags, releases) goes through the GitLab or GitHub
@@ -235,7 +235,7 @@ GitHub only. relwolf brings the same review-first workflow to **GitLab** and run
 | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | Platforms         | GitLab (gitlab.com and self-managed) and GitHub (github.com and Enterprise)                                                                                                 | GitHub only                                                                                                                          |
 | Changelog         | Rendered by git-cliff. A `cliff.toml` controls grouping, templates, links and any other part of the format; `rewrite-changelog` regenerates the files after a config change | Sections per commit type (`changelog-sections`) and the notes type `default` or `github`; custom templates only through the code API |
-| Revert commits    | `Revert "feat: a"` cancels the original commit and both stay out of the changelog                                                                                           | Listed in a `Reverts` section                                                                                                        |
+| Revert commits    | `Revert "feat: Add search"` cancels the original commit and both stay out of the changelog                                                                                  | Listed in a `Reverts` section                                                                                                        |
 | Forcing a version | `RELWOLF_RELEASE_AS` at runtime (pipeline variable or action input), stored in the release request, per component                                                           | `Release-As:` commit footer or `release-as` in the config file                                                                       |
 | Strategies        | Conventional Commits or Changesets (`strategy: changesets`)                                                                                                                 | Conventional Commits                                                                                                                 |
 | Custom steps      | `pre-commit-script` modifies any file before the release commit                                                                                                             | No equivalent in its documentation                                                                                                   |

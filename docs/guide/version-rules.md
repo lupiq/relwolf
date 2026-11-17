@@ -25,21 +25,133 @@ commit types trigger a minor or patch release, e.g. `patch-types: [fix, build]`.
   `initial-version` is set.
 - Tags are `v1.2.3` by default; the format is set by [`tag-template`](/configuration/relwolf-yaml#tags-and-release-names).
 - Only commits touching a package's path count for that package; `exclude-paths` can ignore further paths.
-- Reverted commits do not count: a `Revert "feat: a"` commit (or git's `This reverts commit <sha>` line) cancels the
+- Reverted commits do not count: a `Revert "feat: Add search"` commit (or git's `This reverts commit <sha>` line) cancels the
   original commit since the last release. If nothing else is releasable, an open release merge request is closed.
   Both commits are also left out of the changelog.
 
 ## Examples
 
-| Last tag | Commits since                                 | Next version | Why                         |
-| -------- | --------------------------------------------- | ------------ | --------------------------- |
-| `v1.2.3` | `fix: a`                                      | `1.2.4`      | patch                       |
-| `v1.2.3` | `fix: a`, `feat: b`                           | `1.3.0`      | highest bump wins           |
-| `v1.2.3` | `feat!: c`                                    | `2.0.0`      | breaking change             |
-| `v0.4.0` | `feat!: c`                                    | `0.5.0`      | `bump-minor-pre-major`      |
-| `v0.4.0` | `feat!: c` with `bump-minor-pre-major: false` | `1.0.0`      | breaking change bumps major |
-| none     | `feat: a`                                     | `0.1.0`      | computed from `0.0.0`       |
-| `v1.2.3` | `docs: a`, `chore: b`                         | none         | nothing releasable          |
-| `v1.2.3` | `build: a` with `patch-types: [fix, build]`   | `1.2.4`      | custom patch type           |
+| Last tag | Commits since                                                 | Next version | Why                         |
+| -------- | ------------------------------------------------------------- | ------------ | --------------------------- |
+| `v1.2.3` | `fix: Fix typo`                                               | `1.2.4`      | patch                       |
+| `v1.2.3` | `fix: Fix typo`, `feat: Add search`                           | `1.3.0`      | highest bump wins           |
+| `v1.2.3` | `feat!: Remove legacy API`                                    | `2.0.0`      | breaking change             |
+| `v0.4.0` | `feat!: Remove legacy API`                                    | `0.5.0`      | `bump-minor-pre-major`      |
+| `v0.4.0` | `feat!: Remove legacy API` with `bump-minor-pre-major: false` | `1.0.0`      | breaking change bumps major |
+| none     | `feat: Add search`                                            | `0.1.0`      | computed from `0.0.0`       |
+| `v1.2.3` | `docs: Update readme`, `chore: Update deps`                   | none         | nothing releasable          |
+| `v1.2.3` | `build: Update base image` with `patch-types: [fix, build]`   | `1.2.4`      | custom patch type           |
 
 Use [`RELWOLF_RELEASE_AS`](/guide/release-as) to override the computed version.
+
+## Best practices
+
+relwolf only needs a valid header (`type(scope)!: Description`). Everything else is up to your team; these conventions
+keep a history readable and the changelog useful.
+
+```text
+type(optional scope)!: Description
+
+Optional body: why the change was made and how it differs from before.
+
+Optional footer: Closes #123
+BREAKING CHANGE: what breaks and how to migrate
+```
+
+- **Type.** Use a known type in lower case: `feat`, `fix`, `perf`, `refactor`, `docs`, `test`, `build`, `ci`, `chore`.
+  Only the types in [`minor-types` and `patch-types`](/configuration/relwolf-yaml#commit-types) trigger a release.
+- **Description.** Write it so that it completes the sentence "If applied, this commit will …": imperative, present
+  tense, starts with a capital letter, no full stop. `Add search` rather than `added search` or `Adds search`.
+- **Keep it short.** Aim for about 70 characters in the header. Put details in the body, not in the description.
+- **Body.** Explain the motivation and contrast it with the previous behaviour. Separate it from the header with an empty
+  line.
+- **Breaking changes.** Add `!` before the colon, e.g. `feat(api)!: Remove status endpoint`, and describe the impact in
+  a `BREAKING CHANGE:` footer if the header is not enough. Either one bumps the major version.
+- **One logical change per commit.** The bump level and the changelog are derived per commit, so mixed commits end up
+  in the wrong place.
+- **Squash merges.** If you squash, the squash commit message is what relwolf sees. Write the merge request title in
+  the same format.
+
+### Scopes and ticket references
+
+A scope is optional and free text, so anything except `)` works. Common styles:
+
+| Style             | Example                                         | Use when                                                  |
+| ----------------- | ----------------------------------------------- | --------------------------------------------------------- |
+| Scope = component | `fix(cart): Prevent ordering an empty cart`     | The changelog should group or label changes by component. |
+| Scope = ticket    | `fix(PROJ-123): Prevent ordering an empty cart` | You track every change in Jira and want it in the header. |
+| Scope = issue     | `feat(#42): Add search`                         | You work with GitHub or GitLab issue numbers.             |
+| Ticket in footer  | `fix(cart): Prevent ordering an empty cart`     | You want a component scope and a ticket link.             |
+
+For the last style, add the reference in the footer:
+
+```text
+fix(cart): Prevent ordering an empty cart
+
+Orders without items failed in the payment step.
+
+Closes PROJ-123
+```
+
+::: tip Choose one style per project
+A ticket scope makes every header traceable, but the scope no longer names the component. If your
+[`cliff.toml`](/configuration/changelog) prints the scope in the changelog, it will show the ticket number. A component
+scope keeps the changelog tidy and the ticket in the footer. Mixing both in one project makes the history inconsistent.
+:::
+
+Breaking changes work the same way with any scope:
+
+```text
+feat(PROJ-456)!: Remove ticket list endpoint
+
+BREAKING CHANGE: The ticket endpoints no longer support listing all entities.
+```
+
+## Tooling
+
+relwolf ignores commits that do not follow the format, so a wrong header silently means "no release". A local Git hook
+catches mistakes before they reach the repository. relwolf itself uses [Husky](https://typicode.github.io/husky/) and
+[commitlint](https://commitlint.js.org/); see its
+[`.husky/commit-msg`](https://github.com/lupiq/relwolf/blob/main/.husky/commit-msg) and
+[`commitlint.config.ts`](https://github.com/lupiq/relwolf/blob/main/commitlint.config.ts) for a working setup.
+
+Install the tools:
+
+```sh
+pnpm add -D husky @commitlint/cli @commitlint/config-conventional
+pnpm exec husky init
+```
+
+Add a `commitlint.config.js` that enforces the capitalised description from the [best practices](#best-practices):
+
+```js [commitlint.config.js]
+export default {
+  extends: ['@commitlint/config-conventional'],
+  rules: {
+    'subject-case': [2, 'always', 'sentence-case'],
+  },
+};
+```
+
+The preset forbids sentence case by default, so the `subject-case` rule has to be overridden. Then create the hook
+`.husky/commit-msg`:
+
+```sh [.husky/commit-msg]
+pnpm commitlint --edit "$1"
+```
+
+A commit such as `fix: fix typo` is now rejected until the description starts with a capital letter. Husky installs the
+hooks on `pnpm install` through the `prepare` script, so every contributor gets them without extra steps.
+
+### Without Node.js
+
+The same idea works in any ecosystem, so you do not need a JavaScript toolchain just for commit linting. Examples:
+[pre-commit](https://pre-commit.com/) (Python, hooks for any language), [Lefthook](https://lefthook.dev/) (a single Go
+binary), [Commitizen](https://commitizen-tools.github.io/commitizen/) (Python), [Cocogitto](https://docs.cocogitto.io/)
+(Rust) and [git-conventional-commits](https://github.com/qoomon/git-conventional-commits). Pick whichever fits your
+stack and check that it can enforce a capitalised description.
+
+::: tip Hooks are a convenience, not a guarantee
+Contributors can skip hooks with `git commit --no-verify`. If you squash-merge, the merge request or pull request title
+becomes the commit message, so check it in your CI as well, for example with `commitlint` on the title.
+:::

@@ -193,7 +193,7 @@ requires it.
 | `${version}` | The bare version (`1.2.3`) if a single package is released, otherwise the same as `${tags}` |
 
 ```yaml [relwolf.yaml]
-pull-request-title: 'chore: release ${version}'
+pull-request-title: 'chore: Release ${version}'
 ```
 
 Unknown placeholders fail the run. Keep a type that does not bump the version (`chore`, `docs`, …); a `feat` or `fix`
