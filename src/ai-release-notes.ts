@@ -313,8 +313,14 @@ export function renderFileEntry(
   heading: string,
   summary: string,
   date: Date,
+  options: {emoji?: string; releaseUrl?: string} = {},
 ): string {
-  return `## ${heading} - ${date.toISOString().slice(0, 10)}\n\n${summary.trim()}\n`;
+  const linkedHeading = options.releaseUrl
+    ? `[${heading}](${options.releaseUrl})`
+    : heading;
+  const icon = options.emoji ? `${options.emoji} ` : '';
+
+  return `## ${icon}${linkedHeading} - ${date.toISOString().slice(0, 10)}\n\n${summary.trim()}\n`;
 }
 
 /** Prepends the entry below the first-level title of the summary file (created if missing). */

@@ -17,6 +17,8 @@ ai-release-notes:
     with more detail when the release contains several meaningful changes and less detail for a small release.
     Use Markdown without headings and use **bold** selectively to highlight important features, breaking changes, APIs,
     options, commands, and compatibility details.
+    Prefer top-level bullets with bold topic labels and nested bullets for supporting details; use paragraphs only when
+    they make a small release clearer.
     Explain the important changes and their practical or technical impact instead of merely repeating commit messages.
     Group related changes and describe the resulting behavior, APIs, configuration, integrations, and migration implications.
     Highlight breaking changes first, especially newly added, changed, or removed properties, options, commands, or interfaces.
@@ -24,7 +26,6 @@ ai-release-notes:
     Do not enumerate every changed file or low-level implementation detail unless it helps explain the change.
     Use only evidence from the provided release context, do not invent motivation or behavior, and answer with the summary only.
   targets:
-    - changelog
     - file
   file: RELEASE_NOTES.md
 

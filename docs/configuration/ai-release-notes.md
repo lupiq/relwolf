@@ -49,10 +49,10 @@ ai-release-notes:
 
 ## Targets
 
-| Target      | Effect                                                                                                                                                                    |
-| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `changelog` | The release notes are added to the new changelog entry above its first `###` section (at the end without one) and above the notes of the created release.                 |
-| `file`      | A new entry `## <version> - <date>` with the release notes is prepended below the `# <file-title>` heading of `file` (created if missing), e.g. for a documentation page. |
+| Target      | Effect                                                                                                                                                                                    |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `changelog` | The release notes are added to the new changelog entry above its first `###` section (at the end without one) and above the notes of the created release.                                 |
+| `file`      | A new entry with the release icon, linked version, date, and release notes is prepended below the `# <file-title>` heading of `file` (created if missing), e.g. for a documentation page. |
 
 `changelog` cannot be combined with `rewrite-changelog`, which would drop the summaries of older releases. In
 monorepos every package gets its own release notes. `strategy: changesets` is not supported yet.

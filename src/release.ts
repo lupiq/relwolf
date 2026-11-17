@@ -837,6 +837,25 @@ async function summaryInput(
   };
 }
 
+function releaseUrl(env: NodeJS.ProcessEnv, tag: string): string | undefined {
+  const encodedTag = encodeURIComponent(tag);
+
+  if (env.GITHUB_REPOSITORY) {
+    const server = (env.GITHUB_SERVER_URL ?? 'https://github.com').replace(
+      /\/$/,
+      '',
+    );
+
+    return `${server}/${env.GITHUB_REPOSITORY}/releases/tag/${encodedTag}`;
+  }
+
+  if (env.CI_PROJECT_URL) {
+    return `${env.CI_PROJECT_URL.replace(/\/$/, '')}/-/releases/${encodedTag}`;
+  }
+
+  return undefined;
+}
+
 /**
  * The AI release notes of a release, or undefined if disabled or unavailable. Notes stored in the release request are
  * kept if it was edited there or the commits did not change; otherwise it is generated again. Failures only add a
@@ -984,6 +1003,7 @@ async function applyPlan(
   if (summary && file && targets.includes('file')) {
     const target = await load(file, false);
     const version = formatVersion(plan.version);
+    const url = releaseUrl(options.env ?? process.env, plan.tag);
 
     target.current = prependFileEntry(
       target.current,
@@ -992,6 +1012,10 @@ async function applyPlan(
         pkg.component ? `${pkg.component} ${version}` : version,
         summary,
         new Date(),
+        {
+          ...(emoji ? {emoji} : {}),
+          ...(url ? {releaseUrl: url} : {}),
+        },
       ),
     );
   }

@@ -246,6 +246,17 @@ describe('summary file', () => {
     );
   });
 
+  it('renders the release icon and link in the heading', () => {
+    expect(
+      renderFileEntry('1.0.0', 'Text', new Date('2026-01-02T10:00:00Z'), {
+        emoji: '🎉',
+        releaseUrl: 'https://example.test/releases/1.0.0',
+      }),
+    ).toBe(
+      '## 🎉 [1.0.0](https://example.test/releases/1.0.0) - 2026-01-02\n\nText\n',
+    );
+  });
+
   it('prepends to a file without a title', () => {
     expect(prependFileEntry('Intro\n', 'Summaries', entry('1.0.0'))).toBe(
       '## 1.0.0 - 2026-01-02\n\nText\n\nIntro\n',

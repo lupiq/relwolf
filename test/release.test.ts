@@ -1510,11 +1510,11 @@ describe('AI release notes', () => {
       AI_CONFIG(
         '  targets: [file]\n  file: docs/summaries.md\n  file-title: Summaries\n',
       ),
-      {env},
+      {env: {...env, GITHUB_REPOSITORY: 'lupiq/relwolf'}},
     );
 
     expect(file('docs/summaries.md')).toMatch(
-      /^# Summaries\n\n## 0\.1\.0 - \d{4}-\d\d-\d\d\n\nGenerated summary\n$/,
+      /^# Summaries\n\n## \[0\.1\.0\]\(https:\/\/github\.com\/lupiq\/relwolf\/releases\/tag\/v0\.1\.0\) - \d{4}-\d\d-\d\d\n\nGenerated summary\n$/,
     );
     expect(file('CHANGELOG.md')).not.toMatch(/Generated summary/);
   });
