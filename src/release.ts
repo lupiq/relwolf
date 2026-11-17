@@ -864,7 +864,9 @@ async function resolveSummary(
     return releaseText(old.text) || undefined;
   }
 
-  options.log?.(`Generating the ${label} with ${settings.model}.`);
+  options.log?.(
+    `Generating the ${label} with ${settings.model ?? settings.provider}.`,
+  );
 
   const result = await generateSummary(
     settings,

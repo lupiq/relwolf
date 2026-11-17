@@ -123,7 +123,7 @@ export const STRATEGIES = ['conventional-commits', 'changesets'] as const;
 export type Strategy = (typeof STRATEGIES)[number];
 
 /** Options that changesets decides itself, via `.changeset/config.json` or the workspace. */
-const DEFAULT_AI_MODEL = 'openai/gpt-4.1-mini';
+const AI_PROVIDERS = ['copilot-cli', 'openai'] as const;
 const AI_TARGETS = ['changelog', 'file'] as const;
 
 const CHANGESETS_REJECTED_OPTIONS = [
@@ -335,18 +335,24 @@ export const configSchema = z.strictObject({
         .describe(
           'Generate an AI summary of every release. Disabled by default; commit messages are sent to the configured endpoint.',
         ),
+      'provider': z
+        .enum(AI_PROVIDERS)
+        .default('copilot-cli')
+        .describe(
+          'copilot-cli runs the GitHub Copilot CLI; openai calls an OpenAI-compatible API (base-url and model required).',
+        ),
       'base-url': z
         .url()
         .optional()
         .describe(
-          'Base URL of an OpenAI-compatible API (`/chat/completions` is appended). Defaults to GitHub Models on GitHub; required on GitLab.',
+          'Base URL of the OpenAI-compatible API (`/chat/completions` is appended); only with provider openai.',
         ),
       'model': z
         .string()
         .min(1)
         .optional()
         .describe(
-          `Model name. Defaults to ${DEFAULT_AI_MODEL} for GitHub Models; required with base-url.`,
+          'Model name; the default of the Copilot CLI if omitted, required with provider openai.',
         ),
       'language': z
         .string()
@@ -472,9 +478,10 @@ export interface UpdaterConfig {
 
 export interface AiSummaryConfig {
   enabled: boolean;
-  /** OpenAI-compatible API; GitHub Models if omitted. */
+  provider: (typeof AI_PROVIDERS)[number];
+  /** OpenAI-compatible API, with provider openai. */
   baseUrl?: string;
-  model: string;
+  model?: string;
   language: string;
   prompt?: string;
   targets: Array<(typeof AI_TARGETS)[number]>;
@@ -933,15 +940,24 @@ function parseAiSummary(parsed: ParsedConfig): AiSummaryConfig {
       );
     }
 
-    if (baseUrl && !settings.model) {
-      throw new ConfigError('ai-summary: "model" is required with "base-url"');
+    if (settings.provider === 'openai' && !(baseUrl && settings.model)) {
+      throw new ConfigError(
+        'ai-summary: the provider "openai" requires "base-url" and "model"',
+      );
+    }
+
+    if (settings.provider === 'copilot-cli' && baseUrl) {
+      throw new ConfigError(
+        'ai-summary: "base-url" only works with the provider "openai"',
+      );
     }
   }
 
   return {
     enabled: settings.enabled,
+    provider: settings.provider,
     ...(baseUrl ? {baseUrl} : {}),
-    model: settings.model ?? DEFAULT_AI_MODEL,
+    ...(settings.model ? {model: settings.model} : {}),
     language: settings.language,
     ...(settings.prompt ? {prompt: settings.prompt} : {}),
     targets,

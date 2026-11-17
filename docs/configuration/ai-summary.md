@@ -17,23 +17,28 @@ ai-summary:
 ```
 
 ::: warning Data leaves your repository
-The release notes and the full commit messages of the release are sent to the configured AI endpoint. Only enable
+The release notes and the full commit messages of the release are sent to the Copilot CLI or the configured AI endpoint. Only enable
 this with an endpoint you trust with that content.
 :::
 
 ## Provider
 
-relwolf talks to any OpenAI-compatible `/chat/completions` API with plain HTTP.
+`provider` selects how the summary is generated.
 
-- **GitHub:** by default [GitHub Models](https://docs.github.com/en/github-models) (`openai/gpt-4.1-mini`, free but
-  rate limited, no Claude models). It uses `RELWOLF_AI_API_KEY`, `GITHUB_TOKEN` or `RELWOLF_TOKEN` (first one set).
-  The token needs the permission `models: read`; in GitHub Actions add `models: read` to the `permissions` of the job.
-- **Everything else** (GitLab, other models such as Claude through a compatible gateway, OpenAI, Azure OpenAI, Ollama,
-  …): set `base-url` and `model` and pass the API key as `RELWOLF_AI_API_KEY`.
+- **`copilot-cli`** (default): runs the [GitHub Copilot CLI](https://docs.github.com/en/copilot/concepts/agents/about-copilot-cli)
+  in programmatic mode, so it uses your Copilot subscription. Install it in the job
+  (`npm install --global @github/copilot`) or point `RELWOLF_COPILOT_CLI` to the executable. It authenticates with
+  `RELWOLF_AI_API_KEY` or `COPILOT_GITHUB_TOKEN`: a fine-grained personal access token of a Copilot subscriber with
+  the account permission **Copilot Requests**. relwolf runs the CLI in an empty temporary directory, without any tool
+  permission and without custom instructions, and removes all other tokens from its environment. `model` is optional
+  and defaults to the one of the CLI.
+- **`openai`**: any OpenAI-compatible `/chat/completions` API (OpenAI, Azure OpenAI, Ollama, a gateway for Claude, …)
+  over plain HTTP. `base-url` and `model` are required, the key comes from `RELWOLF_AI_API_KEY`.
 
 ```yaml [relwolf.yaml]
 ai-summary:
   enabled: true
+  provider: openai
   base-url: https://api.openai.com/v1
   model: gpt-4.1-mini
 ```
@@ -66,13 +71,14 @@ are replaced. The model gets the release notes and the commit messages (up to 30
 
 ## Options
 
-| Key          | Default                               | Description                               |
-| ------------ | ------------------------------------- | ----------------------------------------- |
-| `enabled`    | `false`                               | Turn the feature on                       |
-| `base-url`   | GitHub Models on GitHub               | OpenAI-compatible API; required elsewhere |
-| `model`      | `openai/gpt-4.1-mini` (GitHub Models) | Model name; required with `base-url`      |
-| `language`   | `English`                             | Language of the summary                   |
-| `prompt`     | built in                              | Instructions for the model                |
-| `targets`    | `[changelog]`                         | `changelog`, `file` or both               |
-| `file`       | none                                  | Markdown file for the target `file`       |
-| `file-title` | `Release summaries`                   | First-level heading of that file          |
+| Key          | Default             | Description                               |
+| ------------ | ------------------- | ----------------------------------------- |
+| `enabled`    | `false`             | Turn the feature on                       |
+| `provider`   | `copilot-cli`       | `copilot-cli` or `openai`                 |
+| `base-url`   | none                | OpenAI-compatible API; only with `openai` |
+| `model`      | CLI default         | Model name; required with `openai`        |
+| `language`   | `English`           | Language of the summary                   |
+| `prompt`     | built in            | Instructions for the model                |
+| `targets`    | `[changelog]`       | `changelog`, `file` or both               |
+| `file`       | none                | Markdown file for the target `file`       |
+| `file-title` | `Release summaries` | First-level heading of that file          |

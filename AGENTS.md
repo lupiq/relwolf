@@ -53,5 +53,5 @@ Only things that are not enforced by ESLint, Prettier, commitlint or the type ch
 
 ## Manual setup that cannot be committed
 
-Pages source "GitHub Actions" + custom domain, GitHub App for the release token (variable `RELWOLF_APP_CLIENT_ID`, secret `RELWOLF_APP_PRIVATE_KEY`), secrets `GITLAB_E2E_TOKEN`, `GH_E2E_TOKEN` and `GH_MODELS_TOKEN` (fine-grained PAT with "Models: read" for the AI summary) (fine-grained PAT on the sandbox repository: contents, pull requests and issues read/write; the repository needs squash merging enabled), public GHCR package,
+Pages source "GitHub Actions" + custom domain, GitHub App for the release token (variable `RELWOLF_APP_CLIENT_ID`, secret `RELWOLF_APP_PRIVATE_KEY`), secrets `GITLAB_E2E_TOKEN` and `GH_E2E_TOKEN` (fine-grained PAT on the sandbox repository: contents, pull requests and issues read/write; the repository needs squash merging enabled), secret `COPILOT_GITHUB_TOKEN` (fine-grained PAT of a Copilot subscriber with "Copilot Requests", for the AI summary), public GHCR package,
 auto-delete head branches, Renovate GitHub App, squash merging.

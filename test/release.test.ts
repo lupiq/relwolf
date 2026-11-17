@@ -1430,7 +1430,7 @@ describe('pre-commit-script', () => {
 
 describe('AI summary', () => {
   const AI_CONFIG = (extra = '') =>
-    `${NODE_CONFIG}ai-summary:\n  enabled: true\n  base-url: https://llm.example.com/v1\n  model: m\n${extra}`;
+    `${NODE_CONFIG}ai-summary:\n  enabled: true\n  provider: openai\n  base-url: https://llm.example.com/v1\n  model: m\n${extra}`;
   const env = {RELWOLF_AI_API_KEY: 'key'};
   let answers: Array<string | Error>;
   let calls: number;
@@ -1584,6 +1584,7 @@ describe('AI summary', () => {
     updaters: []
 ai-summary:
   enabled: true
+  provider: openai
   base-url: https://llm.example.com/v1
   model: m
 `,

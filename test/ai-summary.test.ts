@@ -33,7 +33,8 @@ describe('ai-summary config', () => {
 
   it.each([
     ['targets: [file]', /requires "file"/],
-    ['base-url: https://llm.example.com/v1', /"model" is required/],
+    ['provider: openai', /requires "base-url" and "model"/],
+    ['base-url: https://llm.example.com/v1', /only works with the provider/],
   ])('rejects %s when enabled', (extra, error) => {
     expect(() => settings(`enabled: true\n${extra}`)).toThrow(error);
   });
@@ -50,10 +51,10 @@ describe('ai-summary config', () => {
 
 describe('resolveEndpoint', () => {
   const custom = settings(
-    'enabled: true\nbase-url: https://llm.example.com/v1\nmodel: m',
+    'enabled: true\nprovider: openai\nbase-url: https://llm.example.com/v1\nmodel: m',
   );
 
-  it('uses the configured API with RELWOLF_AI_API_KEY only', () => {
+  it('needs RELWOLF_AI_API_KEY for the configured API', () => {
     expect(resolveEndpoint(custom, {RELWOLF_AI_API_KEY: 'k'})).toEqual({
       baseUrl: 'https://llm.example.com/v1',
       apiKey: 'k',
@@ -62,30 +63,12 @@ describe('resolveEndpoint', () => {
       /RELWOLF_AI_API_KEY/,
     );
   });
-
-  it('defaults to GitHub Models with the GitHub token on GitHub', () => {
-    expect(
-      resolveEndpoint(settings(), {
-        RELWOLF_PROVIDER: 'github',
-        GITHUB_TOKEN: 't',
-      }),
-    ).toEqual({baseUrl: 'https://models.github.ai/inference', apiKey: 't'});
-  });
-
-  it('requires an explicit API on GitLab', () => {
-    expect(
-      resolveEndpoint(settings(), {
-        RELWOLF_PROVIDER: 'gitlab',
-        RELWOLF_AI_API_KEY: 'k',
-      }),
-    ).toMatch(/base-url/);
-  });
 });
 
 describe('generateSummary', () => {
   const env = {RELWOLF_AI_API_KEY: 'k'};
   const custom = settings(
-    'enabled: true\nbase-url: https://llm.example.com/v1\nmodel: m\nlanguage: German',
+    'enabled: true\nprovider: openai\nbase-url: https://llm.example.com/v1\nmodel: m\nlanguage: German',
   );
 
   it('sends notes and commits and returns the sanitized answer', async () => {
@@ -128,6 +111,69 @@ describe('generateSummary', () => {
     expect(inputHash(custom, {...input})).toBe(same);
     expect(inputHash(custom, {...input, commits: ['fix: b']})).not.toBe(same);
     expect(inputHash({...custom, model: 'n'}, input)).not.toBe(same);
+  });
+});
+
+describe('generateSummary with the Copilot CLI', () => {
+  const copilot = settings('enabled: true\nmodel: gpt-5');
+
+  it('runs the CLI without tools in an empty directory and without other tokens', async () => {
+    const calls: Array<{command: string; args: Array<string>; env: any}> = [];
+    const result = await generateSummary(
+      copilot,
+      input,
+      {RELWOLF_AI_API_KEY: 'k', RELWOLF_TOKEN: 'app', PATH: '/bin'},
+      {
+        runner: async (command, args, options) => {
+          calls.push({command, args, env: options.env});
+
+          return ' Summary <!-- x -->\n';
+        },
+      },
+    );
+
+    expect(result).toEqual({ok: true, text: 'Summary &lt;!-- x -->'});
+    expect(calls[0]!.command).toBe('copilot');
+    expect(calls[0]!.args).toEqual(
+      expect.arrayContaining([
+        '--silent',
+        '--no-custom-instructions',
+        '--model',
+        'gpt-5',
+      ]),
+    );
+    expect(calls[0]!.args).not.toContain('--allow-all-tools');
+    expect(calls[0]!.args[1]).toMatch(/Long body/);
+    expect(calls[0]!.env.COPILOT_GITHUB_TOKEN).toBe('k');
+    expect(calls[0]!.env.RELWOLF_TOKEN).toBeUndefined();
+    expect(calls[0]!.env.PATH).toBe('/bin');
+  });
+
+  it('reports a missing token, a missing CLI and failures', async () => {
+    const failing = (error: object) => async () => {
+      throw Object.assign(new Error('x'), error);
+    };
+
+    expect(await generateSummary(copilot, input, {})).toMatchObject({
+      ok: false,
+      error: expect.stringMatching(/COPILOT_GITHUB_TOKEN/) as string,
+    });
+    expect(
+      await generateSummary(
+        copilot,
+        input,
+        {COPILOT_GITHUB_TOKEN: 't'},
+        {runner: failing({code: 'ENOENT'})},
+      ),
+    ).toMatchObject({error: expect.stringMatching(/not installed/) as string});
+    expect(
+      await generateSummary(
+        copilot,
+        input,
+        {COPILOT_GITHUB_TOKEN: 't'},
+        {runner: failing({stderr: 'no access'})},
+      ),
+    ).toMatchObject({error: expect.stringMatching(/no access/) as string});
   });
 });
 

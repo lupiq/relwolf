@@ -7,8 +7,8 @@ name: Release
 # release pull requests are not authored by a maintainer. It must not be GITHUB_TOKEN, otherwise the tag push would
 # not trigger the "Publish image" workflow.
 # Required app permissions: contents: write, pull requests: write (also covers labels and assignees).
-# The AI summary uses GitHub Models with the secret GH_MODELS_TOKEN (fine-grained PAT with the account permission
-# "Models: read"); without it the release request only shows a warning.
+# The AI summary runs the GitHub Copilot CLI with the secret COPILOT_GITHUB_TOKEN (fine-grained PAT of a Copilot
+# subscriber with the account permission "Copilot Requests"); without it the release request only shows a warning.
 
 on:
   push:
@@ -41,6 +41,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
+      - run: npm install --global @github/copilot@1.0.112
       - uses: actions/create-github-app-token@v3.3.0
         id: app-token
         with:
@@ -50,4 +51,4 @@ jobs:
         env:
           RELWOLF_TOKEN: ${{ steps.app-token.outputs.token }}
           RELWOLF_RELEASE_AS: ${{ inputs.release-as }}
-          RELWOLF_AI_API_KEY: ${{ secrets.GH_MODELS_TOKEN }}
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}

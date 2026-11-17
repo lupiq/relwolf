@@ -145,13 +145,22 @@
           "description": "Generate an AI summary of every release. Disabled by default; commit messages are sent to the configured endpoint.",
           "type": "boolean"
         },
+        "provider": {
+          "default": "copilot-cli",
+          "description": "copilot-cli runs the GitHub Copilot CLI; openai calls an OpenAI-compatible API (base-url and model required).",
+          "type": "string",
+          "enum": [
+            "copilot-cli",
+            "openai"
+          ]
+        },
         "base-url": {
-          "description": "Base URL of an OpenAI-compatible API (`/chat/completions` is appended). Defaults to GitHub Models on GitHub; required on GitLab.",
+          "description": "Base URL of the OpenAI-compatible API (`/chat/completions` is appended); only with provider openai.",
           "type": "string",
           "format": "uri"
         },
         "model": {
-          "description": "Model name. Defaults to openai/gpt-4.1-mini for GitHub Models; required with base-url.",
+          "description": "Model name; the default of the Copilot CLI if omitted, required with provider openai.",
           "type": "string",
           "minLength": 1
         },
