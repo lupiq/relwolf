@@ -123,7 +123,7 @@ export const STRATEGIES = ['conventional-commits', 'changesets'] as const;
 export type Strategy = (typeof STRATEGIES)[number];
 
 /** Options that changesets decides itself, via `.changeset/config.json` or the workspace. */
-const AI_PROVIDERS = ['copilot-cli', 'openai'] as const;
+const AI_PROVIDERS = ['copilot-cli', 'openai', 'anthropic'] as const;
 const AI_CONTEXTS = ['changelog', 'commits', 'full-diff'] as const;
 const AI_AUDIENCES = ['developers', 'users'] as const;
 const AI_TARGETS = ['changelog', 'file'] as const;
@@ -341,20 +341,20 @@ export const configSchema = z.strictObject({
         .enum(AI_PROVIDERS)
         .default('copilot-cli')
         .describe(
-          'copilot-cli runs the GitHub Copilot CLI; openai calls an OpenAI-compatible API (base-url and model required).',
+          'copilot-cli runs the GitHub Copilot CLI; openai calls an OpenAI-compatible API (base-url and model required); anthropic calls the Claude API directly (model required).',
         ),
       'base-url': z
         .url()
         .optional()
         .describe(
-          'Base URL of the OpenAI-compatible API (`/chat/completions` is appended); only with provider openai.',
+          'Base URL of the API (`/chat/completions` is appended for openai, `/messages` for anthropic); required with provider openai, defaults to https://api.anthropic.com/v1 with anthropic.',
         ),
       'model': z
         .string()
         .min(1)
         .optional()
         .describe(
-          'Model name; the default of the Copilot CLI if omitted, required with provider openai.',
+          'Model name; the default of the Copilot CLI if omitted, required with provider openai and anthropic.',
         ),
       'context': z
         .enum(AI_CONTEXTS)
@@ -499,7 +499,7 @@ export interface UpdaterConfig {
 export interface AiReleaseNotesConfig {
   enabled: boolean;
   provider: (typeof AI_PROVIDERS)[number];
-  /** OpenAI-compatible API, with provider openai. */
+  /** API base URL, with provider openai (required) or anthropic (optional). */
   baseUrl?: string;
   model?: string;
   context: (typeof AI_CONTEXTS)[number];
@@ -975,9 +975,15 @@ function parseAiReleaseNotes(parsed: ParsedConfig): AiReleaseNotesConfig {
       );
     }
 
+    if (settings.provider === 'anthropic' && !settings.model) {
+      throw new ConfigError(
+        'ai-release-notes: the provider "anthropic" requires "model"',
+      );
+    }
+
     if (settings.provider === 'copilot-cli' && baseUrl) {
       throw new ConfigError(
-        'ai-release-notes: "base-url" only works with the provider "openai"',
+        'ai-release-notes: "base-url" only works with the providers "openai" and "anthropic"',
       );
     }
   }

@@ -129,22 +129,29 @@ export function inputHash(
 
 export const outputHash = (text: string): string => hash(text.trim());
 
+const ANTHROPIC_BASE_URL = 'https://api.anthropic.com/v1';
+const ANTHROPIC_MAX_TOKENS = 4096;
+
 export interface Endpoint {
   baseUrl: string;
   apiKey: string;
 }
 
-/** The configured OpenAI-compatible API with `RELWOLF_AI_API_KEY`, or a message about what is missing. */
+/** The configured API (the Anthropic default for provider anthropic) with `RELWOLF_AI_API_KEY`, or a message about what is missing. */
 export function resolveEndpoint(
   settings: AiReleaseNotesConfig,
   env: NodeJS.ProcessEnv,
 ): Endpoint | string {
-  if (!settings.baseUrl) {
+  const baseUrl =
+    settings.baseUrl ??
+    (settings.provider === 'anthropic' ? ANTHROPIC_BASE_URL : undefined);
+
+  if (!baseUrl) {
     return 'ai-release-notes.base-url is not set';
   }
 
   return env.RELWOLF_AI_API_KEY
-    ? {baseUrl: settings.baseUrl, apiKey: env.RELWOLF_AI_API_KEY}
+    ? {baseUrl, apiKey: env.RELWOLF_AI_API_KEY}
     : 'RELWOLF_AI_API_KEY is not set';
 }
 
@@ -271,9 +278,15 @@ export async function generateSummary(
     return {ok: false, error: endpoint};
   }
 
+  const anthropic = settings.provider === 'anthropic';
   const client = new HttpClient(
     endpoint.baseUrl,
-    {Authorization: `Bearer ${endpoint.apiKey}`, Accept: 'application/json'},
+    {
+      ...(anthropic
+        ? {'x-api-key': endpoint.apiKey, 'anthropic-version': '2023-06-01'}
+        : {Authorization: `Bearer ${endpoint.apiKey}`}),
+      Accept: 'application/json',
+    },
     options.fetchImpl,
     {
       hint: hintFor,
@@ -282,19 +295,34 @@ export async function generateSummary(
   );
 
   try {
-    const response = await client.request('POST', '/chat/completions', {
-      body: {
-        model: settings.model,
-        messages: [
-          {role: 'system', content: renderPrompt(settings, input)},
-          {role: 'user', content: renderInput(settings, input)},
-        ],
-      },
-    });
+    const response = anthropic
+      ? await client.request('POST', '/messages', {
+          body: {
+            model: settings.model,
+            max_tokens: ANTHROPIC_MAX_TOKENS,
+            system: renderPrompt(settings, input),
+            messages: [{role: 'user', content: renderInput(settings, input)}],
+          },
+        })
+      : await client.request('POST', '/chat/completions', {
+          body: {
+            model: settings.model,
+            messages: [
+              {role: 'system', content: renderPrompt(settings, input)},
+              {role: 'user', content: renderInput(settings, input)},
+            ],
+          },
+        });
     const data = response.data as {
       choices?: Array<{message?: {content?: unknown}}>;
+      content?: Array<{type?: string; text?: unknown}>;
     } | null;
-    const content = data?.choices?.[0]?.message?.content;
+    const content = anthropic
+      ? data?.content
+          ?.filter(block => block.type === 'text')
+          .map(block => (typeof block.text === 'string' ? block.text : ''))
+          .join('')
+      : data?.choices?.[0]?.message?.content;
     const text = typeof content === 'string' ? sanitizeSummary(content) : '';
 
     return text

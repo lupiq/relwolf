@@ -147,20 +147,21 @@
         },
         "provider": {
           "default": "copilot-cli",
-          "description": "copilot-cli runs the GitHub Copilot CLI; openai calls an OpenAI-compatible API (base-url and model required).",
+          "description": "copilot-cli runs the GitHub Copilot CLI; openai calls an OpenAI-compatible API (base-url and model required); anthropic calls the Claude API directly (model required).",
           "type": "string",
           "enum": [
             "copilot-cli",
-            "openai"
+            "openai",
+            "anthropic"
           ]
         },
         "base-url": {
-          "description": "Base URL of the OpenAI-compatible API (`/chat/completions` is appended); only with provider openai.",
+          "description": "Base URL of the API (`/chat/completions` is appended for openai, `/messages` for anthropic); required with provider openai, defaults to https://api.anthropic.com/v1 with anthropic.",
           "type": "string",
           "format": "uri"
         },
         "model": {
-          "description": "Model name; the default of the Copilot CLI if omitted, required with provider openai.",
+          "description": "Model name; the default of the Copilot CLI if omitted, required with provider openai and anthropic.",
           "type": "string",
           "minLength": 1
         },

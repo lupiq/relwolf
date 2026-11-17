@@ -53,6 +53,7 @@ describe('ai-release-notes config', () => {
   it.each([
     ['targets: [file]', /requires "file"/],
     ['provider: openai', /requires "base-url" and "model"/],
+    ['provider: anthropic', /requires "model"/],
     ['base-url: https://llm.example.com/v1', /only works with the provider/],
   ])('rejects %s when enabled', (extra, error) => {
     expect(() => settings(`enabled: true\n${extra}`)).toThrow(error);
@@ -81,6 +82,45 @@ describe('resolveEndpoint', () => {
     expect(resolveEndpoint(custom, {GITHUB_TOKEN: 't'})).toMatch(
       /RELWOLF_AI_API_KEY/,
     );
+  });
+});
+
+describe('generateSummary with anthropic', () => {
+  it('calls the Messages API with the default URL and joins the text blocks', async () => {
+    const calls: Array<{url: string; headers: any; body: any}> = [];
+    const result = await generateSummary(
+      settings('enabled: true\nprovider: anthropic\nmodel: claude-x'),
+      input,
+      {RELWOLF_AI_API_KEY: 'k'},
+      {
+        fetchImpl: async (url, init) => {
+          calls.push({
+            url,
+            headers: init?.headers,
+            body: JSON.parse(init?.body as string),
+          });
+
+          return Response.json({
+            content: [
+              {type: 'text', text: 'Neu '},
+              {type: 'text', text: 'und gut'},
+            ],
+          });
+        },
+      },
+    );
+
+    expect(result).toEqual({ok: true, text: 'Neu und gut'});
+    expect(calls[0]?.url).toBe('https://api.anthropic.com/v1/messages');
+    expect(calls[0]?.headers).toMatchObject({
+      'x-api-key': 'k',
+      'anthropic-version': '2023-06-01',
+    });
+    expect(calls[0]?.body).toMatchObject({
+      model: 'claude-x',
+      messages: [{role: 'user'}],
+    });
+    expect(calls[0]?.body.system).toEqual(expect.any(String));
   });
 });
 

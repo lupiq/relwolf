@@ -38,6 +38,9 @@ Only enable this with an endpoint you trust with that content.
   and defaults to the one of the CLI.
 - **`openai`**: any OpenAI-compatible `/chat/completions` API (OpenAI, Azure OpenAI, Ollama, a gateway for Claude, …)
   over plain HTTP. `base-url` and `model` are required, the key comes from `RELWOLF_AI_API_KEY`.
+- **`anthropic`**: the [Claude API](https://docs.anthropic.com/en/api/messages) (`/messages`) directly. `model` is
+  required (e.g. `claude-sonnet-4-5`), `base-url` defaults to `https://api.anthropic.com/v1`, the key comes from
+  `RELWOLF_AI_API_KEY`.
 
 ```yaml [relwolf.yaml]
 ai-release-notes:
@@ -45,6 +48,13 @@ ai-release-notes:
   provider: openai
   base-url: https://api.openai.com/v1
   model: gpt-4.1-mini
+```
+
+```yaml [relwolf.yaml]
+ai-release-notes:
+  enabled: true
+  provider: anthropic
+  model: claude-sonnet-4-5
 ```
 
 ## Targets
@@ -94,17 +104,17 @@ compatibility details.
 
 ## Options
 
-| Key             | Default             | Description                                   |
-| --------------- | ------------------- | --------------------------------------------- |
-| `enabled`       | `false`             | Turn the feature on                           |
-| `provider`      | `copilot-cli`       | `copilot-cli` or `openai`                     |
-| `base-url`      | none                | OpenAI-compatible API; only with `openai`     |
-| `model`         | CLI default         | Model name; required with `openai`            |
-| `context`       | `commits`           | `changelog`, `commits` or `full-diff`         |
-| `audience`      | `users`             | `users` or `developers`                       |
-| `exclude-paths` | `[]`                | Globs excluded from the `full-diff` context   |
-| `language`      | `English`           | Language of the release notes                 |
-| `prompt`        | built in            | Instructions for the model                    |
-| `targets`       | `[changelog]`       | `changelog`, `file` or both                   |
-| `file`          | none                | Markdown file for the target `file`           |
-| `file-title`    | `Release summaries` | First-level heading of the release notes file |
+| Key             | Default             | Description                                                |
+| --------------- | ------------------- | ---------------------------------------------------------- |
+| `enabled`       | `false`             | Turn the feature on                                        |
+| `provider`      | `copilot-cli`       | `copilot-cli`, `openai` or `anthropic`                     |
+| `base-url`      | none                | API URL; required with `openai`, optional with `anthropic` |
+| `model`         | CLI default         | Model name; required with `openai` and `anthropic`         |
+| `context`       | `commits`           | `changelog`, `commits` or `full-diff`                      |
+| `audience`      | `users`             | `users` or `developers`                                    |
+| `exclude-paths` | `[]`                | Globs excluded from the `full-diff` context                |
+| `language`      | `English`           | Language of the release notes                              |
+| `prompt`        | built in            | Instructions for the model                                 |
+| `targets`       | `[changelog]`       | `changelog`, `file` or both                                |
+| `file`          | none                | Markdown file for the target `file`                        |
+| `file-title`    | `Release summaries` | First-level heading of the release notes file              |
