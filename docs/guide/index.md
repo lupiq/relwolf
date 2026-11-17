@@ -17,12 +17,14 @@ Everything you need to automate releases with relwolf.
 
 - [How it works](/guide/how-it-works): the two phases of a run, the job log and where the state is kept
 - [Version rules](/guide/version-rules): how Conventional Commits map to SemVer
+- [Commit messages](/guide/commit-messages): best practices, ticket scopes and Git hooks
 - [relwolf vs. release-please](/guide/comparison): what is different and which one fits your project
 
 ## Go further
 
 - [Controlling the next version](/guide/release-as): force a version such as `1.0.0`
 - [Pre-releases](/guide/pre-releases): `beta` and `rc` releases
+- [Recipes](/guide/recipes): `relwolf.yaml` examples for Node.js, Maven, Python, Rust and more
 - [Migrating changelogs](/guide/migrating): adopt relwolf in a project with history
 
 Options, monorepos, version files and the changelog format are described in the [configuration](/configuration/)
