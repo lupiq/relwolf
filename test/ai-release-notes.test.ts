@@ -86,6 +86,39 @@ describe('resolveEndpoint', () => {
 });
 
 describe('generateSummary with anthropic', () => {
+  const claude = settings(
+    'enabled: true\nprovider: anthropic\nmodel: claude-x',
+  );
+
+  it('uses the Anthropic URL unless overridden and still needs the key', () => {
+    expect(resolveEndpoint(claude, {RELWOLF_AI_API_KEY: 'k'})).toEqual({
+      baseUrl: 'https://api.anthropic.com/v1',
+      apiKey: 'k',
+    });
+    expect(resolveEndpoint(claude, {})).toMatch(/RELWOLF_AI_API_KEY/);
+    expect(
+      resolveEndpoint(
+        settings(
+          'enabled: true\nprovider: anthropic\nmodel: m\nbase-url: https://gw.example.com/v1',
+        ),
+        {RELWOLF_AI_API_KEY: 'k'},
+      ),
+    ).toMatchObject({baseUrl: 'https://gw.example.com/v1'});
+  });
+
+  it('returns failures for empty answers and rate limits', async () => {
+    const env = {RELWOLF_AI_API_KEY: 'k'};
+    const empty = await generateSummary(claude, input, env, {
+      fetchImpl: async () => Response.json({content: [{type: 'tool_use'}]}),
+    });
+    const limited = await generateSummary(claude, input, env, {
+      fetchImpl: async () => new Response('slow down', {status: 429}),
+    });
+
+    expect(empty).toMatchObject({ok: false});
+    expect(JSON.stringify(limited)).toMatch(/rate limit/);
+  });
+
   it('calls the Messages API with the default URL and joins the text blocks', async () => {
     const calls: Array<{url: string; headers: any; body: any}> = [];
     const result = await generateSummary(
@@ -121,6 +154,41 @@ describe('generateSummary with anthropic', () => {
       messages: [{role: 'user'}],
     });
     expect(calls[0]?.body.system).toEqual(expect.any(String));
+  });
+});
+
+describe('prompt and input limits', () => {
+  it('replaces the placeholders of a custom prompt', async () => {
+    const custom = settings(
+      'enabled: true\nprovider: openai\nbase-url: https://llm.example.com/v1\nmodel: m\nprompt: "${tag} ${version} ${component} ${audience} ${language}"',
+    );
+    let system = '';
+
+    await generateSummary(
+      custom,
+      {...input, component: 'core'},
+      {RELWOLF_AI_API_KEY: 'k'},
+      {
+        fetchImpl: async (_url, init) => {
+          system = JSON.parse(init?.body as string).messages[0].content;
+
+          return Response.json({choices: [{message: {content: 'x'}}]});
+        },
+      },
+    );
+
+    expect(system).toBe('v1.0.0 1.0.0 core users English');
+  });
+
+  it('drops commits that do not fit into the input limit', () => {
+    const big = 'x'.repeat(20_000);
+    const rendered = renderInput(settings(), {
+      ...input,
+      commits: [big, big, 'fix: last'],
+    });
+
+    expect(rendered).not.toContain('fix: last');
+    expect(rendered.length).toBeLessThanOrEqual(30_000);
   });
 });
 
