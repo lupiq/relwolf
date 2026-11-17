@@ -2,6 +2,25 @@
 
 <!-- git-cliff: end of header -->
 
+## 🎉 [0.14.1](https://github.com/lupiq/relwolf/releases/tag/v0.14.1) - 2026-11-17
+
+[See changes](https://github.com/lupiq/relwolf/compare/v0.14.0...v0.14.1)
+
+### 📚 Documentation
+
+- Improve docs in regards of correctness and readability ([a922e75](https://github.com/lupiq/relwolf/commit/a922e75dabb896c5b006a2a5b1785c323a52783e))
+- Improve `README.md` ([cc9b076](https://github.com/lupiq/relwolf/commit/cc9b07620cfb447941450ee757e3a3489acf0671))
+- Improve landing page ([d3f38d9](https://github.com/lupiq/relwolf/commit/d3f38d91272391a583b6545931816aea6a37309f))
+- Add section "Who is it for?" ([83a26c0](https://github.com/lupiq/relwolf/commit/83a26c0960b57948cdeac3a2c99175758c5a78a5))
+- Add flow-chart ([265ec17](https://github.com/lupiq/relwolf/commit/265ec17e6498e34527aab6159e2cf16ea60ddddf))
+- Use lupiq brand colors for docs ([b7e8749](https://github.com/lupiq/relwolf/commit/b7e874950154816b2296d08e5935e5a27ce128d9))
+- Improve sections about conventional commits ([eb902b4](https://github.com/lupiq/relwolf/commit/eb902b44a0eedf24c8361f2cd30c7bcf849101e4))
+- Improve section about `git-cliff` ([359f733](https://github.com/lupiq/relwolf/commit/359f7338bb9f48038c65b8141b0ba060454ca0dc))
+- Improve section about best practices ([fbfe7f2](https://github.com/lupiq/relwolf/commit/fbfe7f26b1b28d483e66e058d8044d4280c6ba89))
+- Add own pages for commit messages, recipes and FAQs ([719977f](https://github.com/lupiq/relwolf/commit/719977f64741023435eb961cf432077422004abf))
+
+---
+
 ## 🌹 [0.14.0](https://github.com/lupiq/relwolf/releases/tag/v0.14.0) - 2026-11-13
 
 [See changes](https://github.com/lupiq/relwolf/compare/v0.13.0...v0.14.0)
