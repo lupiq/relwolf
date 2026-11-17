@@ -61,6 +61,19 @@ features:
     linkText: Configuration
 ---
 
+## Who is it for?
+
+relwolf fits you if:
+
+- you host on **GitLab** (gitlab.com or self-managed) and want release automation that works the same as on GitHub,
+- you want a **human to approve every release** by merging a release request,
+- you want **control over the changelog** through [git-cliff](https://git-cliff.org) templates,
+- you release a **monorepo** or keep versions in several files and ecosystems,
+- you already write **Conventional Commits** or are happy to start.
+
+It is probably not the right tool if you need a fully hands-off pipeline that publishes on every merge, or if you do
+not want to follow Conventional Commits and do not use Changesets.
+
 ## How it works
 
 You keep writing [Conventional Commits](https://www.conventionalcommits.org/). relwolf does the rest in a single CI job
