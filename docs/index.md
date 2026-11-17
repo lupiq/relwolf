@@ -106,9 +106,9 @@ Every run follows the same path:
 
 ```text
 feat: Add search         → release request "Create release v0.1.0" opened
-fix: Fix typo                → release request updated (still v0.1.0, changelog has both)
+fix: Fix typo            → release request updated (still v0.1.0, changelog has both)
 (release request merged) → tag v0.1.0 + release created
-fix: Fix crash on start      → release request "Create release v0.1.1" opened
+fix: Fix crash on start  → release request "Create release v0.1.1" opened
 ```
 
 Git is used read-only, every step is idempotent and the release request is the only state. See
