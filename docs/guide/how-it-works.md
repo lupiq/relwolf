@@ -88,7 +88,7 @@ and the [Changesets](/configuration/changesets) strategy write to the working tr
 
 ```text
 feat: Add search        → release MR "Create release v0.1.0" opened
-fix: Fix typo               → release MR updated (still v0.1.0, changelog has both)
+fix: Fix typo           → release MR updated (still v0.1.0, changelog has both)
 (release MR merged)     → tag v0.1.0 + release created
-fix: Fix crash on start     → release MR "Create release v0.1.1" opened
+fix: Fix crash on start → release MR "Create release v0.1.1" opened
 ```

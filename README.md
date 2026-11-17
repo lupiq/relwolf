@@ -127,10 +127,10 @@ Every run has two phases:
    `relwolf/<branch>`.
 
 ```text
-feat: Add search        → release request "Create release v0.1.0" opened
-fix: Fix typo               → release request updated (still v0.1.0, changelog has both)
+feat: Add search         → release request "Create release v0.1.0" opened
+fix: Fix typo            → release request updated (still v0.1.0, changelog has both)
 (release request merged) → tag v0.1.0 + release created
-fix: Fix crash on start     → release request "Create release v0.1.1" opened
+fix: Fix crash on start  → release request "Create release v0.1.1" opened
 ```
 
 Git is used read-only; every write (release commit, request, labels, tags, releases) goes through the GitLab or GitHub
