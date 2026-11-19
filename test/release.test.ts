@@ -1101,6 +1101,31 @@ packages:
     );
   });
 
+  it('marks modules whose commits are all left out of the changelog', async () => {
+    repo.write(
+      'cliff.toml',
+      `[changelog]\nheader = "# Log\\n"\nbody = "{{ version }}{% for c in commits %}\\n- {{ c.message }}{% endfor %}\\n"\ntrim = true\n\n[git]\nconventional_commits = true\ncommit_parsers = [{message = '^chore', skip = true}]\n`,
+    );
+    repo.write('services/orders/a.txt', 'x');
+    repo.write('common/core/c.txt', 'x');
+    repo.commit('chore: scaffold');
+    repo.commit('feat: orders first', 'services/orders/a.txt');
+    await exec(yaml);
+    mergeLastRelease(repo, provider, 1);
+    await exec(yaml);
+    repo.commit('chore: tidy core', 'common/core/c.txt');
+    repo.commit('fix: orders only', 'services/orders/a.txt');
+    await exec(yaml);
+
+    const core = provider.commits
+      .at(-1)!
+      .files.find(f => f.path === 'common/core/CHANGELOG.md')!;
+
+    expect(core.content).toMatch(
+      /0\.1\.1[\s\S]*No changes, version bumped to stay in sync\./,
+    );
+  });
+
   it('keeps the releases without changes when rewriting the changelog', async () => {
     const cliffToml = (label: string) =>
       `[changelog]\nheader = "# Log\\n"\nbody = "${label} {{ version }}{% for c in commits %}\\n- {{ c.message }}{% endfor %}\\n"\ntrim = true\n\n[git]\nconventional_commits = true\ncommit_parsers = [{message = '^chore', skip = true}]\n`;

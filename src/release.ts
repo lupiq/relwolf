@@ -957,8 +957,37 @@ async function applyPlan(
     RELWOLF_RELEASE_EMOJI: emoji,
   };
 
-  const placeholder = plan.empty ? options.config.noChangesText : '';
-  const notes = placeholder || (await generateNotes(cliff, env));
+  const {noChangesText} = options.config;
+  let notes =
+    plan.empty && noChangesText ? '' : await generateNotes(cliff, env);
+
+  // Commits that the git-cliff config leaves out render like a release without commits.
+  const hidden =
+    !plan.empty &&
+    Boolean(noChangesText) &&
+    notes ===
+      (await generateNotes(
+        {
+          ...cliff,
+          skipCommits: [
+            ...(cliff.skipCommits ?? []),
+            ...(
+              await git.log(
+                plan.range,
+                pathspecsFor(
+                  pkg,
+                  options.config.packages,
+                  options.config.excludePaths,
+                ),
+              )
+            ).map(({sha}) => sha),
+          ],
+        },
+        env,
+      ));
+  const placeholder = plan.empty || hidden ? noChangesText : '';
+
+  notes = placeholder || notes;
 
   const summary = placeholder
     ? undefined
