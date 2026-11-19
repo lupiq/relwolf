@@ -123,6 +123,25 @@ The version lives only in the git tag, so there is nothing to update. Without a 
 root package, tags it and writes the changelog. Add a [relwolf.yaml](/configuration/relwolf-yaml) only to change
 defaults such as the [tag format](/configuration/relwolf-yaml#tags-and-release-names).
 
+## AI release notes
+
+Add AI generated release notes to the changelog and the release, and write them to a Markdown file, for example for a
+documentation page. The notes are part of the release request, so you can edit them before merging. The default
+provider is the GitHub Copilot CLI, which is part of the [Docker image](/reference/docker-image); provide a Copilot
+token as `COPILOT_GITHUB_TOKEN` in the job environment ([GitHub](/guide/github#_5-ai-release-notes-optional),
+[GitLab](/guide/gitlab#_5-ai-release-notes-optional)).
+
+```yaml [relwolf.yaml]
+ai-release-notes:
+  audience: developers
+  changelog: true
+  additional-files:
+    - file: docs/release-notes.md
+      file-title: Release notes
+```
+
+See [AI release notes](/configuration/ai-release-notes) for providers, contexts, languages and monorepos.
+
 ## More
 
 - Several packages in one repository: [Monorepos](/configuration/monorepos)
