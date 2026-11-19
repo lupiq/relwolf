@@ -44,6 +44,7 @@ describe('ai-release-notes config', () => {
       audience: 'users',
       excludePaths: [],
       language: 'English',
+      maxInputChars: 30_000,
     });
   });
 
@@ -301,6 +302,27 @@ describe('prompt and input limits', () => {
 
     expect(rendered).not.toContain('fix: last');
     expect(rendered.length).toBeLessThanOrEqual(30_000);
+  });
+
+  it('honors a configured max-input-chars', () => {
+    const rendered = renderInput(settings('max-input-chars: 100'), {
+      ...input,
+      commits: ['x'.repeat(60), 'y'.repeat(60)],
+    });
+
+    expect(rendered).toContain('xxx');
+    expect(rendered).not.toContain('y');
+    expect(rendered.length).toBeLessThanOrEqual(100);
+  });
+
+  it('does not limit the input with max-input-chars: false', () => {
+    const rendered = renderInput(settings('max-input-chars: false'), {
+      ...input,
+      commits: ['x'.repeat(40_000), 'fix: last'],
+    });
+
+    expect(rendered).toContain('fix: last');
+    expect(rendered.length).toBeGreaterThan(40_000);
   });
 });
 

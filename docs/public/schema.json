@@ -196,6 +196,20 @@
           "type": "number",
           "minimum": 0
         },
+        "max-input-chars": {
+          "description": "Upper bound for the context sent to the model, in characters (default 30000); false removes the limit.",
+          "anyOf": [
+            {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "boolean",
+              "const": false
+            }
+          ]
+        },
         "prompt": {
           "description": "Instructions for the model instead of the built-in ones. Placeholders: ${language}, ${tag}, ${version}, ${component}, ${audience}.",
           "type": "string",
@@ -277,6 +291,20 @@
                   "description": "Price in USD per million output tokens.",
                   "type": "number",
                   "minimum": 0
+                },
+                "max-input-chars": {
+                  "description": "Upper bound for the context sent to the model, in characters (default 30000); false removes the limit.",
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "boolean",
+                      "const": false
+                    }
+                  ]
                 },
                 "prompt": {
                   "description": "Instructions for the model instead of the built-in ones. Placeholders: ${language}, ${tag}, ${version}, ${component}, ${audience}.",
@@ -366,6 +394,20 @@
                 "description": "Price in USD per million output tokens.",
                 "type": "number",
                 "minimum": 0
+              },
+              "max-input-chars": {
+                "description": "Upper bound for the context sent to the model, in characters (default 30000); false removes the limit.",
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "boolean",
+                    "const": false
+                  }
+                ]
               },
               "prompt": {
                 "description": "Instructions for the model instead of the built-in ones. Placeholders: ${language}, ${tag}, ${version}, ${component}, ${audience}.",

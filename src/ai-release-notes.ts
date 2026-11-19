@@ -13,9 +13,6 @@ import {
 
 const execFileAsync = promisify(execFile);
 
-/** Upper bound for the commit text sent to the model, in characters. */
-const MAX_INPUT_CHARS = 30_000;
-
 const DEFAULT_PROMPT = [
   'You summarize one software release for its changelog and release notes for ${audience}.',
   'Write in ${language}.',
@@ -141,7 +138,7 @@ export function renderInput(settings: AiSettings, input: SummaryInput): string {
   if (settings.context === 'changelog') {
     return [`Release ${input.tag}`, `Generated changelog:\n${input.notes}`]
       .join('\n\n')
-      .slice(0, MAX_INPUT_CHARS);
+      .slice(0, settings.maxInputChars);
   }
 
   if (settings.context === 'full-diff') {
@@ -150,12 +147,12 @@ export function renderInput(settings: AiSettings, input: SummaryInput): string {
       `Code diff since the previous release:\n${input.diff ?? ''}`,
     ]
       .join('\n\n')
-      .slice(0, MAX_INPUT_CHARS);
+      .slice(0, settings.maxInputChars);
   }
 
   const release = `Release ${input.tag}`;
   const commits = [release];
-  let budget = MAX_INPUT_CHARS - release.length;
+  let budget = settings.maxInputChars - release.length;
 
   for (const commit of input.commits) {
     const message = `Commit:\n${commit.trim()}`;
@@ -168,7 +165,7 @@ export function renderInput(settings: AiSettings, input: SummaryInput): string {
     commits.push(message);
   }
 
-  return commits.join('\n\n').slice(0, MAX_INPUT_CHARS);
+  return commits.join('\n\n').slice(0, settings.maxInputChars);
 }
 
 /** Hash of everything that influences the generated text. */

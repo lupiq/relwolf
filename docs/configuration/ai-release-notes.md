@@ -72,7 +72,7 @@ above the notes of the created release. Set it to `true` or to an object with it
 Every entry of `additional-files` writes its own release notes to a Markdown file: a new entry with the release icon,
 linked version, date, and release notes is prepended below the `# <file-title>` heading of `file` (created if
 missing), e.g. for a documentation page. An entry accepts `file` (required), `file-title` and all other options
-(`provider`, `base-url`, `model`, `context`, `audience`, `exclude-paths`, `language`, `input-price`, `output-price`, `prompt`). Options that an entry
+(`provider`, `base-url`, `model`, `context`, `audience`, `exclude-paths`, `language`, `input-price`, `output-price`, `max-input-chars`, `prompt`). Options that an entry
 leaves out are inherited from `ai-release-notes`, so you can create files for several audiences and languages, each with its
 own prompt. Every output is generated separately.
 
@@ -167,7 +167,7 @@ which commits or changelog entries are used for the release itself.
 ## Prompt
 
 `prompt` replaces the built-in instructions. The placeholders `${language}`, `${tag}`, `${version}`, `${component}` and
-`${audience}` are replaced. The model gets the selected context (up to 30,000 characters) as input.
+`${audience}` are replaced. The model gets the selected context (up to 30,000 characters by default, see `max-input-chars`, `false` removes the limit) as input.
 The built-in prompt uses Markdown without headings and bolds important features, breaking changes, APIs, options, and
 compatibility details.
 
@@ -175,18 +175,19 @@ compatibility details.
 
 Top level (defaults), `changelog` and every entry of `additional-files` (unset options are inherited from the top level):
 
-| Key             | Default       | Description                                                |
-| --------------- | ------------- | ---------------------------------------------------------- |
-| `provider`      | `copilot-cli` | `copilot-cli`, `openai` or `anthropic`                     |
-| `base-url`      | none          | API URL; required with `openai`, optional with `anthropic` |
-| `model`         | CLI default   | Model name; required with `openai` and `anthropic`         |
-| `context`       | `commits`     | `changelog`, `commits` or `full-diff`                      |
-| `audience`      | `users`       | Free text, e.g. `users`, `developers`, `product managers`  |
-| `exclude-paths` | `[]`          | Globs excluded from the `full-diff` context                |
-| `language`      | `English`     | Language of the release notes                              |
-| `input-price`   | none          | USD per million input tokens, for the cost estimate        |
-| `output-price`  | none          | USD per million output tokens, for the cost estimate       |
-| `prompt`        | built in      | Instructions for the model                                 |
+| Key               | Default       | Description                                                            |
+| ----------------- | ------------- | ---------------------------------------------------------------------- |
+| `provider`        | `copilot-cli` | `copilot-cli`, `openai` or `anthropic`                                 |
+| `base-url`        | none          | API URL; required with `openai`, optional with `anthropic`             |
+| `model`           | CLI default   | Model name; required with `openai` and `anthropic`                     |
+| `context`         | `commits`     | `changelog`, `commits` or `full-diff`                                  |
+| `audience`        | `users`       | Free text, e.g. `users`, `developers`, `product managers`              |
+| `exclude-paths`   | `[]`          | Globs excluded from the `full-diff` context                            |
+| `language`        | `English`     | Language of the release notes                                          |
+| `input-price`     | none          | USD per million input tokens, for the cost estimate                    |
+| `output-price`    | none          | USD per million output tokens, for the cost estimate                   |
+| `max-input-chars` | `30000`       | Max characters of context sent to the model; `false` removes the limit |
+| `prompt`          | built in      | Instructions for the model                                             |
 
 Only in `changelog` and `additional-files` entries:
 

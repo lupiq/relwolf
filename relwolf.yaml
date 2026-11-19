@@ -11,6 +11,12 @@ ai-release-notes:
   generate: manual
   model: claude-sonnet-5.5
   context: full-diff
+  max-input-chars: 140000
+  exclude-paths:
+    - test/**
+    - e2e/**
+    - docs/public/schema.json
+    - pnpm-lock.yaml
   language: English
   audience: developers
   usage-comment: true

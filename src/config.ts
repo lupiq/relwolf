@@ -183,6 +183,12 @@ const AI_SETTINGS_SHAPE = {
     .nonnegative()
     .optional()
     .describe('Price in USD per million output tokens.'),
+  'max-input-chars': z
+    .union([z.number().int().positive(), z.literal(false)])
+    .optional()
+    .describe(
+      'Upper bound for the context sent to the model, in characters (default 30000); false removes the limit.',
+    ),
   'prompt': z
     .string()
     .min(1)
@@ -558,6 +564,8 @@ export interface AiSettings {
   /** Globs from the repository root excluded from the full-diff context. */
   excludePaths: Array<string>;
   language: string;
+  /** Upper bound for the context sent to the model, in characters; Infinity when disabled. */
+  maxInputChars: number;
   /** USD per million tokens, for the cost estimate in the usage comment. */
   inputPrice?: number;
   outputPrice?: number;
@@ -1039,6 +1047,7 @@ function resolveAiSettings(
   const baseUrl = pick('base-url');
   const model = pick('model');
   const prompt = pick('prompt');
+  const maxInputChars = pick('max-input-chars');
   const inputPrice = pick('input-price');
   const outputPrice = pick('output-price');
 
@@ -1071,6 +1080,8 @@ function resolveAiSettings(
       `${label}.exclude-paths`,
     ),
     language: pick('language') ?? 'English',
+    maxInputChars:
+      maxInputChars === false ? Infinity : (maxInputChars ?? 30_000),
     ...(inputPrice === undefined ? {} : {inputPrice}),
     ...(outputPrice === undefined ? {} : {outputPrice}),
     ...(prompt ? {prompt} : {}),
