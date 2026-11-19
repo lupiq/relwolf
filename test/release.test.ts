@@ -1455,7 +1455,7 @@ describe('pre-commit-script', () => {
 
 describe('AI release notes', () => {
   const AI_CONFIG = (extra = '') =>
-    `${NODE_CONFIG}ai-release-notes:\n  provider: openai\n  base-url: https://llm.example.com/v1\n  model: m\n${extra}`;
+    `${NODE_CONFIG}ai-release-notes:\n  provider: openai\n  base-url: https://llm.example.com/v1\n  model: m\n  changelog: true\n${extra}`;
   const env = {RELWOLF_AI_API_KEY: 'key'};
   let answers: Array<string | Error>;
   let calls: number;
@@ -1512,6 +1512,17 @@ describe('AI release notes', () => {
     expect(calls).toBe(1);
   });
 
+  it('keeps a literal ${component} in the changelog notes', async () => {
+    answers = ['Use `${component}` in the file path'];
+    repo.write('package.json', PACKAGE_JSON);
+    repo.commit('feat: a');
+    await exec(AI_CONFIG(), {env});
+
+    expect(file('CHANGELOG.md')).toContain(
+      'Use `${component}` in the file path',
+    );
+  });
+
   it('excludes configured paths from the full-diff context', async () => {
     repo.write('package.json', PACKAGE_JSON);
     repo.commit('chore: initial');
@@ -1526,6 +1537,14 @@ describe('AI release notes', () => {
 
     expect(inputs[0]).toContain('src/feature.ts');
     expect(inputs[0]).not.toContain('generated/output.ts');
+  });
+
+  it('sends the whole code as the diff of the first release', async () => {
+    repo.write('package.json', PACKAGE_JSON);
+    repo.commit('feat: first', 'src/first.ts');
+    await exec(AI_CONFIG('  context: full-diff\n'), {env});
+
+    expect(inputs[0]).toContain('src/first.ts');
   });
 
   it('writes separate files without touching the changelog', async () => {
@@ -1554,7 +1573,9 @@ describe('AI release notes', () => {
     );
     expect(file('docs/de.md')).toMatch(/German summary\n$/);
     expect(file('CHANGELOG.md')).not.toMatch(/summary/);
-    expect(provider.requests[0]!.body).toMatch(/in `docs\/de\.md`/);
+    expect(provider.requests[0]!.body).toMatch(
+      /package `root`, file `docs\/de\.md`/,
+    );
     expect(inputs).toHaveLength(2);
 
     await exec(undefined, {env});
@@ -1652,6 +1673,7 @@ ai-release-notes:
   provider: openai
   base-url: https://llm.example.com/v1
   model: m
+  changelog: true
 `,
       {env},
     );

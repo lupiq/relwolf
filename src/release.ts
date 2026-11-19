@@ -805,6 +805,9 @@ interface SummaryState {
   warnings: Array<string>;
 }
 
+/** The empty tree object, so that the first release is diffed against nothing. */
+const EMPTY_TREE = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
+
 async function summaryInput(
   options: RunOptions,
   git: Git,
@@ -830,7 +833,7 @@ async function summaryInput(
     ...(settings.context === 'full-diff'
       ? {
           diff: await git.diff(
-            plan.range ?? 'HEAD',
+            plan.range ?? `${EMPTY_TREE}..HEAD`,
             pathspecsFor(plan.pkg, packages, [
               ...excludePaths,
               ...settings.excludePaths,

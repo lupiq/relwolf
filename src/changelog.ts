@@ -161,6 +161,9 @@ export function insertSummary(entry: string, summary: string): string {
   return `${entry.slice(0, section.index)}${summary.trim()}\n\n${entry.slice(section.index)}`;
 }
 
+/** Keeps a literal `${component}` in AI notes out of the replacement of `applyChangelogTitle`. */
+const COMPONENT_SENTINEL = '\uE000relwolf-component\uE000';
+
 /** Returns `existing` with the new release entry prepended, following the user's git-cliff config. */
 export async function prependToChangelog(
   options: CliffInvocation,
@@ -188,7 +191,12 @@ export async function prependToChangelog(
     const kept = commonSuffixLength(result, existing);
     const added = result.slice(0, result.length - kept).trimEnd();
     const rest = result.slice(result.length - kept).trimStart();
-    const summarized = summary ? insertSummary(added, summary) : added;
+    const summarized = summary
+      ? insertSummary(
+          added,
+          summary.replaceAll('${component}', COMPONENT_SENTINEL),
+        )
+      : added;
     const entry = placeholder
       ? addPlaceholder(summarized, placeholder)
       : summarized;
@@ -201,7 +209,7 @@ export async function prependToChangelog(
 
 /**
  * Makes the changelog title package specific without touching the git-cliff config:
- * `${component}` is replaced everywhere (usable in the cliff header), and `title` replaces a leading
+ * `${component}` is replaced everywhere except in AI notes (usable in the cliff header), and `title` replaces a leading
  * first-level heading.
  */
 export function applyChangelogTitle(
@@ -209,7 +217,9 @@ export function applyChangelogTitle(
   component: string,
   title?: string,
 ): string {
-  const replaced = changelog.replaceAll('${component}', component);
+  const replaced = changelog
+    .replaceAll('${component}', component)
+    .replaceAll(COMPONENT_SENTINEL, '${component}');
 
   if (!title) {
     return replaced;

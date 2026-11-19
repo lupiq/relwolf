@@ -123,7 +123,7 @@ function summarySection(options: RenderBodyOptions): string {
   );
   const blocks = (options.summaries ?? []).map(
     summary =>
-      `**AI release notes** for \`${summary.tag}\`${summary.target ? ` in \`${summary.target}\`` : ''} (editable; clear the text to leave it out)\n\n` +
+      `**AI release notes** for \`${summary.tag}\`, package \`${summary.key}\`, ${summary.target ? `file \`${summary.target}\`` : 'changelog and release'} (editable; clear the text to leave it out)\n\n` +
       `<!-- relwolf:summary tag="${summary.tag}" key="${summary.key}"${summary.target ? ` target="${summary.target}"` : ''} input="${summary.input}" output="${summary.output}" -->\n${sanitize(summary.text)}\n<!-- /relwolf:summary -->`,
   );
 

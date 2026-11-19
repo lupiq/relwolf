@@ -177,17 +177,20 @@ const AI_SETTINGS_SHAPE = {
     .describe(
       'Instructions for the model instead of the built-in ones. Placeholders: ${language}, ${tag}, ${version}, ${component}, ${audience}.',
     ),
+};
+
+const AI_SCOPE_SHAPE = {
   'packages': z
     .array(z.string().min(1))
     .optional()
     .describe(
-      'Packages (component name or path) that get these release notes; all packages if omitted. Not inherited by additional-files.',
+      'Packages (component name or path) that get these release notes; all packages if omitted.',
     ),
   'exclude-packages': z
     .array(z.string().min(1))
     .optional()
     .describe(
-      'Packages (component name or path) that do not get these release notes. Not inherited by additional-files.',
+      'Packages (component name or path) that do not get these release notes.',
     ),
 };
 
@@ -395,10 +398,20 @@ export const configSchema = z.strictObject({
   'ai-release-notes': z
     .strictObject({
       ...AI_SETTINGS_SHAPE,
+      'changelog': z
+        .union([
+          z.boolean(),
+          z.strictObject({...AI_SETTINGS_SHAPE, ...AI_SCOPE_SHAPE}),
+        ])
+        .optional()
+        .describe(
+          'Adds release notes to the changelog and the created release: true, or an object with its own options (and packages / exclude-packages).',
+        ),
       'additional-files': z
         .array(
           z.strictObject({
             ...AI_SETTINGS_SHAPE,
+            ...AI_SCOPE_SHAPE,
             'file': z
               .string()
               .min(1)
@@ -419,7 +432,7 @@ export const configSchema = z.strictObject({
     })
     .prefault({})
     .describe(
-      'AI generated release notes. Setting any option besides additional-files adds the release notes to the changelog; the feature is disabled without options and files.',
+      'AI generated release notes. Enabled by changelog and/or at least one entry of additional-files; the other options are only defaults for them.',
     ),
   'http-timeout': z
     .number()
@@ -979,6 +992,10 @@ type AiRawSettings = {
   >;
 };
 
+type AiRawScope = {
+  [Key in keyof typeof AI_SCOPE_SHAPE]?: z.output<(typeof AI_SCOPE_SHAPE)[Key]>;
+};
+
 function resolveAiSettings(
   own: AiRawSettings,
   shared: AiRawSettings,
@@ -1025,7 +1042,7 @@ function resolveAiSettings(
 }
 
 function parseAiScope(
-  own: AiRawSettings,
+  own: AiRawScope,
   packages: ReadonlyArray<PackageConfig>,
   label: string,
 ): AiScope {
@@ -1077,11 +1094,23 @@ function parseAiReleaseNotes(
   parsed: ParsedConfig,
   packages: ReadonlyArray<PackageConfig>,
 ): AiReleaseNotesConfig {
-  const {'additional-files': additional, ...shared} =
-    parsed['ai-release-notes'];
-  const hasChangelog = Object.keys(shared).length > 0;
+  const {
+    'additional-files': additional,
+    'changelog': changelogSetting,
+    ...shared
+  } = parsed['ai-release-notes'];
+  const changelogOwn =
+    typeof changelogSetting === 'object' ? changelogSetting : {};
+  const hasChangelog =
+    changelogSetting !== undefined && changelogSetting !== false;
 
   if (!hasChangelog && additional.length === 0) {
+    if (Object.keys(shared).length > 0) {
+      throw new ConfigError(
+        'ai-release-notes: the options only act as defaults, set "changelog" or at least one entry in "additional-files"',
+      );
+    }
+
     return {files: []};
   }
 
@@ -1136,8 +1165,16 @@ function parseAiReleaseNotes(
     ...(hasChangelog
       ? {
           changelog: {
-            ...resolveAiSettings(shared, {}, 'ai-release-notes'),
-            ...parseAiScope(shared, packages, 'ai-release-notes'),
+            ...resolveAiSettings(
+              changelogOwn,
+              shared,
+              'ai-release-notes.changelog',
+            ),
+            ...parseAiScope(
+              changelogOwn,
+              packages,
+              'ai-release-notes.changelog',
+            ),
           },
         }
       : {}),

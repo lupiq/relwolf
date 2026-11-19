@@ -11,9 +11,9 @@ import {aiAppliesTo, parseConfig, resolveAiFile} from '../src/config.js';
 
 const settings = (yaml = 'language: English') =>
   parseConfig(
-    `ai-release-notes:\n${yaml
+    `ai-release-notes:\n  changelog:\n${yaml
       .split('\n')
-      .map(line => `  ${line}`)
+      .map(line => `    ${line}`)
       .join('\n')}\n`,
   ).aiReleaseNotes.changelog!;
 
@@ -29,7 +29,7 @@ describe('ai-release-notes config', () => {
     expect(parseConfig(undefined).aiReleaseNotes).toEqual({files: []});
   });
 
-  it('enables the changelog with any top-level option and applies defaults', () => {
+  it('enables the changelog with changelog and applies defaults', () => {
     expect(settings()).toEqual({
       packages: [],
       excludePackages: [],
@@ -74,6 +74,7 @@ describe('ai-release-notes config', () => {
       `ai-release-notes:
   context: full-diff
   language: French
+  changelog: true
   additional-files:
     - file: a.md
       language: German
@@ -118,6 +119,15 @@ ai-release-notes:
     expect(() => parseConfig(yaml('packages: [nope]'))).toThrow(/nope/);
   });
 
+  it('rejects options without changelog or additional files', () => {
+    expect(() => parseConfig('ai-release-notes:\n  language: German')).toThrow(
+      /"changelog" or at least one entry/,
+    );
+    expect(() =>
+      parseConfig('ai-release-notes:\n  language: German\n  changelog: false'),
+    ).toThrow(/"changelog" or at least one entry/);
+  });
+
   it('rejects duplicate files and invalid file settings', () => {
     expect(() =>
       parseConfig(
@@ -143,7 +153,7 @@ ai-release-notes:
       excludePaths: ['docs/**', '**/*.lock'],
     });
     expect(() => settings('exclude-paths: ["../secrets"]')).toThrow(
-      /ai-release-notes\.exclude-paths/,
+      /ai-release-notes\.changelog\.exclude-paths/,
     );
   });
 
@@ -158,13 +168,11 @@ ai-release-notes:
   it('rejects the AI release notes with rewrite-changelog and strategy changesets', () => {
     expect(() =>
       parseConfig(
-        'rewrite-changelog: true\nai-release-notes: {language: English}',
+        'rewrite-changelog: true\nai-release-notes: {changelog: true}',
       ),
     ).toThrow(/rewrite-changelog/);
     expect(() =>
-      parseConfig(
-        'strategy: changesets\nai-release-notes: {language: English}',
-      ),
+      parseConfig('strategy: changesets\nai-release-notes: {changelog: true}'),
     ).toThrow(/changesets/);
   });
 });

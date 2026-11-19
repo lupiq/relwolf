@@ -136,7 +136,7 @@
       }
     },
     "ai-release-notes": {
-      "description": "AI generated release notes. Setting any option besides additional-files adds the release notes to the changelog; the feature is disabled without options and files.",
+      "description": "AI generated release notes. Enabled by changelog and/or at least one entry of additional-files; the other options are only defaults for them.",
       "default": {},
       "type": "object",
       "properties": {
@@ -191,21 +191,86 @@
           "type": "string",
           "minLength": 1
         },
-        "packages": {
-          "description": "Packages (component name or path) that get these release notes; all packages if omitted. Not inherited by additional-files.",
-          "type": "array",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "exclude-packages": {
-          "description": "Packages (component name or path) that do not get these release notes. Not inherited by additional-files.",
-          "type": "array",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
+        "changelog": {
+          "description": "Adds release notes to the changelog and the created release: true, or an object with its own options (and packages / exclude-packages).",
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "provider": {
+                  "description": "copilot-cli (default) runs the GitHub Copilot CLI; openai calls an OpenAI-compatible API (base-url and model required); anthropic calls the Claude API directly (model required).",
+                  "type": "string",
+                  "enum": [
+                    "copilot-cli",
+                    "openai",
+                    "anthropic"
+                  ]
+                },
+                "base-url": {
+                  "description": "Base URL of the API (`/chat/completions` is appended for openai, `/messages` for anthropic); required with provider openai, defaults to https://api.anthropic.com/v1 with anthropic.",
+                  "type": "string",
+                  "format": "uri"
+                },
+                "model": {
+                  "description": "Model name; the default of the Copilot CLI if omitted, required with provider openai and anthropic.",
+                  "type": "string",
+                  "minLength": 1
+                },
+                "context": {
+                  "description": "Release context sent to the model: generated changelog content, all commits (default), or the full code diff since the previous release.",
+                  "type": "string",
+                  "enum": [
+                    "changelog",
+                    "commits",
+                    "full-diff"
+                  ]
+                },
+                "audience": {
+                  "description": "Audience of the release notes as free text, e.g. users (default) for feature-focused notes, developers for technical notes, or your own like \"product managers\".",
+                  "type": "string",
+                  "minLength": 1
+                },
+                "exclude-paths": {
+                  "description": "Globs from the repository root excluded from the full-diff context.",
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "language": {
+                  "description": "Language of the release notes (default English).",
+                  "type": "string",
+                  "minLength": 1
+                },
+                "prompt": {
+                  "description": "Instructions for the model instead of the built-in ones. Placeholders: ${language}, ${tag}, ${version}, ${component}, ${audience}.",
+                  "type": "string",
+                  "minLength": 1
+                },
+                "packages": {
+                  "description": "Packages (component name or path) that get these release notes; all packages if omitted.",
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "exclude-packages": {
+                  "description": "Packages (component name or path) that do not get these release notes.",
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
         },
         "additional-files": {
           "default": [],
@@ -266,7 +331,7 @@
                 "minLength": 1
               },
               "packages": {
-                "description": "Packages (component name or path) that get these release notes; all packages if omitted. Not inherited by additional-files.",
+                "description": "Packages (component name or path) that get these release notes; all packages if omitted.",
                 "type": "array",
                 "items": {
                   "type": "string",
@@ -274,7 +339,7 @@
                 }
               },
               "exclude-packages": {
-                "description": "Packages (component name or path) that do not get these release notes. Not inherited by additional-files.",
+                "description": "Packages (component name or path) that do not get these release notes.",
                 "type": "array",
                 "items": {
                   "type": "string",

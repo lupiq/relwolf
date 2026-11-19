@@ -6,15 +6,18 @@ description: Let an AI model summarize every release in the release request, the
 # AI release notes
 
 relwolf can ask an AI model for release notes for every release. The notes are part of the release request, so you
-can read and edit them before you merge. The feature is **disabled by default**: it is on as soon as `ai-release-notes`
-contains an option (release notes in the changelog) or at least one entry in `additional-files`.
+can read and edit them before you merge. The feature is **disabled by default**: it is on as soon as `changelog` is set
+(release notes in the changelog) or `additional-files` has at least one entry. The other options are only defaults for
+these outputs, so you do not have to repeat them; without `changelog` and `additional-files` they are an error.
 
 ```yaml [relwolf.yaml]
 ai-release-notes:
+  # Defaults for the changelog and every file
   context: changelog # changelog, commits (default) or full-diff
   audience: users # free text, e.g. users (default), developers or product managers
   exclude-paths: ['**/*.lock', 'generated/**'] # applies to full-diff
   language: English
+  changelog: true # release notes in the changelog and the release
   additional-files:
     - file: docs/release-summaries.md
     - file: docs/de/release-summaries.md
@@ -61,16 +64,16 @@ ai-release-notes:
 
 ## Outputs
 
-The top-level options of `ai-release-notes` describe the release notes in the changelog: they are added to the new
-changelog entry above its first `###` section (at the end without one) and above the notes of the created release.
-Without any top-level option there are none, so `additional-files` alone only writes files.
+`changelog` adds the release notes to the new changelog entry above its first `###` section (at the end without one) and
+above the notes of the created release. Set it to `true` or to an object with its own options (see below) and
+`packages` / `exclude-packages`. Without it, `additional-files` alone only writes files.
 
 Every entry of `additional-files` writes its own release notes to a Markdown file: a new entry with the release icon,
 linked version, date, and release notes is prepended below the `# <file-title>` heading of `file` (created if
 missing), e.g. for a documentation page. An entry accepts `file` (required), `file-title` and all other options
 (`provider`, `base-url`, `model`, `context`, `audience`, `exclude-paths`, `language`, `prompt`). Options that an entry
-leaves out are inherited from the top level, so you can create files for several audiences and languages, each with its
-own prompt. Every output is generated separately and shown in its own block in the release request.
+leaves out are inherited from `ai-release-notes`, so you can create files for several audiences and languages, each with its
+own prompt. Every output is generated separately.
 
 ### Monorepos
 
@@ -78,12 +81,13 @@ By default every package gets release notes in every output. `file` may contain 
 the root) and `${component}` (the component name, `root` without one), which writes one file per package, e.g.
 `file: ${path}/RELEASE_NOTES.md`. Without a placeholder all packages share the file and the headings show the component.
 
-`packages` and `exclude-packages` limit an output to packages, given as component name or path. They apply to the
-changelog notes at the top level and to each entry of `additional-files`, and are not inherited.
+`packages` and `exclude-packages` limit an output to packages, given as component name or path. They are set in `changelog`
+and in each entry of `additional-files`.
 
 ```yaml [relwolf.yaml]
 ai-release-notes:
-  exclude-packages: [internal] # no notes in the changelog of this package
+  changelog:
+    exclude-packages: [internal] # no notes in the changelog of this package
   additional-files:
     - file: ${path}/RELEASE_NOTES.md
       exclude-packages: [internal, tools]
@@ -96,6 +100,7 @@ monorepos every package gets its own release notes. `strategy: changesets` is no
 
 The release notes are rendered between hidden `relwolf:summary` markers in the release request:
 
+- Every block names what it is generated for: the tag, the package, and the changelog (and release) or the file.
 - It is generated again whenever the commits of the release (or the model, language or prompt) change, so it is always
   up to date when you merge.
 - If you edit the text, relwolf keeps your version. Clear the text to leave the release notes out. A new version (new tag)
@@ -130,7 +135,7 @@ compatibility details.
 
 ## Options
 
-Top level and every entry of `additional-files` (unset options of an entry are inherited from the top level):
+Top level (defaults), `changelog` and every entry of `additional-files` (unset options are inherited from the top level):
 
 | Key             | Default       | Description                                                |
 | --------------- | ------------- | ---------------------------------------------------------- |
@@ -143,14 +148,16 @@ Top level and every entry of `additional-files` (unset options of an entry are i
 | `language`      | `English`     | Language of the release notes                              |
 | `prompt`        | built in      | Instructions for the model                                 |
 
-Not inherited by `additional-files` entries:
+Only in `changelog` and `additional-files` entries:
 
 | Key                | Default      | Description                                       |
 | ------------------ | ------------ | ------------------------------------------------- |
 | `packages`         | all packages | Only these packages (component name or path)      |
 | `exclude-packages` | none         | Leave out these packages (component name or path) |
 
-Only in `additional-files` entries (unset options are inherited from the top level):
+Only in `ai-release-notes`: `changelog` (`true` or an object, adds the notes to the changelog) and `additional-files`.
+
+Only in `additional-files` entries:
 
 | Key          | Default             | Description                                   |
 | ------------ | ------------------- | --------------------------------------------- |

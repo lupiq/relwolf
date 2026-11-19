@@ -393,6 +393,7 @@ packages:
     () => {
       const config = [
         'ai-release-notes:',
+        '  changelog: true',
         '  context: full-diff',
         '  audience: developers',
         '  exclude-paths: ["**/*.lock"]',
@@ -412,12 +413,18 @@ packages:
         const created = await sandbox.runRelwolf(branch, config);
         const id = created.releaseRequests[0]!.id;
         const mr = await sandbox.releaseRequest(id);
-        const notes =
-          /<!-- relwolf:summary [^>]*-->\r?\n([\s\S]*?)\r?\n<!-- \/relwolf:summary -->/.exec(
-            mr.body,
-          )?.[1];
+        const block = (target: string) =>
+          new RegExp(
+            `<!-- relwolf:summary [^>]*${target}[^>]*-->\\r?\\n([\\s\\S]*?)\\r?\\n<!-- /relwolf:summary -->`,
+          ).exec(mr.body)?.[1];
+        // The changelog and the file notes are generated separately.
+        const notes = block('key="root" input');
+        const fileNotes = block('target="RELEASE_NOTES.md"');
 
         expect(notes?.trim().length).toBeGreaterThan(20);
+        expect(fileNotes?.trim().length).toBeGreaterThan(20);
+        expect(mr.body).toMatch(/package `root`, file `RELEASE_NOTES.md`/);
+        expect(mr.body).toMatch(/package `root`, changelog and release/);
 
         const file = await sandbox.fileContent(
           `relwolf/${branch}`,
@@ -426,7 +433,7 @@ packages:
 
         expect(file).toMatch(/^# /);
         expect(file).toContain('## ');
-        expect(file).toContain(notes!.trim());
+        expect(file).toContain(fileNotes!.trim());
         expect(
           await sandbox.fileContent(`relwolf/${branch}`, 'CHANGELOG.md'),
         ).toContain(notes!.trim());
