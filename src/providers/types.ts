@@ -18,6 +18,12 @@ export interface ReleaseRequest {
   fork: boolean;
 }
 
+/** A comment on a release request. */
+export interface ReleaseComment {
+  id: number;
+  body: string;
+}
+
 export interface FileChange {
   path: string;
   content: string;
@@ -72,6 +78,12 @@ export interface Provider {
     /** `draft` keeps the draft state; a request is never turned into a draft later on. */
     options: {title: string; body: string; draft?: boolean},
   ): Promise<void>;
+
+  /** The comment of the release request whose body contains `<!-- ${marker} `, if any. */
+  findComment(id: number, marker: string): Promise<ReleaseComment | null>;
+
+  /** Updates the comment `commentId`, or adds a new one if it is undefined. */
+  saveComment(id: number, body: string, commentId?: number): Promise<void>;
 
   /** Closes an open release request without merging it. */
   closeReleaseRequest(id: number): Promise<void>;

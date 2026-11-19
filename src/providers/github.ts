@@ -3,6 +3,7 @@ import type {
   FileChange,
   LabelDefinition,
   Provider,
+  ReleaseComment,
   ReleaseRequest,
 } from './types.js';
 
@@ -256,6 +257,39 @@ export class GitHubProvider implements Provider {
     await this.http.request('PATCH', `${this.repo}/pulls/${id}`, {
       body: {title: options.title, body: options.body},
     });
+  }
+
+  async findComment(
+    id: number,
+    marker: string,
+  ): Promise<ReleaseComment | null> {
+    const comments = (await this.http.requestAll(
+      `${this.repo}/issues/${id}/comments`,
+      {per_page: '100'},
+    )) as Array<{id: number; body?: string | null}>;
+    const found = comments.find(comment =>
+      comment.body?.includes(`<!-- ${marker} `),
+    );
+
+    return found ? {id: found.id, body: found.body ?? ''} : null;
+  }
+
+  async saveComment(
+    id: number,
+    body: string,
+    commentId?: number,
+  ): Promise<void> {
+    if (commentId === undefined) {
+      await this.http.request('POST', `${this.repo}/issues/${id}/comments`, {
+        body: {body},
+      });
+    } else {
+      await this.http.request(
+        'PATCH',
+        `${this.repo}/issues/comments/${commentId}`,
+        {body: {body}},
+      );
+    }
   }
 
   async closeReleaseRequest(id: number): Promise<void> {

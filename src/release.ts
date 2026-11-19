@@ -6,9 +6,17 @@ import {
   outputHash,
   prependFileEntry,
   renderFileEntry,
+  usageCost,
   type StoredSummary,
   type SummaryInput,
 } from './ai-release-notes.js';
+import {
+  addUsage,
+  parseUsage,
+  renderUsage,
+  USAGE_MARKER,
+  type UsageTotals,
+} from './ai-usage.js';
 import {
   DEFAULT_RELEASE_TEXT,
   parseBody,
@@ -683,6 +691,7 @@ async function buildFiles(
     ),
     stored: [],
     warnings: [],
+    usage: {input: 0, output: 0, runs: 0},
   };
 
   for (const plan of plans) {
@@ -803,6 +812,8 @@ interface SummaryState {
   previous: Array<StoredSummary>;
   stored: Array<StoredSummary>;
   warnings: Array<string>;
+  /** Tokens and cost of the model calls of this run. */
+  usage: UsageTotals;
 }
 
 /** The empty tree object, so that the first release is diffed against nothing. */
@@ -927,6 +938,26 @@ async function resolveSummary(
     }
 
     return old ? releaseText(old.text) || undefined : undefined;
+  }
+
+  if (result.usage) {
+    const cost = usageCost(result.usage, settings);
+
+    state.usage.input += result.usage.input;
+    state.usage.output += result.usage.output;
+    state.usage.runs = 1;
+
+    if (cost !== undefined) {
+      state.usage.cost = (state.usage.cost ?? 0) + cost;
+    }
+
+    if (result.usage.credits !== undefined) {
+      state.usage.credits = (state.usage.credits ?? 0) + result.usage.credits;
+    }
+
+    options.log?.(
+      `The ${label} used ${result.usage.input} input and ${result.usage.output} output tokens${result.usage.credits === undefined ? '' : `, ${result.usage.credits} AI credits`}${cost === undefined ? '' : ` (about $${cost.toFixed(4)})`}.`,
+    );
   }
 
   state.stored.push({
@@ -1674,11 +1705,44 @@ async function prepareReleaseRequest(
   await provider.ensureLabel(labelDefinitions(config).pending);
   await provider.commitFiles({branch: sourceBranch, baseSha, message, files});
 
-  if (existing) {
-    return updateRequest(options, existing, title, body, log);
+  const result = existing
+    ? await updateRequest(options, existing, title, body, log)
+    : await createRequest(options, branch, sourceBranch, title, body, log);
+
+  if (
+    config.aiReleaseNotes.usageComment &&
+    prepared.summaries &&
+    prepared.summaries.usage.runs > 0
+  ) {
+    await saveUsageComment(options, result.id, prepared.summaries.usage, log);
   }
 
-  return createRequest(options, branch, sourceBranch, title, body, log);
+  return result;
+}
+
+/** Adds this run to the usage comment of the release request; a failure only gets logged. */
+async function saveUsageComment(
+  options: RunOptions,
+  id: number,
+  last: UsageTotals,
+  log: (message: string) => void,
+): Promise<void> {
+  const {provider} = options;
+
+  try {
+    const comment = await provider.findComment(id, USAGE_MARKER);
+    const total = addUsage(
+      comment ? parseUsage(comment.body) : undefined,
+      last,
+    );
+
+    await provider.saveComment(id, renderUsage(total, last), comment?.id);
+    log(`Updated the AI usage comment of release request #${id}.`);
+  } catch (error) {
+    log(
+      `Could not update the AI usage comment of release request #${id}: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
 }
 
 async function createRequest(

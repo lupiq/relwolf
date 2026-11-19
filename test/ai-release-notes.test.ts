@@ -1,3 +1,4 @@
+import {writeFile} from 'node:fs/promises';
 import {describe, expect, it} from 'vitest';
 import {
   generateSummary,
@@ -6,6 +7,7 @@ import {
   renderFileEntry,
   renderInput,
   resolveEndpoint,
+  usageCost,
 } from '../src/ai-release-notes.js';
 import {aiAppliesTo, parseConfig, resolveAiFile} from '../src/config.js';
 
@@ -26,7 +28,10 @@ const input = {
 
 describe('ai-release-notes config', () => {
   it('is disabled by default', () => {
-    expect(parseConfig(undefined).aiReleaseNotes).toEqual({files: []});
+    expect(parseConfig(undefined).aiReleaseNotes).toEqual({
+      files: [],
+      usageComment: false,
+    });
   });
 
   it('enables the changelog with changelog and applies defaults', () => {
@@ -380,6 +385,76 @@ describe('generateSummary', () => {
     expect(inputHash(custom, {...input})).toBe(same);
     expect(inputHash(custom, {...input, commits: ['fix: b']})).not.toBe(same);
     expect(inputHash({...custom, model: 'n'}, input)).not.toBe(same);
+  });
+});
+
+describe('token usage', () => {
+  it('reads it from the Copilot CLI usage file', async () => {
+    const result = await generateSummary(
+      settings('model: gpt-5'),
+      input,
+      {COPILOT_GITHUB_TOKEN: 't'},
+      {
+        runner: async (_command, args) => {
+          const file = args[args.indexOf('--usage-output-file') + 1]!;
+
+          await writeFile(
+            file,
+            JSON.stringify({
+              totalNanoAiu: 2_500_000_000,
+              modelMetrics: {
+                a: {usage: {inputTokens: 100, outputTokens: 7}},
+                b: {usage: {inputTokens: 5, outputTokens: 1}},
+              },
+            }),
+          );
+
+          return 'Summary';
+        },
+      },
+    );
+
+    expect(result).toEqual({
+      ok: true,
+      text: 'Summary',
+      usage: {input: 105, output: 8, credits: 2.5},
+    });
+  });
+
+  it('reads it from openai and anthropic responses', async () => {
+    const fetchWith = (data: unknown) => async () => Response.json(data);
+    const openai = await generateSummary(
+      settings('provider: openai\nbase-url: https://x.test/v1\nmodel: m'),
+      input,
+      {RELWOLF_AI_API_KEY: 'k'},
+      {
+        fetchImpl: fetchWith({
+          choices: [{message: {content: 'S'}}],
+          usage: {prompt_tokens: 3, completion_tokens: 4},
+        }),
+      },
+    );
+    const anthropic = await generateSummary(
+      settings('provider: anthropic\nmodel: m'),
+      input,
+      {RELWOLF_AI_API_KEY: 'k'},
+      {
+        fetchImpl: fetchWith({
+          content: [{type: 'text', text: 'S'}],
+          usage: {input_tokens: 5, output_tokens: 6},
+        }),
+      },
+    );
+
+    expect(openai).toMatchObject({usage: {input: 3, output: 4}});
+    expect(anthropic).toMatchObject({usage: {input: 5, output: 6}});
+  });
+
+  it('estimates the cost from prices per million tokens', () => {
+    const usage = {input: 500_000, output: 100_000};
+
+    expect(usageCost(usage, {inputPrice: 2, outputPrice: 10})).toBe(2);
+    expect(usageCost(usage, {})).toBeUndefined();
   });
 });
 

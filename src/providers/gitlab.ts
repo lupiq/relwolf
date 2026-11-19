@@ -3,6 +3,7 @@ import type {
   FileChange,
   LabelDefinition,
   Provider,
+  ReleaseComment,
   ReleaseRequest,
 } from './types.js';
 import {ProviderError} from './types.js';
@@ -242,6 +243,41 @@ export class GitLabProvider implements Provider {
     }
 
     return ids;
+  }
+
+  async findComment(
+    id: number,
+    marker: string,
+  ): Promise<ReleaseComment | null> {
+    const notes = (await this.http.requestAll(
+      `${this.project}/merge_requests/${id}/notes`,
+      {per_page: '100'},
+    )) as Array<{id: number; body?: string | null; system?: boolean}>;
+    const found = notes.find(
+      note => !note.system && note.body?.includes(`<!-- ${marker} `),
+    );
+
+    return found ? {id: found.id, body: found.body ?? ''} : null;
+  }
+
+  async saveComment(
+    id: number,
+    body: string,
+    commentId?: number,
+  ): Promise<void> {
+    if (commentId === undefined) {
+      await this.http.request(
+        'POST',
+        `${this.project}/merge_requests/${id}/notes`,
+        {body: {body}},
+      );
+    } else {
+      await this.http.request(
+        'PUT',
+        `${this.project}/merge_requests/${id}/notes/${commentId}`,
+        {body: {body}},
+      );
+    }
   }
 
   async closeReleaseRequest(id: number): Promise<void> {

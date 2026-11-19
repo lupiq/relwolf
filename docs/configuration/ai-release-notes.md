@@ -72,7 +72,7 @@ above the notes of the created release. Set it to `true` or to an object with it
 Every entry of `additional-files` writes its own release notes to a Markdown file: a new entry with the release icon,
 linked version, date, and release notes is prepended below the `# <file-title>` heading of `file` (created if
 missing), e.g. for a documentation page. An entry accepts `file` (required), `file-title` and all other options
-(`provider`, `base-url`, `model`, `context`, `audience`, `exclude-paths`, `language`, `prompt`). Options that an entry
+(`provider`, `base-url`, `model`, `context`, `audience`, `exclude-paths`, `language`, `input-price`, `output-price`, `prompt`). Options that an entry
 leaves out are inherited from `ai-release-notes`, so you can create files for several audiences and languages, each with its
 own prompt. Every output is generated separately.
 
@@ -108,6 +108,23 @@ The release notes are rendered between hidden `relwolf:summary` markers in the r
   starts with fresh release notes.
 - If the model cannot be reached or answers with an error, the release goes on without new release notes and the request
   shows a warning with the reason. The next run tries again.
+
+## Token usage and cost
+
+With `usage-comment: true` (top level of `ai-release-notes`, default `false`), relwolf adds a comment to the release request (hidden `relwolf:usage` marker) with the
+input and output tokens and the cost of the last run and, if there were several runs, of all runs of
+the release request. The comment is updated in place; a new release request starts counting again. Runs that do not
+call the model leave it untouched.
+
+- Tokens are reported by the provider: `openai`, `anthropic`, and the Copilot CLI (all models it used, including
+  cached input). If a provider reports nothing, no comment is written.
+- With `copilot-cli` the cost is the AI credits GitHub Copilot billed for the call, as reported by the CLI; no prices
+  needed.
+- With `openai` and `anthropic` (or additionally with `copilot-cli`) the cost is an estimate in USD, shown if
+  `input-price` and/or `output-price` (USD per million tokens) are set. Relwolf has no price table, so it is only as
+  accurate as your prices. Without credits and prices the cost shows `–`.
+- The token counts are also written to the job log. If the comment cannot be written (e.g. missing permissions to
+  comment), the release goes on and the reason is logged.
 
 ## Context and audience
 
@@ -147,6 +164,8 @@ Top level (defaults), `changelog` and every entry of `additional-files` (unset o
 | `audience`      | `users`       | Free text, e.g. `users`, `developers`, `product managers`  |
 | `exclude-paths` | `[]`          | Globs excluded from the `full-diff` context                |
 | `language`      | `English`     | Language of the release notes                              |
+| `input-price`   | none          | USD per million input tokens, for the cost estimate        |
+| `output-price`  | none          | USD per million output tokens, for the cost estimate       |
 | `prompt`        | built in      | Instructions for the model                                 |
 
 Only in `changelog` and `additional-files` entries:
@@ -156,7 +175,8 @@ Only in `changelog` and `additional-files` entries:
 | `packages`         | all packages | Only these packages (component name or path)      |
 | `exclude-packages` | none         | Leave out these packages (component name or path) |
 
-Only in `ai-release-notes`: `changelog` (`true` or an object, adds the notes to the changelog) and `additional-files`.
+Only in `ai-release-notes`: `changelog` (`true` or an object, adds the notes to the changelog), `additional-files` and
+`usage-comment` (`true` adds the [token usage comment](#token-usage-and-cost); default `false`).
 
 Only in `additional-files` entries:
 

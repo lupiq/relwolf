@@ -147,6 +147,34 @@ export class FakeProvider implements Provider {
     });
   }
 
+  comments: Array<{requestId: number; id: number; body: string}> = [];
+
+  async findComment(
+    id: number,
+    marker: string,
+  ): Promise<{id: number; body: string} | null> {
+    return (
+      this.comments.find(
+        comment =>
+          comment.requestId === id && comment.body.includes(`<!-- ${marker} `),
+      ) ?? null
+    );
+  }
+
+  async saveComment(
+    id: number,
+    body: string,
+    commentId?: number,
+  ): Promise<void> {
+    const existing = this.comments.find(comment => comment.id === commentId);
+
+    if (existing) {
+      existing.body = body;
+    } else {
+      this.comments.push({requestId: id, id: this.comments.length + 1, body});
+    }
+  }
+
   async closeReleaseRequest(id: number): Promise<void> {
     this.mustFind(id).state = 'closed';
   }

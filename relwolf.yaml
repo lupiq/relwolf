@@ -8,9 +8,11 @@ release-emoji: true
 
 # AI release notes for every release in the release request and RELEASE_NOTES.md (GitHub Copilot CLI)
 ai-release-notes:
+  model: claude-sonnet-5.5
   context: full-diff
   language: English
   audience: developers
+  usage-comment: true
   prompt: |
     Summarize this software release in ${language} for ${audience}.
     Write a concise but substantive release summary: usually one to three short paragraphs or four to eight bullets,

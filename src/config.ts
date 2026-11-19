@@ -170,6 +170,18 @@ const AI_SETTINGS_SHAPE = {
     .min(1)
     .optional()
     .describe('Language of the release notes (default English).'),
+  'input-price': z
+    .number()
+    .nonnegative()
+    .optional()
+    .describe(
+      'Price in USD per million input tokens; with it and/or output-price, the usage comment in the release request shows the estimated cost.',
+    ),
+  'output-price': z
+    .number()
+    .nonnegative()
+    .optional()
+    .describe('Price in USD per million output tokens.'),
   'prompt': z
     .string()
     .min(1)
@@ -398,6 +410,12 @@ export const configSchema = z.strictObject({
   'ai-release-notes': z
     .strictObject({
       ...AI_SETTINGS_SHAPE,
+      'usage-comment': z
+        .boolean()
+        .optional()
+        .describe(
+          'Adds a comment to the release request with the tokens and estimated cost (see input-price / output-price) of the last run and of all runs (default false).',
+        ),
       'changelog': z
         .union([
           z.boolean(),
@@ -533,6 +551,9 @@ export interface AiSettings {
   /** Globs from the repository root excluded from the full-diff context. */
   excludePaths: Array<string>;
   language: string;
+  /** USD per million tokens, for the cost estimate in the usage comment. */
+  inputPrice?: number;
+  outputPrice?: number;
   prompt?: string;
 }
 
@@ -553,6 +574,8 @@ export interface AiReleaseNotesConfig {
   /** Release notes in the changelog; undefined if only additional files are configured. */
   changelog?: AiSettings & AiScope;
   files: Array<AiFileConfig>;
+  /** Whether the release request gets a comment with the token usage and estimated cost. */
+  usageComment: boolean;
 }
 
 export interface PackageConfig {
@@ -1007,6 +1030,8 @@ function resolveAiSettings(
   const baseUrl = pick('base-url');
   const model = pick('model');
   const prompt = pick('prompt');
+  const inputPrice = pick('input-price');
+  const outputPrice = pick('output-price');
 
   if (provider === 'openai' && !(baseUrl && model)) {
     throw new ConfigError(
@@ -1037,6 +1062,8 @@ function resolveAiSettings(
       `${label}.exclude-paths`,
     ),
     language: pick('language') ?? 'English',
+    ...(inputPrice === undefined ? {} : {inputPrice}),
+    ...(outputPrice === undefined ? {} : {outputPrice}),
     ...(prompt ? {prompt} : {}),
   };
 }
@@ -1097,6 +1124,7 @@ function parseAiReleaseNotes(
   const {
     'additional-files': additional,
     'changelog': changelogSetting,
+    'usage-comment': usageComment = false,
     ...shared
   } = parsed['ai-release-notes'];
   const changelogOwn =
@@ -1105,13 +1133,13 @@ function parseAiReleaseNotes(
     changelogSetting !== undefined && changelogSetting !== false;
 
   if (!hasChangelog && additional.length === 0) {
-    if (Object.keys(shared).length > 0) {
+    if (usageComment || Object.keys(shared).length > 0) {
       throw new ConfigError(
         'ai-release-notes: the options only act as defaults, set "changelog" or at least one entry in "additional-files"',
       );
     }
 
-    return {files: []};
+    return {files: [], usageComment: false};
   }
 
   if (parsed.strategy === 'changesets') {
@@ -1179,6 +1207,7 @@ function parseAiReleaseNotes(
         }
       : {}),
     files,
+    usageComment,
   };
 }
 

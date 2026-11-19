@@ -277,6 +277,37 @@ describe('GitLabProvider', () => {
     });
   });
 
+  it('finds, creates and updates the marker comment', async () => {
+    const {provider, calls} = make(() => ({
+      json: [
+        {id: 1, body: 'hello'},
+        {id: 2, body: '<!-- relwolf:usage input="1" -->', system: true},
+        {id: 3, body: '<!-- relwolf:usage input="1" -->'},
+      ],
+    }));
+
+    expect(await provider.findComment(7, 'relwolf:usage')).toEqual({
+      id: 3,
+      body: '<!-- relwolf:usage input="1" -->',
+    });
+    await provider.saveComment(7, 'B');
+    await provider.saveComment(7, 'B', 3);
+    expect(calls.slice(1).map(c => [c.method, c.url.pathname, c.body])).toEqual(
+      [
+        [
+          'POST',
+          expect.stringMatching(/merge_requests\/7\/notes$/),
+          {body: 'B'},
+        ],
+        [
+          'PUT',
+          expect.stringMatching(/merge_requests\/7\/notes\/3$/),
+          {body: 'B'},
+        ],
+      ],
+    );
+  });
+
   it('closes merge requests', async () => {
     const {provider, calls} = make(() => ({json: gitlabMr()}));
 
@@ -834,6 +865,28 @@ describe('GitHubProvider', () => {
       color: 'ffffff',
       description: 'd',
     });
+  });
+
+  it('finds, creates and updates the marker comment', async () => {
+    const {provider, calls} = make(() => ({
+      json: [
+        {id: 1, body: 'hello'},
+        {id: 2, body: '<!-- relwolf:usage input="1" -->'},
+      ],
+    }));
+
+    expect(await provider.findComment(3, 'relwolf:usage')).toEqual({
+      id: 2,
+      body: '<!-- relwolf:usage input="1" -->',
+    });
+    await provider.saveComment(3, 'B');
+    await provider.saveComment(3, 'B', 2);
+    expect(calls.slice(1).map(c => [c.method, c.url.pathname, c.body])).toEqual(
+      [
+        ['POST', '/repos/lupiq/relwolf/issues/3/comments', {body: 'B'}],
+        ['PATCH', '/repos/lupiq/relwolf/issues/comments/2', {body: 'B'}],
+      ],
+    );
   });
 
   it('closes pull requests', async () => {

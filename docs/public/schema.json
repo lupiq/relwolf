@@ -186,10 +186,24 @@
           "type": "string",
           "minLength": 1
         },
+        "input-price": {
+          "description": "Price in USD per million input tokens; with it and/or output-price, the usage comment in the release request shows the estimated cost.",
+          "type": "number",
+          "minimum": 0
+        },
+        "output-price": {
+          "description": "Price in USD per million output tokens.",
+          "type": "number",
+          "minimum": 0
+        },
         "prompt": {
           "description": "Instructions for the model instead of the built-in ones. Placeholders: ${language}, ${tag}, ${version}, ${component}, ${audience}.",
           "type": "string",
           "minLength": 1
+        },
+        "usage-comment": {
+          "description": "Adds a comment to the release request with the tokens and estimated cost (see input-price / output-price) of the last run and of all runs (default false).",
+          "type": "boolean"
         },
         "changelog": {
           "description": "Adds release notes to the changelog and the created release: true, or an object with its own options (and packages / exclude-packages).",
@@ -245,6 +259,16 @@
                   "description": "Language of the release notes (default English).",
                   "type": "string",
                   "minLength": 1
+                },
+                "input-price": {
+                  "description": "Price in USD per million input tokens; with it and/or output-price, the usage comment in the release request shows the estimated cost.",
+                  "type": "number",
+                  "minimum": 0
+                },
+                "output-price": {
+                  "description": "Price in USD per million output tokens.",
+                  "type": "number",
+                  "minimum": 0
                 },
                 "prompt": {
                   "description": "Instructions for the model instead of the built-in ones. Placeholders: ${language}, ${tag}, ${version}, ${component}, ${audience}.",
@@ -324,6 +348,16 @@
                 "description": "Language of the release notes (default English).",
                 "type": "string",
                 "minLength": 1
+              },
+              "input-price": {
+                "description": "Price in USD per million input tokens; with it and/or output-price, the usage comment in the release request shows the estimated cost.",
+                "type": "number",
+                "minimum": 0
+              },
+              "output-price": {
+                "description": "Price in USD per million output tokens.",
+                "type": "number",
+                "minimum": 0
               },
               "prompt": {
                 "description": "Instructions for the model instead of the built-in ones. Placeholders: ${language}, ${tag}, ${version}, ${component}, ${audience}.",

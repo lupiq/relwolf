@@ -5,6 +5,7 @@ import {
   mkdtempSync,
   readFileSync,
   rmSync,
+  writeFileSync,
 } from 'node:fs';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
@@ -13,7 +14,6 @@ import {parseBody as parse} from '../src/body.js';
 import {parseConfig} from '../src/config.js';
 import {run, RunError} from '../src/release.js';
 import {FakeProvider, mergeLastRelease, TestRepo} from './helpers.js';
-
 let repo: TestRepo;
 let provider: FakeProvider;
 
@@ -1476,11 +1476,82 @@ describe('AI release notes', () => {
 
       return answer instanceof Error
         ? new Response('nope', {status: 400})
-        : Response.json({choices: [{message: {content: answer}}]});
+        : Response.json({
+            choices: [{message: {content: answer}}],
+            usage: {prompt_tokens: 1000, completion_tokens: 200},
+          });
     });
   });
 
   afterEach(() => vi.unstubAllGlobals());
+
+  const USAGE = '  usage-comment: true\n  input-price: 2\n  output-price: 10\n';
+
+  it('shows the AI credits reported by the Copilot CLI instead of a USD estimate', async () => {
+    const bin = path.join(
+      mkdtempSync(path.join(tmpdir(), 'relwolf-fake-')),
+      'copilot',
+    );
+
+    writeFileSync(
+      bin,
+      `#!/bin/sh
+[ "$1" = "--version" ] && exit 0
+while [ $# -gt 0 ]; do [ "$1" = "--usage-output-file" ] && f="$2"; shift; done
+echo '{"totalNanoAiu": 1500000000, "modelMetrics": {"m": {"usage": {"inputTokens": 10, "outputTokens": 2}}}}' > "$f"
+echo 'Copilot summary'
+`,
+      {mode: 0o755},
+    );
+    repo.write('package.json', PACKAGE_JSON);
+    repo.commit('feat: a');
+    await exec(
+      `${NODE_CONFIG}ai-release-notes:\n  changelog: true\n  usage-comment: true\n`,
+      {env: {RELWOLF_AI_API_KEY: 'key', RELWOLF_COPILOT_CLI: bin}},
+    );
+
+    expect(provider.comments[0]!.body).toContain(
+      '| Last run | 10 | 2 | 1.5 credits |',
+    );
+  });
+
+  it('writes no usage comment unless enabled', async () => {
+    repo.write('package.json', PACKAGE_JSON);
+    repo.commit('feat: a');
+    await exec(AI_CONFIG('  input-price: 2\n'), {env});
+
+    expect(calls).toBe(1);
+    expect(provider.comments).toEqual([]);
+  });
+
+  it('keeps token usage and estimated cost in a comment, summed over all runs', async () => {
+    repo.write('package.json', PACKAGE_JSON);
+    repo.commit('feat: a');
+    await exec(AI_CONFIG(USAGE), {env});
+
+    expect(provider.comments).toHaveLength(1);
+    expect(provider.comments[0]!.body).toContain(
+      '| Last run | 1,000 | 200 | $0.004 |',
+    );
+    expect(provider.comments[0]!.body).not.toContain('All 2 runs');
+
+    repo.commit('feat: b');
+    await exec(AI_CONFIG(USAGE), {env});
+
+    expect(provider.comments).toHaveLength(1);
+    expect(provider.comments[0]!.body).toContain(
+      '| All 2 runs | 2,000 | 400 |',
+    );
+    expect(provider.comments[0]!.body).toContain('input="2000" output="400"');
+  });
+
+  it('adds no usage comment without a model call', async () => {
+    repo.write('package.json', PACKAGE_JSON);
+    repo.commit('feat: a');
+    await exec(NODE_CONFIG, {env});
+
+    expect(provider.comments).toEqual([]);
+  });
 
   const file = (name: string) =>
     provider.commits.at(-1)!.files.find(entry => entry.path === name)?.content;
