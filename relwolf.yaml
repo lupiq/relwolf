@@ -8,6 +8,7 @@ release-emoji: true
 
 # AI release notes for every release in the release request and RELEASE_NOTES.md (GitHub Copilot CLI)
 ai-release-notes:
+  generate: manual
   model: claude-sonnet-5.5
   context: full-diff
   language: English

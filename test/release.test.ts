@@ -1583,6 +1583,45 @@ echo 'Copilot summary'
     expect(calls).toBe(1);
   });
 
+  describe('generate: manual', () => {
+    const MANUAL = AI_CONFIG('  generate: manual\n');
+    const generate = {...env, RELWOLF_GENERATE_AI_RELEASE_NOTES: 'true'};
+
+    it('reminds to generate the notes instead of calling the model', async () => {
+      repo.write('package.json', PACKAGE_JSON);
+      repo.commit('feat: a');
+      await exec(MANUAL, {env});
+
+      expect(calls).toBe(0);
+      expect(provider.requests[0]!.body).toMatch(
+        /⚠️ .*has not been generated yet.*RELWOLF_GENERATE_AI_RELEASE_NOTES=true/,
+      );
+      expect(provider.requests[0]!.body).not.toMatch(/relwolf:summary/);
+    });
+
+    it('generates on request and marks the notes stale after new commits', async () => {
+      repo.write('package.json', PACKAGE_JSON);
+      repo.commit('feat: a');
+      await exec(MANUAL, {env: generate});
+
+      expect(calls).toBe(1);
+      expect(provider.requests[0]!.body).not.toContain('⚠️');
+
+      repo.commit('feat: b');
+      await exec(MANUAL, {env});
+
+      const body = provider.requests[0]!.body;
+
+      expect(calls).toBe(1);
+      expect(body).toMatch(/⚠️ .*is stale/);
+      expect(body).toContain('Generated summary');
+
+      await exec(MANUAL, {env: generate});
+      expect(calls).toBe(2);
+      expect(provider.requests[0]!.body).not.toContain('⚠️');
+    });
+  });
+
   it('keeps a literal ${component} in the changelog notes', async () => {
     answers = ['Use `${component}` in the file path'];
     repo.write('package.json', PACKAGE_JSON);

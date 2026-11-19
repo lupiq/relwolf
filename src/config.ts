@@ -124,6 +124,7 @@ export type Strategy = (typeof STRATEGIES)[number];
 
 /** Options that changesets decides itself, via `.changeset/config.json` or the workspace. */
 const AI_PROVIDERS = ['copilot-cli', 'openai', 'anthropic'] as const;
+const AI_GENERATE_MODES = ['always', 'manual'] as const;
 const AI_CONTEXTS = ['changelog', 'commits', 'full-diff'] as const;
 
 const AI_SETTINGS_SHAPE = {
@@ -410,6 +411,12 @@ export const configSchema = z.strictObject({
   'ai-release-notes': z
     .strictObject({
       ...AI_SETTINGS_SHAPE,
+      'generate': z
+        .enum(AI_GENERATE_MODES)
+        .optional()
+        .describe(
+          'always (default) generates the release notes on every run where the commits changed; manual only generates them in a run with RELWOLF_GENERATE_AI_RELEASE_NOTES=true, e.g. just before the release request is merged.',
+        ),
       'usage-comment': z
         .boolean()
         .optional()
@@ -576,6 +583,8 @@ export interface AiReleaseNotesConfig {
   files: Array<AiFileConfig>;
   /** Whether the release request gets a comment with the token usage and estimated cost. */
   usageComment: boolean;
+  /** Whether the notes are generated on every run or only on request. */
+  generate: (typeof AI_GENERATE_MODES)[number];
 }
 
 export interface PackageConfig {
@@ -1125,6 +1134,7 @@ function parseAiReleaseNotes(
     'additional-files': additional,
     'changelog': changelogSetting,
     'usage-comment': usageComment = false,
+    'generate': generate = 'always',
     ...shared
   } = parsed['ai-release-notes'];
   const changelogOwn =
@@ -1133,13 +1143,17 @@ function parseAiReleaseNotes(
     changelogSetting !== undefined && changelogSetting !== false;
 
   if (!hasChangelog && additional.length === 0) {
-    if (usageComment || Object.keys(shared).length > 0) {
+    if (
+      usageComment ||
+      generate !== 'always' ||
+      Object.keys(shared).length > 0
+    ) {
       throw new ConfigError(
         'ai-release-notes: the options only act as defaults, set "changelog" or at least one entry in "additional-files"',
       );
     }
 
-    return {files: [], usageComment: false};
+    return {files: [], usageComment: false, generate};
   }
 
   if (parsed.strategy === 'changesets') {
@@ -1208,6 +1222,7 @@ function parseAiReleaseNotes(
       : {}),
     files,
     usageComment,
+    generate,
   };
 }
 

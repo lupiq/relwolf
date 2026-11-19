@@ -31,6 +31,7 @@ describe('ai-release-notes config', () => {
     expect(parseConfig(undefined).aiReleaseNotes).toEqual({
       files: [],
       usageComment: false,
+      generate: 'always',
     });
   });
 

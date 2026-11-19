@@ -109,6 +109,26 @@ The release notes are rendered between hidden `relwolf:summary` markers in the r
 - If the model cannot be reached or answers with an error, the release goes on without new release notes and the request
   shows a warning with the reason. The next run tries again.
 
+## Generating on request
+
+Model calls cost money. With `generate: manual` (top level of `ai-release-notes`, default `always`), relwolf only
+calls the model in a run where the variable `RELWOLF_GENERATE_AI_RELEASE_NOTES=true` is set, e.g. a manually started
+pipeline (GitLab: _Run pipeline_ with that variable) or workflow run (GitHub: a `workflow_dispatch` input that you map
+to the variable) just before you merge the release request.
+
+```yaml [relwolf.yaml]
+ai-release-notes:
+  generate: manual
+  changelog: true
+```
+
+- Without the variable, the release request shows a warning that the release notes still have to be generated before
+  merging.
+- Release notes that were generated earlier stay in the request; if the commits changed since, they are marked as
+  stale in a warning (and still used until you generate them again). Edited release notes are kept as usual.
+- A run with the variable generates only the missing or outdated release notes.
+- If you merge without generating, the release has no (or stale) release notes.
+
 ## Token usage and cost
 
 With `usage-comment: true` (top level of `ai-release-notes`, default `false`), relwolf adds a comment to the release request (hidden `relwolf:usage` marker) with the
@@ -175,7 +195,8 @@ Only in `changelog` and `additional-files` entries:
 | `packages`         | all packages | Only these packages (component name or path)      |
 | `exclude-packages` | none         | Leave out these packages (component name or path) |
 
-Only in `ai-release-notes`: `changelog` (`true` or an object, adds the notes to the changelog), `additional-files` and
+Only in `ai-release-notes`: `changelog` (`true` or an object, adds the notes to the changelog), `additional-files`,
+`generate` (`always` by default, or [`manual`](#generating-on-request)) and
 `usage-comment` (`true` adds the [token usage comment](#token-usage-and-cost); default `false`).
 
 Only in `additional-files` entries:

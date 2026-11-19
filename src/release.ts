@@ -915,19 +915,36 @@ async function resolveSummary(
     return releaseText(old.text) || undefined;
   }
 
+  const env = options.env ?? process.env;
+
+  if (
+    options.config.aiReleaseNotes.generate === 'manual' &&
+    env.RELWOLF_GENERATE_AI_RELEASE_NOTES !== 'true'
+  ) {
+    options.log?.(
+      `${old ? `The ${label} is outdated` : `The ${label} was not generated yet`}; generate: manual, run with RELWOLF_GENERATE_AI_RELEASE_NOTES=true to generate it.`,
+    );
+    state.warnings.push(
+      old
+        ? `The ${label} is stale: the commits changed since it was generated. Run relwolf with RELWOLF_GENERATE_AI_RELEASE_NOTES=true to update it before merging.`
+        : `The ${label} has not been generated yet. Run relwolf with RELWOLF_GENERATE_AI_RELEASE_NOTES=true to generate it before merging.`,
+    );
+
+    if (old) {
+      state.stored.push(old);
+    }
+
+    return old ? releaseText(old.text) || undefined : undefined;
+  }
+
   options.log?.(
     `Generating the ${label} with ${settings.model ?? settings.provider}.`,
   );
 
-  const result = await generateSummary(
-    settings,
-    input,
-    options.env ?? process.env,
-    {
-      timeoutMs: options.config.httpTimeout * 1000,
-      ...(options.log ? {log: options.log} : {}),
-    },
-  );
+  const result = await generateSummary(settings, input, env, {
+    timeoutMs: options.config.httpTimeout * 1000,
+    ...(options.log ? {log: options.log} : {}),
+  });
 
   if (!result.ok) {
     options.log?.(`The ${label} failed: ${result.error}`);

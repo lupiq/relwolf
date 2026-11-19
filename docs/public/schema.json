@@ -201,6 +201,14 @@
           "type": "string",
           "minLength": 1
         },
+        "generate": {
+          "description": "always (default) generates the release notes on every run where the commits changed; manual only generates them in a run with RELWOLF_GENERATE_AI_RELEASE_NOTES=true, e.g. just before the release request is merged.",
+          "type": "string",
+          "enum": [
+            "always",
+            "manual"
+          ]
+        },
         "usage-comment": {
           "description": "Adds a comment to the release request with the tokens and estimated cost (see input-price / output-price) of the last run and of all runs (default false).",
           "type": "boolean"

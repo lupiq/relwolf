@@ -9,6 +9,8 @@ name: Release
 # Required app permissions: contents: write, pull requests: write (also covers labels and assignees).
 # The AI summary runs the GitHub Copilot CLI with the secret COPILOT_GITHUB_TOKEN (fine-grained PAT of a Copilot
 # subscriber with the account permission "Copilot Requests"); without it the release request only shows a warning.
+# The notes are generated manually (generate: manual in relwolf.yaml): run this workflow with "generate-ai-release-notes"
+# just before merging the release pull request.
 
 on:
   push:
@@ -19,6 +21,10 @@ on:
         description: 'Force the next version, e.g. 1.0.0 ("auto" removes a request)'
         required: false
         default: ''
+      generate-ai-release-notes:
+        description: 'Generate the AI release notes (run this before merging the release pull request)'
+        type: boolean
+        default: false
 
 concurrency:
   group: release
@@ -51,4 +57,5 @@ jobs:
         env:
           RELWOLF_TOKEN: ${{ steps.app-token.outputs.token }}
           RELWOLF_RELEASE_AS: ${{ inputs.release-as }}
+          RELWOLF_GENERATE_AI_RELEASE_NOTES: ${{ inputs.generate-ai-release-notes }}
           COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
