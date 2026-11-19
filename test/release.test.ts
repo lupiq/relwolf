@@ -1673,4 +1673,40 @@ ai-release-notes:
     await exec(undefined, {env});
     expect(prompts).toHaveLength(2);
   });
+
+  it('writes one file per package and skips excluded packages', async () => {
+    repo.write('package.json', PACKAGE_JSON);
+    repo.write('services/api/VERSION', '0.0.0 # x-relwolf-version\n');
+    repo.write('services/web/VERSION', '0.0.0 # x-relwolf-version\n');
+    repo.commit('chore: scaffold');
+    repo.commit('feat: root change', 'root.txt');
+    repo.commit('feat: api change', 'services/api/code.txt');
+    repo.commit('feat: web change', 'services/web/code.txt');
+    await exec(
+      `packages:
+  ".":
+    updaters: [{ type: package-json }]
+  services/api:
+    component: api
+    updaters: []
+  services/web:
+    component: web
+    updaters: []
+ai-release-notes:
+  additional-files:
+    - file: \${path}/NOTES.md
+      exclude-packages: [web]
+      provider: openai
+      base-url: https://llm.example.com/v1
+      model: m
+`,
+      {env},
+    );
+
+    expect(file('NOTES.md')).toMatch(/Generated summary/);
+    expect(file('services/api/NOTES.md')).toMatch(/Generated summary/);
+    expect(file('services/web/NOTES.md')).toBeUndefined();
+    expect(file('CHANGELOG.md')).not.toMatch(/Generated summary/);
+    expect(calls).toBe(2);
+  });
 });

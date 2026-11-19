@@ -7,7 +7,7 @@ import {
   renderInput,
   resolveEndpoint,
 } from '../src/ai-release-notes.js';
-import {parseConfig} from '../src/config.js';
+import {aiAppliesTo, parseConfig, resolveAiFile} from '../src/config.js';
 
 const settings = (yaml = 'language: English') =>
   parseConfig(
@@ -31,6 +31,8 @@ describe('ai-release-notes config', () => {
 
   it('enables the changelog with any top-level option and applies defaults', () => {
     expect(settings()).toEqual({
+      packages: [],
+      excludePackages: [],
       provider: 'copilot-cli',
       context: 'commits',
       audience: 'users',
@@ -83,6 +85,37 @@ describe('ai-release-notes config', () => {
       context: 'full-diff',
       language: 'German',
     });
+  });
+
+  it('scopes outputs to packages and validates the entries', () => {
+    const yaml = (entry: string) =>
+      `packages:
+  ".": {}
+  services/api: {component: api}
+ai-release-notes:
+  additional-files:
+    - file: \${path}/NOTES.md
+      ${entry}
+`;
+    const [file] = parseConfig(yaml('exclude-packages: [api]')).aiReleaseNotes
+      .files;
+
+    expect(file).toMatchObject({file: '${path}/NOTES.md'});
+    expect(aiAppliesTo(file!, {path: '.'})).toBe(true);
+    expect(aiAppliesTo(file!, {path: 'services/api', component: 'api'})).toBe(
+      false,
+    );
+    expect(
+      aiAppliesTo(
+        parseConfig(yaml('packages: [services/api]')).aiReleaseNotes.files[0]!,
+        {
+          path: '.',
+        },
+      ),
+    ).toBe(false);
+    expect(resolveAiFile('${path}/N.md', {path: '.'})).toBe('N.md');
+    expect(resolveAiFile('${component}.md', {path: '.'})).toBe('root.md');
+    expect(() => parseConfig(yaml('packages: [nope]'))).toThrow(/nope/);
   });
 
   it('rejects duplicate files and invalid file settings', () => {

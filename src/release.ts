@@ -41,6 +41,8 @@ import {
   type Workspace,
 } from './changesets.js';
 import {
+  aiAppliesTo,
+  resolveAiFile,
   ROOT_KEY,
   tagPackagePath,
   type AiSettings,
@@ -997,7 +999,7 @@ async function applyPlan(
 
   const ai = options.config.aiReleaseNotes;
   const summary =
-    placeholder || !ai.changelog
+    placeholder || !ai.changelog || !aiAppliesTo(ai.changelog, pkg)
       ? undefined
       : await resolveSummary(
           options,
@@ -1041,7 +1043,10 @@ async function applyPlan(
     );
   }
 
-  for (const {file, fileTitle, ...settings} of placeholder ? [] : ai.files) {
+  for (const {file: template, fileTitle, ...settings} of placeholder
+    ? []
+    : ai.files.filter(entry => aiAppliesTo(entry, pkg))) {
+    const file = resolveAiFile(template, pkg);
     const text = await resolveSummary(
       options,
       git,

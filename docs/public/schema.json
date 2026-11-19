@@ -191,6 +191,22 @@
           "type": "string",
           "minLength": 1
         },
+        "packages": {
+          "description": "Packages (component name or path) that get these release notes; all packages if omitted. Not inherited by additional-files.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "exclude-packages": {
+          "description": "Packages (component name or path) that do not get these release notes. Not inherited by additional-files.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
         "additional-files": {
           "default": [],
           "description": "Additional Markdown files with their own release notes; unset options are inherited from the top level.",
@@ -249,10 +265,26 @@
                 "type": "string",
                 "minLength": 1
               },
+              "packages": {
+                "description": "Packages (component name or path) that get these release notes; all packages if omitted. Not inherited by additional-files.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "exclude-packages": {
+                "description": "Packages (component name or path) that do not get these release notes. Not inherited by additional-files.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
               "file": {
                 "type": "string",
                 "minLength": 1,
-                "description": "Markdown file (repository-relative) that gets a new entry per release."
+                "description": "Markdown file (repository-relative) that gets a new entry per release. ${path} and ${component} are replaced per package, which writes one file per package."
               },
               "file-title": {
                 "default": "Release summaries",

@@ -72,6 +72,23 @@ missing), e.g. for a documentation page. An entry accepts `file` (required), `fi
 leaves out are inherited from the top level, so you can create files for several audiences and languages, each with its
 own prompt. Every output is generated separately and shown in its own block in the release request.
 
+### Monorepos
+
+By default every package gets release notes in every output. `file` may contain `${path}` (the package path, `.` for
+the root) and `${component}` (the component name, `root` without one), which writes one file per package, e.g.
+`file: ${path}/RELEASE_NOTES.md`. Without a placeholder all packages share the file and the headings show the component.
+
+`packages` and `exclude-packages` limit an output to packages, given as component name or path. They apply to the
+changelog notes at the top level and to each entry of `additional-files`, and are not inherited.
+
+```yaml [relwolf.yaml]
+ai-release-notes:
+  exclude-packages: [internal] # no notes in the changelog of this package
+  additional-files:
+    - file: ${path}/RELEASE_NOTES.md
+      exclude-packages: [internal, tools]
+```
+
 The changelog notes cannot be combined with `rewrite-changelog`, which would drop the summaries of older releases. In
 monorepos every package gets its own release notes. `strategy: changesets` is not supported yet.
 
@@ -113,7 +130,7 @@ compatibility details.
 
 ## Options
 
-Top level and every entry of `additional-files`:
+Top level and every entry of `additional-files` (unset options of an entry are inherited from the top level):
 
 | Key             | Default       | Description                                                |
 | --------------- | ------------- | ---------------------------------------------------------- |
@@ -125,6 +142,13 @@ Top level and every entry of `additional-files`:
 | `exclude-paths` | `[]`          | Globs excluded from the `full-diff` context                |
 | `language`      | `English`     | Language of the release notes                              |
 | `prompt`        | built in      | Instructions for the model                                 |
+
+Not inherited by `additional-files` entries:
+
+| Key                | Default      | Description                                       |
+| ------------------ | ------------ | ------------------------------------------------- |
+| `packages`         | all packages | Only these packages (component name or path)      |
+| `exclude-packages` | none         | Leave out these packages (component name or path) |
 
 Only in `additional-files` entries (unset options are inherited from the top level):
 

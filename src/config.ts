@@ -177,6 +177,18 @@ const AI_SETTINGS_SHAPE = {
     .describe(
       'Instructions for the model instead of the built-in ones. Placeholders: ${language}, ${tag}, ${version}, ${component}, ${audience}.',
     ),
+  'packages': z
+    .array(z.string().min(1))
+    .optional()
+    .describe(
+      'Packages (component name or path) that get these release notes; all packages if omitted. Not inherited by additional-files.',
+    ),
+  'exclude-packages': z
+    .array(z.string().min(1))
+    .optional()
+    .describe(
+      'Packages (component name or path) that do not get these release notes. Not inherited by additional-files.',
+    ),
 };
 
 const CHANGESETS_REJECTED_OPTIONS = [
@@ -391,7 +403,7 @@ export const configSchema = z.strictObject({
               .string()
               .min(1)
               .describe(
-                'Markdown file (repository-relative) that gets a new entry per release.',
+                'Markdown file (repository-relative) that gets a new entry per release. ${path} and ${component} are replaced per package, which writes one file per package.',
               ),
             'file-title': z
               .string()
@@ -511,15 +523,22 @@ export interface AiSettings {
   prompt?: string;
 }
 
-export interface AiFileConfig extends AiSettings {
-  /** Repository-relative path of the release notes file. */
+/** The packages an output applies to. */
+export interface AiScope {
+  /** Component names or paths; all packages if empty. */
+  packages: Array<string>;
+  excludePackages: Array<string>;
+}
+
+export interface AiFileConfig extends AiSettings, AiScope {
+  /** Repository-relative path of the release notes file; may contain `${path}` and `${component}`. */
   file: string;
   fileTitle: string;
 }
 
 export interface AiReleaseNotesConfig {
   /** Release notes in the changelog; undefined if only additional files are configured. */
-  changelog?: AiSettings;
+  changelog?: AiSettings & AiScope;
   files: Array<AiFileConfig>;
 }
 
@@ -1005,7 +1024,59 @@ function resolveAiSettings(
   };
 }
 
-function parseAiReleaseNotes(parsed: ParsedConfig): AiReleaseNotesConfig {
+function parseAiScope(
+  own: AiRawSettings,
+  packages: ReadonlyArray<PackageConfig>,
+  label: string,
+): AiScope {
+  const scope = {
+    packages: own.packages ?? [],
+    excludePackages: own['exclude-packages'] ?? [],
+  };
+
+  for (const entry of [...scope.packages, ...scope.excludePackages]) {
+    if (!packages.some(pkg => pkg.component === entry || pkg.path === entry)) {
+      throw new ConfigError(
+        `${label}: "${entry}" is neither a component name nor a path of a configured package`,
+      );
+    }
+  }
+
+  return scope;
+}
+
+const AI_FILE_PLACEHOLDERS = ['${path}', '${component}'];
+
+/** Resolves the `${path}` and `${component}` placeholders of an additional file for a package. */
+export function resolveAiFile(
+  file: string,
+  pkg: Pick<PackageConfig, 'path' | 'component'>,
+): string {
+  return path.posix.normalize(
+    file
+      .replaceAll('${path}', () => pkg.path)
+      .replaceAll('${component}', () => pkg.component ?? ROOT_KEY),
+  );
+}
+
+/** Whether an output applies to the package. */
+export function aiAppliesTo(
+  scope: AiScope,
+  pkg: Pick<PackageConfig, 'path' | 'component'>,
+): boolean {
+  const matches = (entry: string) =>
+    entry === pkg.path || entry === pkg.component;
+
+  return (
+    (scope.packages.length === 0 || scope.packages.some(matches)) &&
+    !scope.excludePackages.some(matches)
+  );
+}
+
+function parseAiReleaseNotes(
+  parsed: ParsedConfig,
+  packages: ReadonlyArray<PackageConfig>,
+): AiReleaseNotesConfig {
   const {'additional-files': additional, ...shared} =
     parsed['ai-release-notes'];
   const hasChangelog = Object.keys(shared).length > 0;
@@ -1030,7 +1101,19 @@ function parseAiReleaseNotes(parsed: ParsedConfig): AiReleaseNotesConfig {
   const files = additional.map(
     ({file, 'file-title': fileTitle, ...own}, index) => {
       const label = `ai-release-notes.additional-files[${index}]`;
-      const normalized = normalizeRepoPath(file, `${label}.file`);
+      const templated = AI_FILE_PLACEHOLDERS.some(placeholder =>
+        file.includes(placeholder),
+      );
+      const normalized = templated
+        ? file
+        : normalizeRepoPath(file, `${label}.file`);
+
+      if (templated) {
+        normalizeRepoPath(
+          resolveAiFile(file, {path: 'pkg', component: 'pkg'}),
+          `${label}.file`,
+        );
+      }
 
       if (seen.has(normalized)) {
         throw new ConfigError(
@@ -1042,6 +1125,7 @@ function parseAiReleaseNotes(parsed: ParsedConfig): AiReleaseNotesConfig {
 
       return {
         ...resolveAiSettings(own, shared, label),
+        ...parseAiScope(own, packages, label),
         file: normalized,
         fileTitle,
       };
@@ -1050,7 +1134,12 @@ function parseAiReleaseNotes(parsed: ParsedConfig): AiReleaseNotesConfig {
 
   return {
     ...(hasChangelog
-      ? {changelog: resolveAiSettings(shared, {}, 'ai-release-notes')}
+      ? {
+          changelog: {
+            ...resolveAiSettings(shared, {}, 'ai-release-notes'),
+            ...parseAiScope(shared, packages, 'ai-release-notes'),
+          },
+        }
       : {}),
     files,
   };
@@ -1132,7 +1221,7 @@ export function parseConfig(source: string | undefined): Config {
     changelogLinksText: parsed['changelog-links-text'],
     assignees: parsed.assignees,
     reviewers: parsed.reviewers,
-    aiReleaseNotes: parseAiReleaseNotes(parsed),
+    aiReleaseNotes: parseAiReleaseNotes(parsed, packages),
     httpTimeout: parsed['http-timeout'],
     minorTypes,
     patchTypes,
