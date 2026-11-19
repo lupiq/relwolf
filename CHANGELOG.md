@@ -2,6 +2,51 @@
 
 <!-- git-cliff: end of header -->
 
+## 🌈 [0.15.0](https://github.com/lupiq/relwolf/releases/tag/v0.15.0) - 2026-11-19
+
+[See changes](https://github.com/lupiq/relwolf/compare/v0.14.1...v0.15.0)
+
+### 🚀 Features
+
+- Add the possibility to add an AI generated summary to the release and changelogs ([0cbf63a](https://github.com/lupiq/relwolf/commit/0cbf63a9e1e29f5bb6654f25c565caa8503acb00))
+- Add possibility to configure the `context` for the AI summary ([53c8cb9](https://github.com/lupiq/relwolf/commit/53c8cb994007aa522fd809f6990caf93b112b336))
+- Add release emoji to release notes too ([92b7989](https://github.com/lupiq/relwolf/commit/92b7989a78174d9aad2a05d6f97bbefd774d2445))
+- Add Anthropic as a direct provider ([d745658](https://github.com/lupiq/relwolf/commit/d7456583fae6033eff728ac052e413745e09028b))
+- Improve the AI release notes config ([81474ea](https://github.com/lupiq/relwolf/commit/81474ea9106d34342641d82709daff0bb5a2d35a))
+- Add possibility to explicitly in- or exclude packages in/from AI release notes generation ([837c044](https://github.com/lupiq/relwolf/commit/837c04471b87c950801fa738067b271fbd7453ce))
+- Bundle `@github/copilot` in the Docker container ([ff1f408](https://github.com/lupiq/relwolf/commit/ff1f408cf5676d3fcba6ab7889ee00b4a68c52f8))
+- Add the possibility to show the tokens which were used to generate the AI release notes ([0e7a8a6](https://github.com/lupiq/relwolf/commit/0e7a8a6669a27364fa44abccbe29dbef6f60bd01))
+- Add manual mode for AI release notes to safe costs ([a339c5f](https://github.com/lupiq/relwolf/commit/a339c5fb3020ed0f4d2630511e07a0692d964d0b))
+- Add the possibility to configure the `max-input-chars` for AI release notes ([bb205fe](https://github.com/lupiq/relwolf/commit/bb205fe31e8986284eaf8d449a5b2a1c5be16c6f))
+
+### 🐛 Bug Fixes
+
+- Use the Copilot CLI instead of the retired GitHub Models ([d692c2b](https://github.com/lupiq/relwolf/commit/d692c2b5b50ca7b68670779d9c6ddbb4e6762b8a))
+- Add the `no-changes-text` if there are no commits in the changelog ([542f406](https://github.com/lupiq/relwolf/commit/542f4063be333a672dd3cdf865e32e79c31c16af))
+- Diff the first release against the empty tree for AI release notes ([ef300bb](https://github.com/lupiq/relwolf/commit/ef300bb90ae919f88dd97f056fb0dcc5cd0c5470))
+- Fix big inputs for Copilot CLI (`spawn E2BIG`) ([0469675](https://github.com/lupiq/relwolf/commit/04696752f7eae2471a8033cf4fe683e70e59c1c3))
+
+### 📚 Documentation
+
+- Improve description of GitHub Action ([75402b7](https://github.com/lupiq/relwolf/commit/75402b74625f21b53924a94e3b24ca6af921ae51))
+- Fix flow example on landing page ([3809eed](https://github.com/lupiq/relwolf/commit/3809eede81ba497428bce274c4a11cb66adcf8a8))
+- Fix timeline examples ([6481ffe](https://github.com/lupiq/relwolf/commit/6481ffe3da1c76505afea9e9d8e996a1f7e3cf04))
+- Add the release notes to an own markdown file ([88e791b](https://github.com/lupiq/relwolf/commit/88e791b4e7bad4ea42b14c2b5c27ddc132f9d2c0))
+- Add AI release notes to release-please comparison ([403812c](https://github.com/lupiq/relwolf/commit/403812c79af5f1f5e483b467c6b107324ed87b0d))
+- Add AI release notes recipe ([3f9adf4](https://github.com/lupiq/relwolf/commit/3f9adf455e012fdf1ae472c5bc0f79cccbb49016))
+
+### 🚜 Refactor
+
+- Rename ai-summary to ai-release-notes ([500ab43](https://github.com/lupiq/relwolf/commit/500ab43aed3674b4db3f29876d12bdccbd1a79c5))
+
+### 🧪 Testing
+
+- Add AI summary test for monorepos ([d1595a6](https://github.com/lupiq/relwolf/commit/d1595a66196ae7c07d111621aee0baa2466cf2d5))
+- Add more tests for new AI release notes ([c8126a2](https://github.com/lupiq/relwolf/commit/c8126a29dd6a76a5750e460e70f1dcd793b1b316))
+- Add E2E scenarios for AI release notes ([cbe4d8e](https://github.com/lupiq/relwolf/commit/cbe4d8e9ce4ca873bb1c647d9eab7854d93ff951))
+
+---
+
 ## 🎉 [0.14.1](https://github.com/lupiq/relwolf/releases/tag/v0.14.1) - 2026-11-17
 
 [See changes](https://github.com/lupiq/relwolf/compare/v0.14.0...v0.14.1)
