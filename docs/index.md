@@ -194,13 +194,14 @@ relwolf follows the workflow of Google's [release-please](https://github.com/goo
 is excellent, but it exists for GitHub only. relwolf brings the same review-first workflow to **GitLab** and runs
 equally on GitHub.
 
-|                 | relwolf                                                           | release-please                                        |
-| --------------- | ----------------------------------------------------------------- | ----------------------------------------------------- |
-| Platforms       | GitLab and GitHub                                                 | GitHub only                                           |
-| Changelog       | git-cliff: a `cliff.toml` controls the whole format               | Sections per commit type, `default` or `github` notes |
-| Versioning      | Conventional Commits or Changesets                                | Conventional Commits                                  |
-| Reverted commit | Cancels the original; both stay out of the changelog              | Listed in a `Reverts` section                         |
-| Custom steps    | `pre-commit-script` can change any file before the release commit | No equivalent in its documentation                    |
+|                  | relwolf                                                                                  | release-please                                        |
+| ---------------- | ---------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| Platforms        | GitLab and GitHub                                                                        | GitHub only                                           |
+| Changelog        | git-cliff: a `cliff.toml` controls the whole format                                      | Sections per commit type, `default` or `github` notes |
+| Versioning       | Conventional Commits or Changesets                                                       | Conventional Commits                                  |
+| Reverted commit  | Cancels the original; both stay out of the changelog                                     | Listed in a `Reverts` section                         |
+| Custom steps     | `pre-commit-script` can change any file before the release commit                        | No equivalent in its documentation                    |
+| AI release notes | Optional, reviewable in the release request; changelog, release and extra Markdown files | No equivalent in its documentation                    |
 
 See the [full comparison](/guide/comparison), including where release-please goes further.
 
