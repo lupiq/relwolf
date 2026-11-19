@@ -85,6 +85,23 @@ that major version; use an exact tag such as `@v1.2.3` to pin.
 Add a [`relwolf.yaml`](/configuration/relwolf-yaml) to the repository root to update version files, set a pre-release
 channel or configure a monorepo.
 
+## 5. AI release notes (optional)
+
+The Docker image contains the GitHub Copilot CLI, so the default provider of the
+[AI release notes](/configuration/ai-release-notes) works without installing anything. Store a fine-grained personal
+access token of a Copilot subscriber with the account permission **Copilot Requests** as the secret
+`COPILOT_GITHUB_TOKEN` and pass it to the step as an environment variable (the action has no input for it):
+
+```yaml
+- uses: lupiq/relwolf@v0 # x-relwolf-major
+  with:
+    token: ${{ secrets.RELWOLF_TOKEN }}
+  env:
+    COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+```
+
+For `provider: openai` or `anthropic` pass `RELWOLF_AI_API_KEY` the same way.
+
 ## Action inputs
 
 | Input        | Required | Description                                                                                   |

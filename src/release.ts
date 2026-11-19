@@ -912,7 +912,10 @@ async function resolveSummary(
     settings,
     input,
     options.env ?? process.env,
-    {timeoutMs: options.config.httpTimeout * 1000},
+    {
+      timeoutMs: options.config.httpTimeout * 1000,
+      ...(options.log ? {log: options.log} : {}),
+    },
   );
 
   if (!result.ok) {

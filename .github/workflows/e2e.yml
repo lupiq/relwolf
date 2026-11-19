@@ -30,7 +30,7 @@ jobs:
           node-version-file: .node-version
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: npm install --global @github/copilot
+      - run: npm install --global @github/copilot@1.0.112
       - name: Run E2E tests
         run: pnpm test:e2e e2e/gitlab.e2e.test.ts
         env:
@@ -52,7 +52,7 @@ jobs:
           node-version-file: .node-version
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: npm install --global @github/copilot
+      - run: npm install --global @github/copilot@1.0.112
       - name: Run E2E tests
         run: pnpm test:e2e e2e/github.e2e.test.ts
         env:

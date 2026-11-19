@@ -24,6 +24,19 @@
       "matchStrings": ["npm install --global pnpm@(?<currentValue>[\\d.]+)"],
       "depNameTemplate": "pnpm",
       "datasourceTemplate": "npm"
+    },
+    {
+      "customType": "regex",
+      "description": "Copilot CLI installed in the Dockerfile and the workflows",
+      "managerFilePatterns": [
+        "/(^|/)Dockerfile$/",
+        "/^\\.github/workflows/.+\\.ya?ml$/"
+      ],
+      "matchStrings": [
+        "npm install --global @github/copilot@(?<currentValue>[\\d.]+)"
+      ],
+      "depNameTemplate": "@github/copilot",
+      "datasourceTemplate": "npm"
     }
   ],
   "packageRules": [
@@ -47,6 +60,11 @@
       "matchDepNames": ["typescript", "@typescript/native"],
       "matchPackageNames": ["typescript", "@typescript/typescript6"],
       "groupName": "typescript"
+    },
+    {
+      "description": "Keep the Copilot CLI version of the image and the workflows in sync",
+      "matchDepNames": ["@github/copilot"],
+      "groupName": "copilot-cli"
     },
     {
       "matchPackageNames": ["eslint", "@eslint/js", "typescript-eslint"],

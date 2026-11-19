@@ -23,6 +23,10 @@ RUN apt-get update \
     # GitLab runners mount the checkout with a different owner than the container user
     && git config --system --add safe.directory '*'
 
+# GitHub Copilot CLI for the default `ai-release-notes` provider (`copilot-cli`)
+RUN npm install --global @github/copilot@1.0.112 \
+    && npm cache clean --force
+
 WORKDIR /opt/relwolf
 COPY package.json ./
 COPY --from=deps /app/node_modules ./node_modules

@@ -418,6 +418,30 @@ describe('generateSummary with the Copilot CLI', () => {
     expect(calls[0]!.env.PATH).toBe('/bin');
   });
 
+  it('logs the version of the CLI', async () => {
+    const logs: Array<string> = [];
+    const calls: Array<Array<string>> = [];
+
+    await generateSummary(
+      copilot,
+      input,
+      {COPILOT_GITHUB_TOKEN: 't'},
+      {
+        log: message => logs.push(message),
+        runner: async (_command, args) => {
+          calls.push(args);
+
+          return args[0] === '--version'
+            ? "GitHub Copilot CLI 1.0.112.\nRun 'copilot update' to check for updates.\n"
+            : 'Summary';
+        },
+      },
+    );
+
+    expect(logs).toEqual(['Using GitHub Copilot CLI 1.0.112.']);
+    expect(calls[0]).toEqual(['--version']);
+  });
+
   it('reports a missing token, a missing CLI and failures', async () => {
     const failing = (error: object) => async () => {
       throw Object.assign(new Error('x'), error);

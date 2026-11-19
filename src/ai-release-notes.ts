@@ -199,7 +199,11 @@ async function generateWithCopilot(
   settings: AiSettings,
   input: SummaryInput,
   env: NodeJS.ProcessEnv,
-  options: {timeoutMs?: number; runner?: CommandRunner},
+  options: {
+    timeoutMs?: number;
+    runner?: CommandRunner;
+    log?: (message: string) => void;
+  },
 ): Promise<SummaryResult> {
   const token = env.RELWOLF_AI_API_KEY ?? env.COPILOT_GITHUB_TOKEN;
 
@@ -226,15 +230,27 @@ async function generateWithCopilot(
   const dir = await mkdtemp(path.join(tmpdir(), 'relwolf-ai-'));
 
   try {
-    const output = await (options.runner ?? runCommand)(
-      env.RELWOLF_COPILOT_CLI ?? 'copilot',
-      args,
-      {
-        cwd: dir,
-        env: {...childEnv, COPILOT_GITHUB_TOKEN: token},
-        timeoutMs: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
-      },
-    );
+    const run = options.runner ?? runCommand;
+    const command = env.RELWOLF_COPILOT_CLI ?? 'copilot';
+    const runOptions = {
+      cwd: dir,
+      env: {...childEnv, COPILOT_GITHUB_TOKEN: token},
+      timeoutMs: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+    };
+
+    if (options.log) {
+      // Only informational; a missing CLI is reported by the actual call below.
+      const version = await run(command, ['--version'], runOptions).catch(
+        () => '',
+      );
+      const line = version.trim().split('\n')[0]?.trim();
+
+      if (line) {
+        options.log(`Using ${line}`);
+      }
+    }
+
+    const output = await run(command, args, runOptions);
     const text = sanitizeSummary(output);
 
     return text
@@ -262,6 +278,7 @@ export async function generateSummary(
     timeoutMs?: number;
     fetchImpl?: FetchLike;
     runner?: CommandRunner;
+    log?: (message: string) => void;
   } = {},
 ): Promise<SummaryResult> {
   if (settings.provider === 'copilot-cli') {

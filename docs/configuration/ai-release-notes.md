@@ -37,10 +37,11 @@ Only enable this with an endpoint you trust with that content.
 `provider` selects how the release notes are generated.
 
 - **`copilot-cli`** (default): runs the [GitHub Copilot CLI](https://docs.github.com/en/copilot/concepts/agents/about-copilot-cli)
-  in programmatic mode, so it uses your Copilot subscription. Install it in the job
+  in programmatic mode, so it uses your Copilot subscription. The Docker image (GitHub Action and GitLab CI) already
+  contains it; when you run relwolf without the image, install it
   (`npm install --global @github/copilot`) or point `RELWOLF_COPILOT_CLI` to the executable. It authenticates with
-  `RELWOLF_AI_API_KEY` or `COPILOT_GITHUB_TOKEN`: a fine-grained personal access token of a Copilot subscriber with
-  the account permission **Copilot Requests**. relwolf runs the CLI in an empty temporary directory, without any tool
+  `RELWOLF_AI_API_KEY` or `COPILOT_GITHUB_TOKEN`, which you provide as a secret in the job environment: a fine-grained
+  personal access token of a Copilot subscriber with the account permission **Copilot Requests**. relwolf runs the CLI in an empty temporary directory, without any tool
   permission and without custom instructions, and removes all other tokens from its environment. `model` is optional
   and defaults to the one of the CLI.
 - **`openai`**: any OpenAI-compatible `/chat/completions` API (OpenAI, Azure OpenAI, Ollama, a gateway for Claude, …)

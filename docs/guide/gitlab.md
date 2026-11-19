@@ -48,6 +48,13 @@ jobs from running at the same time.
 Add a [`relwolf.yaml`](/configuration/relwolf-yaml) to the repository root to update version files, set a pre-release channel or
 configure a monorepo.
 
+## 5. AI release notes (optional)
+
+The image contains the GitHub Copilot CLI, so the default provider of the [AI release notes](/configuration/ai-release-notes)
+works without installing anything. Store a fine-grained personal access token of a Copilot subscriber with the account
+permission **Copilot Requests** as a masked CI/CD variable `COPILOT_GITHUB_TOKEN`. For `provider: openai` or `anthropic`
+use `RELWOLF_AI_API_KEY` instead.
+
 ## Forcing a version
 
 Run a pipeline manually (_Build → Pipelines → Run pipeline_) on the default branch with the variable

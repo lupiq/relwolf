@@ -39,7 +39,8 @@ Only things that are not enforced by ESLint, Prettier, commitlint or the type ch
 - Updaters are pure `(content, version, file, key) => content` functions without dependencies that keep formatting;
   lockfiles come via `companions()` in `src/updaters/index.ts`.
 - The job log should explain decisions (`plan.ts`), and HTTP errors carry provider-specific hints.
-- Docker image: no `ENTRYPOINT` (GitLab overrides it), `relwolf` on the `PATH`, amd64 + arm64.
+- Docker image: no `ENTRYPOINT` (GitLab overrides it), `relwolf` on the `PATH`, amd64 + arm64, pinned Copilot CLI
+  (`@github/copilot`, same version as in the workflows) for the default AI release notes provider.
 
 ## Tooling quirks
 
