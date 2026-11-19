@@ -22,7 +22,7 @@ const NOTES_PATTERN =
   /<!-- relwolf:notes tag="([^"\s]+)" prerelease="(true|false)" -->\r?\n([\s\S]*?)\r?\n<!-- \/relwolf:notes -->/g;
 
 const SUMMARY_PATTERN =
-  /<!-- relwolf:summary tag="([^"\s]+)" key="([^"\n]*)" input="([0-9a-f]+)" output="([0-9a-f]+)" -->\r?\n([\s\S]*?)\r?\n<!-- \/relwolf:summary -->/g;
+  /<!-- relwolf:summary tag="([^"\s]+)" key="([^"\n]*)"(?: target="([^"\n]*)")? input="([0-9a-f]+)" output="([0-9a-f]+)" -->\r?\n([\s\S]*?)\r?\n<!-- \/relwolf:summary -->/g;
 
 export const DEFAULT_TITLE_TEMPLATE = 'chore(release): Create release ${tags}';
 
@@ -123,8 +123,8 @@ function summarySection(options: RenderBodyOptions): string {
   );
   const blocks = (options.summaries ?? []).map(
     summary =>
-      `**AI release notes** for \`${summary.tag}\` (editable; clear the text to leave it out)\n\n` +
-      `<!-- relwolf:summary tag="${summary.tag}" key="${summary.key}" input="${summary.input}" output="${summary.output}" -->\n${sanitize(summary.text)}\n<!-- /relwolf:summary -->`,
+      `**AI release notes** for \`${summary.tag}\`${summary.target ? ` in \`${summary.target}\`` : ''} (editable; clear the text to leave it out)\n\n` +
+      `<!-- relwolf:summary tag="${summary.tag}" key="${summary.key}"${summary.target ? ` target="${summary.target}"` : ''} input="${summary.input}" output="${summary.output}" -->\n${sanitize(summary.text)}\n<!-- /relwolf:summary -->`,
   );
 
   return [...warnings, ...blocks].map(part => `${part}\n\n`).join('');
@@ -204,10 +204,11 @@ export function parseSummaries(
   const summaries: Array<StoredSummary> = [];
 
   for (const match of body.matchAll(SUMMARY_PATTERN)) {
-    const [, tag = '', key = '', input = '', output = '', text = ''] = match;
+    const [, tag = '', key = '', target, input = '', output = '', text = ''] =
+      match;
 
     if (isValidTag(tag)) {
-      summaries.push({tag, key, input, output, text});
+      summaries.push({tag, key, target, input, output, text});
     }
   }
 

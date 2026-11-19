@@ -393,12 +393,11 @@ packages:
     () => {
       const config = [
         'ai-release-notes:',
-        '  enabled: true',
         '  context: full-diff',
         '  audience: developers',
         '  exclude-paths: ["**/*.lock"]',
-        '  targets: [changelog, file]',
-        '  file: RELEASE_NOTES.md',
+        '  additional-files:',
+        '    - file: RELEASE_NOTES.md',
         '',
       ].join('\n');
 

@@ -9,13 +9,13 @@ import {
 } from '../src/ai-release-notes.js';
 import {parseConfig} from '../src/config.js';
 
-const settings = (yaml = 'enabled: true') =>
+const settings = (yaml = 'language: English') =>
   parseConfig(
     `ai-release-notes:\n${yaml
       .split('\n')
       .map(line => `  ${line}`)
       .join('\n')}\n`,
-  ).aiReleaseNotes;
+  ).aiReleaseNotes.changelog!;
 
 const input = {
   tag: 'v1.0.0',
@@ -26,19 +26,83 @@ const input = {
 
 describe('ai-release-notes config', () => {
   it('is disabled by default', () => {
-    expect(parseConfig(undefined).aiReleaseNotes).toMatchObject({
-      enabled: false,
+    expect(parseConfig(undefined).aiReleaseNotes).toEqual({files: []});
+  });
+
+  it('enables the changelog with any top-level option and applies defaults', () => {
+    expect(settings()).toEqual({
+      provider: 'copilot-cli',
       context: 'commits',
       audience: 'users',
       excludePaths: [],
-      targets: ['changelog'],
+      language: 'English',
     });
   });
 
+  it('enables only the additional files and inherits top-level options', () => {
+    const config = parseConfig(
+      `ai-release-notes:
+  additional-files:
+    - file: ./docs/de.md
+      language: German
+      prompt: Custom
+    - file: docs/dev.md
+      audience: developers
+      file-title: Dev
+`,
+    ).aiReleaseNotes;
+
+    expect(config.changelog).toBeUndefined();
+    expect(config.files).toMatchObject([
+      {
+        file: 'docs/de.md',
+        language: 'German',
+        prompt: 'Custom',
+        audience: 'users',
+      },
+      {
+        file: 'docs/dev.md',
+        fileTitle: 'Dev',
+        audience: 'developers',
+        language: 'English',
+      },
+    ]);
+
+    const inherited = parseConfig(
+      `ai-release-notes:
+  context: full-diff
+  language: French
+  additional-files:
+    - file: a.md
+      language: German
+`,
+    ).aiReleaseNotes;
+
+    expect(inherited.changelog).toMatchObject({language: 'French'});
+    expect(inherited.files[0]).toMatchObject({
+      context: 'full-diff',
+      language: 'German',
+    });
+  });
+
+  it('rejects duplicate files and invalid file settings', () => {
+    expect(() =>
+      parseConfig(
+        'ai-release-notes:\n  additional-files: [{file: a.md}, {file: ./a.md}]',
+      ),
+    ).toThrow(/used twice/);
+    expect(() =>
+      parseConfig(
+        'ai-release-notes:\n  additional-files: [{file: a.md, provider: openai}]',
+      ),
+    ).toThrow(/additional-files\[0\].*base-url/);
+  });
+
   it('parses the context and audience', () => {
-    expect(
-      settings('enabled: true\ncontext: full-diff\naudience: developers'),
-    ).toMatchObject({context: 'full-diff', audience: 'developers'});
+    expect(settings('context: full-diff\naudience: developers')).toMatchObject({
+      context: 'full-diff',
+      audience: 'developers',
+    });
   });
 
   it('parses AI context exclusions', () => {
@@ -51,27 +115,30 @@ describe('ai-release-notes config', () => {
   });
 
   it.each([
-    ['targets: [file]', /requires "file"/],
     ['provider: openai', /requires "base-url" and "model"/],
     ['provider: anthropic', /requires "model"/],
     ['base-url: https://llm.example.com/v1', /only works with the provider/],
-  ])('rejects %s when enabled', (extra, error) => {
-    expect(() => settings(`enabled: true\n${extra}`)).toThrow(error);
+  ])('rejects %s', (extra, error) => {
+    expect(() => settings(extra)).toThrow(error);
   });
 
-  it('rejects the changelog target with rewrite-changelog and strategy changesets', () => {
+  it('rejects the AI release notes with rewrite-changelog and strategy changesets', () => {
     expect(() =>
-      parseConfig('rewrite-changelog: true\nai-release-notes: {enabled: true}'),
+      parseConfig(
+        'rewrite-changelog: true\nai-release-notes: {language: English}',
+      ),
     ).toThrow(/rewrite-changelog/);
     expect(() =>
-      parseConfig('strategy: changesets\nai-release-notes: {enabled: true}'),
+      parseConfig(
+        'strategy: changesets\nai-release-notes: {language: English}',
+      ),
     ).toThrow(/changesets/);
   });
 });
 
 describe('resolveEndpoint', () => {
   const custom = settings(
-    'enabled: true\nprovider: openai\nbase-url: https://llm.example.com/v1\nmodel: m',
+    'provider: openai\nbase-url: https://llm.example.com/v1\nmodel: m',
   );
 
   it('needs RELWOLF_AI_API_KEY for the configured API', () => {
@@ -86,9 +153,7 @@ describe('resolveEndpoint', () => {
 });
 
 describe('generateSummary with anthropic', () => {
-  const claude = settings(
-    'enabled: true\nprovider: anthropic\nmodel: claude-x',
-  );
+  const claude = settings('provider: anthropic\nmodel: claude-x');
 
   it('uses the Anthropic URL unless overridden and still needs the key', () => {
     expect(resolveEndpoint(claude, {RELWOLF_AI_API_KEY: 'k'})).toEqual({
@@ -99,7 +164,7 @@ describe('generateSummary with anthropic', () => {
     expect(
       resolveEndpoint(
         settings(
-          'enabled: true\nprovider: anthropic\nmodel: m\nbase-url: https://gw.example.com/v1',
+          'provider: anthropic\nmodel: m\nbase-url: https://gw.example.com/v1',
         ),
         {RELWOLF_AI_API_KEY: 'k'},
       ),
@@ -122,7 +187,7 @@ describe('generateSummary with anthropic', () => {
   it('calls the Messages API with the default URL and joins the text blocks', async () => {
     const calls: Array<{url: string; headers: any; body: any}> = [];
     const result = await generateSummary(
-      settings('enabled: true\nprovider: anthropic\nmodel: claude-x'),
+      settings('provider: anthropic\nmodel: claude-x'),
       input,
       {RELWOLF_AI_API_KEY: 'k'},
       {
@@ -160,7 +225,7 @@ describe('generateSummary with anthropic', () => {
 describe('prompt and input limits', () => {
   it('replaces the placeholders of a custom prompt', async () => {
     const custom = settings(
-      'enabled: true\nprovider: openai\nbase-url: https://llm.example.com/v1\nmodel: m\nprompt: "${tag} ${version} ${component} ${audience} ${language}"',
+      'provider: openai\nbase-url: https://llm.example.com/v1\nmodel: m\nprompt: "${tag} ${version} ${component} ${audience} ${language}"',
     );
     let system = '';
 
@@ -195,7 +260,7 @@ describe('prompt and input limits', () => {
 describe('generateSummary', () => {
   const env = {RELWOLF_AI_API_KEY: 'k'};
   const custom = settings(
-    'enabled: true\nprovider: openai\nbase-url: https://llm.example.com/v1\nmodel: m\nlanguage: German',
+    'provider: openai\nbase-url: https://llm.example.com/v1\nmodel: m\nlanguage: German',
   );
 
   it('sends notes and commits and returns the sanitized answer', async () => {
@@ -223,7 +288,7 @@ describe('generateSummary', () => {
     ['commits', 'Commit:\nfeat: a\n\nLong body'],
     ['full-diff', 'Code diff since the previous release:\n@@ -1 +1 @@'],
   ] as const)('uses the %s context', (context, expected) => {
-    const configured = settings(`enabled: true\ncontext: ${context}`);
+    const configured = settings(`context: ${context}`);
 
     expect(renderInput(configured, {...input, diff: '@@ -1 +1 @@'})).toContain(
       expected,
@@ -235,7 +300,7 @@ describe('generateSummary', () => {
 
     await generateSummary(
       settings(
-        'enabled: true\nprovider: openai\nbase-url: https://llm.example.com/v1\nmodel: m\naudience: developers',
+        'provider: openai\nbase-url: https://llm.example.com/v1\nmodel: m\naudience: developers',
       ),
       input,
       env,
@@ -278,7 +343,7 @@ describe('generateSummary', () => {
 });
 
 describe('generateSummary with the Copilot CLI', () => {
-  const copilot = settings('enabled: true\nmodel: gpt-5');
+  const copilot = settings('model: gpt-5');
 
   it('runs the CLI without tools in an empty directory and without other tokens', async () => {
     const calls: Array<{command: string; args: Array<string>; env: any}> = [];

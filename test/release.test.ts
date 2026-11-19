@@ -1455,7 +1455,7 @@ describe('pre-commit-script', () => {
 
 describe('AI release notes', () => {
   const AI_CONFIG = (extra = '') =>
-    `${NODE_CONFIG}ai-release-notes:\n  enabled: true\n  provider: openai\n  base-url: https://llm.example.com/v1\n  model: m\n${extra}`;
+    `${NODE_CONFIG}ai-release-notes:\n  provider: openai\n  base-url: https://llm.example.com/v1\n  model: m\n${extra}`;
   const env = {RELWOLF_AI_API_KEY: 'key'};
   let answers: Array<string | Error>;
   let calls: number;
@@ -1528,20 +1528,37 @@ describe('AI release notes', () => {
     expect(inputs[0]).not.toContain('generated/output.ts');
   });
 
-  it('writes a separate file without touching the changelog', async () => {
+  it('writes separate files without touching the changelog', async () => {
     repo.write('package.json', PACKAGE_JSON);
     repo.commit('feat: a');
+    answers = ['English summary', 'German summary'];
     await exec(
-      AI_CONFIG(
-        '  targets: [file]\n  file: docs/summaries.md\n  file-title: Summaries\n',
-      ),
+      `${NODE_CONFIG}ai-release-notes:
+  additional-files:
+    - file: docs/summaries.md
+      file-title: Summaries
+      provider: openai
+      base-url: https://llm.example.com/v1
+      model: m
+    - file: docs/de.md
+      language: German
+      provider: openai
+      base-url: https://llm.example.com/v1
+      model: m
+`,
       {env: {...env, GITHUB_REPOSITORY: 'lupiq/relwolf'}},
     );
 
     expect(file('docs/summaries.md')).toMatch(
-      /^# Summaries\n\n## \[0\.1\.0\]\(https:\/\/github\.com\/lupiq\/relwolf\/releases\/tag\/v0\.1\.0\) - \d{4}-\d\d-\d\d\n\nGenerated summary\n$/,
+      /^# Summaries\n\n## \[0\.1\.0\]\(https:\/\/github\.com\/lupiq\/relwolf\/releases\/tag\/v0\.1\.0\) - \d{4}-\d\d-\d\d\n\nEnglish summary\n$/,
     );
-    expect(file('CHANGELOG.md')).not.toMatch(/Generated summary/);
+    expect(file('docs/de.md')).toMatch(/German summary\n$/);
+    expect(file('CHANGELOG.md')).not.toMatch(/summary/);
+    expect(provider.requests[0]!.body).toMatch(/in `docs\/de\.md`/);
+    expect(inputs).toHaveLength(2);
+
+    await exec(undefined, {env});
+    expect(calls).toBe(2);
   });
 
   it('keeps it while the commits are unchanged and regenerates it for new commits', async () => {
@@ -1632,7 +1649,6 @@ describe('AI release notes', () => {
     component: api
     updaters: []
 ai-release-notes:
-  enabled: true
   provider: openai
   base-url: https://llm.example.com/v1
   model: m

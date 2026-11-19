@@ -125,8 +125,59 @@ export type Strategy = (typeof STRATEGIES)[number];
 /** Options that changesets decides itself, via `.changeset/config.json` or the workspace. */
 const AI_PROVIDERS = ['copilot-cli', 'openai', 'anthropic'] as const;
 const AI_CONTEXTS = ['changelog', 'commits', 'full-diff'] as const;
-const AI_AUDIENCES = ['developers', 'users'] as const;
-const AI_TARGETS = ['changelog', 'file'] as const;
+
+const AI_SETTINGS_SHAPE = {
+  'provider': z
+    .enum(AI_PROVIDERS)
+    .optional()
+    .describe(
+      'copilot-cli (default) runs the GitHub Copilot CLI; openai calls an OpenAI-compatible API (base-url and model required); anthropic calls the Claude API directly (model required).',
+    ),
+  'base-url': z
+    .url()
+    .optional()
+    .describe(
+      'Base URL of the API (`/chat/completions` is appended for openai, `/messages` for anthropic); required with provider openai, defaults to https://api.anthropic.com/v1 with anthropic.',
+    ),
+  'model': z
+    .string()
+    .min(1)
+    .optional()
+    .describe(
+      'Model name; the default of the Copilot CLI if omitted, required with provider openai and anthropic.',
+    ),
+  'context': z
+    .enum(AI_CONTEXTS)
+    .optional()
+    .describe(
+      'Release context sent to the model: generated changelog content, all commits (default), or the full code diff since the previous release.',
+    ),
+  'audience': z
+    .string()
+    .min(1)
+    .optional()
+    .describe(
+      'Audience of the release notes as free text, e.g. users (default) for feature-focused notes, developers for technical notes, or your own like "product managers".',
+    ),
+  'exclude-paths': z
+    .array(z.string().min(1))
+    .optional()
+    .describe(
+      'Globs from the repository root excluded from the full-diff context.',
+    ),
+  'language': z
+    .string()
+    .min(1)
+    .optional()
+    .describe('Language of the release notes (default English).'),
+  'prompt': z
+    .string()
+    .min(1)
+    .optional()
+    .describe(
+      'Instructions for the model instead of the built-in ones. Placeholders: ${language}, ${tag}, ${version}, ${component}, ${audience}.',
+    ),
+};
 
 const CHANGESETS_REJECTED_OPTIONS = [
   'patch-types',
@@ -331,83 +382,33 @@ export const configSchema = z.strictObject({
     .describe('Usernames requested as reviewers when the request is created.'),
   'ai-release-notes': z
     .strictObject({
-      'enabled': z
-        .boolean()
-        .default(false)
-        .describe(
-          'Generate AI release notes for every release. Disabled by default; release context is sent to the configured endpoint.',
-        ),
-      'provider': z
-        .enum(AI_PROVIDERS)
-        .default('copilot-cli')
-        .describe(
-          'copilot-cli runs the GitHub Copilot CLI; openai calls an OpenAI-compatible API (base-url and model required); anthropic calls the Claude API directly (model required).',
-        ),
-      'base-url': z
-        .url()
-        .optional()
-        .describe(
-          'Base URL of the API (`/chat/completions` is appended for openai, `/messages` for anthropic); required with provider openai, defaults to https://api.anthropic.com/v1 with anthropic.',
-        ),
-      'model': z
-        .string()
-        .min(1)
-        .optional()
-        .describe(
-          'Model name; the default of the Copilot CLI if omitted, required with provider openai and anthropic.',
-        ),
-      'context': z
-        .enum(AI_CONTEXTS)
-        .default('commits')
-        .describe(
-          'Release context sent to the model: generated changelog content, all commits, or the full code diff since the previous release.',
-        ),
-      'audience': z
-        .enum(AI_AUDIENCES)
-        .default('users')
-        .describe(
-          'Audience of the release notes: developers for technical notes or users for feature-focused notes.',
-        ),
-      'exclude-paths': z
-        .array(z.string().min(1))
+      ...AI_SETTINGS_SHAPE,
+      'additional-files': z
+        .array(
+          z.strictObject({
+            ...AI_SETTINGS_SHAPE,
+            'file': z
+              .string()
+              .min(1)
+              .describe(
+                'Markdown file (repository-relative) that gets a new entry per release.',
+              ),
+            'file-title': z
+              .string()
+              .min(1)
+              .default('Release summaries')
+              .describe('First-level heading of the release notes file.'),
+          }),
+        )
         .default([])
         .describe(
-          'Globs from the repository root excluded from the full-diff context.',
+          'Additional Markdown files with their own release notes; unset options are inherited from the top level.',
         ),
-      'language': z
-        .string()
-        .min(1)
-        .default('English')
-        .describe('Language of the release notes.'),
-      'prompt': z
-        .string()
-        .min(1)
-        .optional()
-        .describe(
-          'Instructions for the model instead of the built-in ones. Placeholders: ${language}, ${tag}, ${version}, ${component}, ${audience}.',
-        ),
-      'targets': z
-        .array(z.enum(AI_TARGETS))
-        .min(1)
-        .default(['changelog'])
-        .describe(
-          'Where the release notes are written: the changelog (and release notes), a separate Markdown file, or both.',
-        ),
-      'file': z
-        .string()
-        .min(1)
-        .optional()
-        .describe(
-          'Markdown file (repository-relative) that gets a new entry per release; required for the target "file".',
-        ),
-      'file-title': z
-        .string()
-        .min(1)
-        .default('Release summaries')
-        .describe('First-level heading of the release notes file.'),
     })
     .prefault({})
-    .describe('AI generated release notes.'),
+    .describe(
+      'AI generated release notes. Setting any option besides additional-files adds the release notes to the changelog; the feature is disabled without options and files.',
+    ),
   'http-timeout': z
     .number()
     .int()
@@ -496,22 +497,30 @@ export interface UpdaterConfig {
   lockfiles: boolean;
 }
 
-export interface AiReleaseNotesConfig {
-  enabled: boolean;
+/** Fully resolved settings of one AI release notes output. */
+export interface AiSettings {
   provider: (typeof AI_PROVIDERS)[number];
   /** API base URL, with provider openai (required) or anthropic (optional). */
   baseUrl?: string;
   model?: string;
   context: (typeof AI_CONTEXTS)[number];
-  audience: (typeof AI_AUDIENCES)[number];
+  audience: string;
   /** Globs from the repository root excluded from the full-diff context. */
   excludePaths: Array<string>;
   language: string;
   prompt?: string;
-  targets: Array<(typeof AI_TARGETS)[number]>;
+}
+
+export interface AiFileConfig extends AiSettings {
   /** Repository-relative path of the release notes file. */
-  file?: string;
+  file: string;
   fileTitle: string;
+}
+
+export interface AiReleaseNotesConfig {
+  /** Release notes in the changelog; undefined if only additional files are configured. */
+  changelog?: AiSettings;
+  files: Array<AiFileConfig>;
 }
 
 export interface PackageConfig {
@@ -945,67 +954,105 @@ function checkReleaseEmoji(parsed: ParsedConfig): void {
   }
 }
 
-function parseAiReleaseNotes(parsed: ParsedConfig): AiReleaseNotesConfig {
-  const settings = parsed['ai-release-notes'];
-  const targets = [...new Set(settings.targets)];
-  const baseUrl = settings['base-url'];
+type AiRawSettings = {
+  [Key in keyof typeof AI_SETTINGS_SHAPE]?: z.output<
+    (typeof AI_SETTINGS_SHAPE)[Key]
+  >;
+};
 
-  if (settings.enabled) {
-    if (parsed.strategy === 'changesets') {
-      throw new ConfigError(
-        'ai-release-notes: not supported with strategy changesets yet',
-      );
-    }
+function resolveAiSettings(
+  own: AiRawSettings,
+  shared: AiRawSettings,
+  label: string,
+): AiSettings {
+  const pick = <Key extends keyof AiRawSettings>(key: Key) =>
+    own[key] ?? shared[key];
+  const provider = pick('provider') ?? 'copilot-cli';
+  const baseUrl = pick('base-url');
+  const model = pick('model');
+  const prompt = pick('prompt');
 
-    if (targets.includes('file') && !settings.file) {
-      throw new ConfigError(
-        'ai-release-notes: the target "file" requires "file"',
-      );
-    }
+  if (provider === 'openai' && !(baseUrl && model)) {
+    throw new ConfigError(
+      `${label}: the provider "openai" requires "base-url" and "model"`,
+    );
+  }
 
-    if (targets.includes('changelog') && parsed['rewrite-changelog']) {
-      throw new ConfigError(
-        'ai-release-notes: the target "changelog" cannot be combined with rewrite-changelog, which would drop the release notes of older releases',
-      );
-    }
+  if (provider === 'anthropic' && !model) {
+    throw new ConfigError(
+      `${label}: the provider "anthropic" requires "model"`,
+    );
+  }
 
-    if (settings.provider === 'openai' && !(baseUrl && settings.model)) {
-      throw new ConfigError(
-        'ai-release-notes: the provider "openai" requires "base-url" and "model"',
-      );
-    }
-
-    if (settings.provider === 'anthropic' && !settings.model) {
-      throw new ConfigError(
-        'ai-release-notes: the provider "anthropic" requires "model"',
-      );
-    }
-
-    if (settings.provider === 'copilot-cli' && baseUrl) {
-      throw new ConfigError(
-        'ai-release-notes: "base-url" only works with the providers "openai" and "anthropic"',
-      );
-    }
+  if (provider === 'copilot-cli' && baseUrl) {
+    throw new ConfigError(
+      `${label}: "base-url" only works with the providers "openai" and "anthropic"`,
+    );
   }
 
   return {
-    enabled: settings.enabled,
-    provider: settings.provider,
+    provider,
     ...(baseUrl ? {baseUrl} : {}),
-    ...(settings.model ? {model: settings.model} : {}),
-    context: settings.context,
-    audience: settings.audience,
+    ...(model ? {model} : {}),
+    context: pick('context') ?? 'commits',
+    audience: pick('audience') ?? 'users',
     excludePaths: parseExcludePaths(
-      settings['exclude-paths'],
-      'ai-release-notes.exclude-paths',
+      pick('exclude-paths') ?? [],
+      `${label}.exclude-paths`,
     ),
-    language: settings.language,
-    ...(settings.prompt ? {prompt: settings.prompt} : {}),
-    targets,
-    ...(settings.file
-      ? {file: normalizeRepoPath(settings.file, 'ai-release-notes.file')}
+    language: pick('language') ?? 'English',
+    ...(prompt ? {prompt} : {}),
+  };
+}
+
+function parseAiReleaseNotes(parsed: ParsedConfig): AiReleaseNotesConfig {
+  const {'additional-files': additional, ...shared} =
+    parsed['ai-release-notes'];
+  const hasChangelog = Object.keys(shared).length > 0;
+
+  if (!hasChangelog && additional.length === 0) {
+    return {files: []};
+  }
+
+  if (parsed.strategy === 'changesets') {
+    throw new ConfigError(
+      'ai-release-notes: not supported with strategy changesets yet',
+    );
+  }
+
+  if (hasChangelog && parsed['rewrite-changelog']) {
+    throw new ConfigError(
+      'ai-release-notes: the release notes in the changelog cannot be combined with rewrite-changelog, which would drop the release notes of older releases',
+    );
+  }
+
+  const seen = new Set<string>();
+  const files = additional.map(
+    ({file, 'file-title': fileTitle, ...own}, index) => {
+      const label = `ai-release-notes.additional-files[${index}]`;
+      const normalized = normalizeRepoPath(file, `${label}.file`);
+
+      if (seen.has(normalized)) {
+        throw new ConfigError(
+          `${label}: the file "${normalized}" is used twice`,
+        );
+      }
+
+      seen.add(normalized);
+
+      return {
+        ...resolveAiSettings(own, shared, label),
+        file: normalized,
+        fileTitle,
+      };
+    },
+  );
+
+  return {
+    ...(hasChangelog
+      ? {changelog: resolveAiSettings(shared, {}, 'ai-release-notes')}
       : {}),
-    fileTitle: settings['file-title'],
+    files,
   };
 }
 

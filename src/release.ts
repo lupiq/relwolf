@@ -43,6 +43,7 @@ import {
 import {
   ROOT_KEY,
   tagPackagePath,
+  type AiSettings,
   type Config,
   type PackageConfig,
 } from './config.js';
@@ -326,10 +327,10 @@ async function tagMergedRequest(
 
   const details = parseDetails(request.body);
   const intro = releaseText(details.text ?? '');
-  const summaries = config.aiReleaseNotes.targets.includes('changelog')
+  const summaries = config.aiReleaseNotes.changelog
     ? parseSummaries(request.body, tag =>
         isValidReleaseTag(tag, config.packages),
-      )
+      ).filter(summary => summary.target === undefined)
     : [];
   const created: Array<string> = [];
 
@@ -807,6 +808,7 @@ async function summaryInput(
   git: Git,
   plan: PackagePlan,
   notes: string,
+  settings: AiSettings,
 ): Promise<SummaryInput> {
   const {packages, excludePaths} = options.config;
   const reverted = new Set(plan.revertedCommits);
@@ -823,13 +825,13 @@ async function summaryInput(
     commits: commits
       .filter(commit => !reverted.has(commit.sha))
       .map(commit => commit.message),
-    ...(options.config.aiReleaseNotes.context === 'full-diff'
+    ...(settings.context === 'full-diff'
       ? {
           diff: await git.diff(
             plan.range ?? 'HEAD',
             pathspecsFor(plan.pkg, packages, [
               ...excludePaths,
-              ...options.config.aiReleaseNotes.excludePaths,
+              ...settings.excludePaths,
             ]),
           ),
         }
@@ -867,19 +869,22 @@ async function resolveSummary(
   plan: PackagePlan,
   notes: string,
   state: SummaryState,
+  settings: AiSettings,
+  target?: string,
 ): Promise<string | undefined> {
-  const settings = options.config.aiReleaseNotes;
-
-  if (!settings.enabled || plan.empty) {
+  if (plan.empty) {
     return undefined;
   }
 
   const key = packageKey(plan.pkg);
-  const label = `AI release notes for ${plan.tag}${plan.pkg.component ? ` (${plan.pkg.component})` : ''}`;
-  const input = await summaryInput(options, git, plan, notes);
+  const label = `AI release notes for ${plan.tag}${plan.pkg.component ? ` (${plan.pkg.component})` : ''}${target ? ` in ${target}` : ''}`;
+  const input = await summaryInput(options, git, plan, notes, settings);
   const current = inputHash(settings, input);
   const old = state.previous.find(
-    summary => summary.tag === plan.tag && summary.key === key,
+    summary =>
+      summary.tag === plan.tag &&
+      summary.key === key &&
+      summary.target === target,
   );
   const edited = old !== undefined && outputHash(old.text) !== old.output;
 
@@ -919,6 +924,7 @@ async function resolveSummary(
   state.stored.push({
     tag: plan.tag,
     key,
+    target,
     input: current,
     output: outputHash(result.text),
     text: result.text,
@@ -989,10 +995,18 @@ async function applyPlan(
 
   notes = placeholder || notes;
 
-  const summary = placeholder
-    ? undefined
-    : await resolveSummary(options, git, plan, notes, summaries);
-  const {targets} = options.config.aiReleaseNotes;
+  const ai = options.config.aiReleaseNotes;
+  const summary =
+    placeholder || !ai.changelog
+      ? undefined
+      : await resolveSummary(
+          options,
+          git,
+          plan,
+          notes,
+          summaries,
+          ai.changelog,
+        );
   const sections = notesByTag.get(plan.tag) ?? [];
 
   sections.push({pkg, notes});
@@ -1023,13 +1037,25 @@ async function applyPlan(
       changelog.current,
       env,
       placeholder,
-      targets.includes('changelog') ? summary : undefined,
+      summary,
     );
   }
 
-  const {file, fileTitle} = options.config.aiReleaseNotes;
+  for (const {file, fileTitle, ...settings} of placeholder ? [] : ai.files) {
+    const text = await resolveSummary(
+      options,
+      git,
+      plan,
+      notes,
+      summaries,
+      settings,
+      file,
+    );
 
-  if (summary && file && targets.includes('file')) {
+    if (!text) {
+      continue;
+    }
+
     const target = await load(file, false);
     const version = formatVersion(plan.version);
     const url = releaseUrl(options.env ?? process.env, plan.tag);
@@ -1039,7 +1065,7 @@ async function applyPlan(
       fileTitle,
       renderFileEntry(
         pkg.component ? `${pkg.component} ${version}` : version,
-        summary,
+        text,
         new Date(),
         {
           ...(emoji ? {emoji} : {}),

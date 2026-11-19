@@ -1,22 +1,26 @@
 ---
 title: AI release notes
-description: Let an AI model summarize every release in the release request, the changelog, the release notes and a separate Markdown file.
+description: Let an AI model summarize every release in the release request, the changelog, the release notes and additional Markdown files.
 ---
 
 # AI release notes
 
 relwolf can ask an AI model for release notes for every release. The notes are part of the release request, so you
-can read and edit them before you merge. The feature is **disabled by default**.
+can read and edit them before you merge. The feature is **disabled by default**: it is on as soon as `ai-release-notes`
+contains an option (release notes in the changelog) or at least one entry in `additional-files`.
 
 ```yaml [relwolf.yaml]
 ai-release-notes:
-  enabled: true
   context: changelog # changelog, commits (default) or full-diff
-  audience: users # users (default) or developers
+  audience: users # free text, e.g. users (default), developers or product managers
   exclude-paths: ['**/*.lock', 'generated/**'] # applies to full-diff
-  targets: [changelog, file] # changelog (default), file or both
-  file: docs/release-summaries.md # required for the target "file"
   language: English
+  additional-files:
+    - file: docs/release-summaries.md
+    - file: docs/de/release-summaries.md
+      language: German
+      audience: developers
+      prompt: Summarize release ${tag} in ${language} for ${audience}.
 ```
 
 ::: warning Data leaves your repository
@@ -44,7 +48,6 @@ Only enable this with an endpoint you trust with that content.
 
 ```yaml [relwolf.yaml]
 ai-release-notes:
-  enabled: true
   provider: openai
   base-url: https://api.openai.com/v1
   model: gpt-4.1-mini
@@ -52,19 +55,24 @@ ai-release-notes:
 
 ```yaml [relwolf.yaml]
 ai-release-notes:
-  enabled: true
   provider: anthropic
   model: claude-sonnet-4-5
 ```
 
-## Targets
+## Outputs
 
-| Target      | Effect                                                                                                                                                                                    |
-| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `changelog` | The release notes are added to the new changelog entry above its first `###` section (at the end without one) and above the notes of the created release.                                 |
-| `file`      | A new entry with the release icon, linked version, date, and release notes is prepended below the `# <file-title>` heading of `file` (created if missing), e.g. for a documentation page. |
+The top-level options of `ai-release-notes` describe the release notes in the changelog: they are added to the new
+changelog entry above its first `###` section (at the end without one) and above the notes of the created release.
+Without any top-level option there are none, so `additional-files` alone only writes files.
 
-`changelog` cannot be combined with `rewrite-changelog`, which would drop the summaries of older releases. In
+Every entry of `additional-files` writes its own release notes to a Markdown file: a new entry with the release icon,
+linked version, date, and release notes is prepended below the `# <file-title>` heading of `file` (created if
+missing), e.g. for a documentation page. An entry accepts `file` (required), `file-title` and all other options
+(`provider`, `base-url`, `model`, `context`, `audience`, `exclude-paths`, `language`, `prompt`). Options that an entry
+leaves out are inherited from the top level, so you can create files for several audiences and languages, each with its
+own prompt. Every output is generated separately and shown in its own block in the release request.
+
+The changelog notes cannot be combined with `rewrite-changelog`, which would drop the summaries of older releases. In
 monorepos every package gets its own release notes. `strategy: changesets` is not supported yet.
 
 ## Release request
@@ -88,9 +96,10 @@ The release notes are rendered between hidden `relwolf:summary` markers in the r
 | `commits`   | All commit messages and bodies since the previous release (default)                         |
 | `full-diff` | The full package-scoped code diff since the previous release                                |
 
-`audience` is `users` by default. Set it to `developers` for more technical release notes focused on APIs,
-configuration, migrations, and compatibility. Both audiences get important breaking changes highlighted first,
-including newly added, changed, or removed properties.
+`audience` is free text and `users` by default. Set it to `developers` for more technical release notes focused on APIs,
+configuration, migrations, and compatibility, or to any audience of your own such as `product managers`. The text is
+passed to the model as `${audience}`. All audiences get important breaking changes highlighted first, including newly
+added, changed, or removed properties.
 
 `exclude-paths` removes matching repository-relative glob paths from the `full-diff` context. It does not change
 which commits or changelog entries are used for the release itself.
@@ -104,17 +113,22 @@ compatibility details.
 
 ## Options
 
-| Key             | Default             | Description                                                |
-| --------------- | ------------------- | ---------------------------------------------------------- |
-| `enabled`       | `false`             | Turn the feature on                                        |
-| `provider`      | `copilot-cli`       | `copilot-cli`, `openai` or `anthropic`                     |
-| `base-url`      | none                | API URL; required with `openai`, optional with `anthropic` |
-| `model`         | CLI default         | Model name; required with `openai` and `anthropic`         |
-| `context`       | `commits`           | `changelog`, `commits` or `full-diff`                      |
-| `audience`      | `users`             | `users` or `developers`                                    |
-| `exclude-paths` | `[]`                | Globs excluded from the `full-diff` context                |
-| `language`      | `English`           | Language of the release notes                              |
-| `prompt`        | built in            | Instructions for the model                                 |
-| `targets`       | `[changelog]`       | `changelog`, `file` or both                                |
-| `file`          | none                | Markdown file for the target `file`                        |
-| `file-title`    | `Release summaries` | First-level heading of the release notes file              |
+Top level and every entry of `additional-files`:
+
+| Key             | Default       | Description                                                |
+| --------------- | ------------- | ---------------------------------------------------------- |
+| `provider`      | `copilot-cli` | `copilot-cli`, `openai` or `anthropic`                     |
+| `base-url`      | none          | API URL; required with `openai`, optional with `anthropic` |
+| `model`         | CLI default   | Model name; required with `openai` and `anthropic`         |
+| `context`       | `commits`     | `changelog`, `commits` or `full-diff`                      |
+| `audience`      | `users`       | Free text, e.g. `users`, `developers`, `product managers`  |
+| `exclude-paths` | `[]`          | Globs excluded from the `full-diff` context                |
+| `language`      | `English`     | Language of the release notes                              |
+| `prompt`        | built in      | Instructions for the model                                 |
+
+Only in `additional-files` entries (unset options are inherited from the top level):
+
+| Key          | Default             | Description                                   |
+| ------------ | ------------------- | --------------------------------------------- |
+| `file`       | required            | Markdown file that gets the release notes     |
+| `file-title` | `Release summaries` | First-level heading of the release notes file |

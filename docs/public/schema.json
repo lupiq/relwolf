@@ -136,18 +136,12 @@
       }
     },
     "ai-release-notes": {
-      "description": "AI generated release notes.",
+      "description": "AI generated release notes. Setting any option besides additional-files adds the release notes to the changelog; the feature is disabled without options and files.",
       "default": {},
       "type": "object",
       "properties": {
-        "enabled": {
-          "default": false,
-          "description": "Generate AI release notes for every release. Disabled by default; release context is sent to the configured endpoint.",
-          "type": "boolean"
-        },
         "provider": {
-          "default": "copilot-cli",
-          "description": "copilot-cli runs the GitHub Copilot CLI; openai calls an OpenAI-compatible API (base-url and model required); anthropic calls the Claude API directly (model required).",
+          "description": "copilot-cli (default) runs the GitHub Copilot CLI; openai calls an OpenAI-compatible API (base-url and model required); anthropic calls the Claude API directly (model required).",
           "type": "string",
           "enum": [
             "copilot-cli",
@@ -166,8 +160,7 @@
           "minLength": 1
         },
         "context": {
-          "default": "commits",
-          "description": "Release context sent to the model: generated changelog content, all commits, or the full code diff since the previous release.",
+          "description": "Release context sent to the model: generated changelog content, all commits (default), or the full code diff since the previous release.",
           "type": "string",
           "enum": [
             "changelog",
@@ -176,16 +169,11 @@
           ]
         },
         "audience": {
-          "default": "users",
-          "description": "Audience of the release notes: developers for technical notes or users for feature-focused notes.",
+          "description": "Audience of the release notes as free text, e.g. users (default) for feature-focused notes, developers for technical notes, or your own like \"product managers\".",
           "type": "string",
-          "enum": [
-            "developers",
-            "users"
-          ]
+          "minLength": 1
         },
         "exclude-paths": {
-          "default": [],
           "description": "Globs from the repository root excluded from the full-diff context.",
           "type": "array",
           "items": {
@@ -194,8 +182,7 @@
           }
         },
         "language": {
-          "default": "English",
-          "description": "Language of the release notes.",
+          "description": "Language of the release notes (default English).",
           "type": "string",
           "minLength": 1
         },
@@ -204,31 +191,81 @@
           "type": "string",
           "minLength": 1
         },
-        "targets": {
-          "default": [
-            "changelog"
-          ],
-          "description": "Where the release notes are written: the changelog (and release notes), a separate Markdown file, or both.",
-          "minItems": 1,
+        "additional-files": {
+          "default": [],
+          "description": "Additional Markdown files with their own release notes; unset options are inherited from the top level.",
           "type": "array",
           "items": {
-            "type": "string",
-            "enum": [
-              "changelog",
+            "type": "object",
+            "properties": {
+              "provider": {
+                "description": "copilot-cli (default) runs the GitHub Copilot CLI; openai calls an OpenAI-compatible API (base-url and model required); anthropic calls the Claude API directly (model required).",
+                "type": "string",
+                "enum": [
+                  "copilot-cli",
+                  "openai",
+                  "anthropic"
+                ]
+              },
+              "base-url": {
+                "description": "Base URL of the API (`/chat/completions` is appended for openai, `/messages` for anthropic); required with provider openai, defaults to https://api.anthropic.com/v1 with anthropic.",
+                "type": "string",
+                "format": "uri"
+              },
+              "model": {
+                "description": "Model name; the default of the Copilot CLI if omitted, required with provider openai and anthropic.",
+                "type": "string",
+                "minLength": 1
+              },
+              "context": {
+                "description": "Release context sent to the model: generated changelog content, all commits (default), or the full code diff since the previous release.",
+                "type": "string",
+                "enum": [
+                  "changelog",
+                  "commits",
+                  "full-diff"
+                ]
+              },
+              "audience": {
+                "description": "Audience of the release notes as free text, e.g. users (default) for feature-focused notes, developers for technical notes, or your own like \"product managers\".",
+                "type": "string",
+                "minLength": 1
+              },
+              "exclude-paths": {
+                "description": "Globs from the repository root excluded from the full-diff context.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "language": {
+                "description": "Language of the release notes (default English).",
+                "type": "string",
+                "minLength": 1
+              },
+              "prompt": {
+                "description": "Instructions for the model instead of the built-in ones. Placeholders: ${language}, ${tag}, ${version}, ${component}, ${audience}.",
+                "type": "string",
+                "minLength": 1
+              },
+              "file": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Markdown file (repository-relative) that gets a new entry per release."
+              },
+              "file-title": {
+                "default": "Release summaries",
+                "description": "First-level heading of the release notes file.",
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
               "file"
-            ]
+            ],
+            "additionalProperties": false
           }
-        },
-        "file": {
-          "description": "Markdown file (repository-relative) that gets a new entry per release; required for the target \"file\".",
-          "type": "string",
-          "minLength": 1
-        },
-        "file-title": {
-          "default": "Release summaries",
-          "description": "First-level heading of the release notes file.",
-          "type": "string",
-          "minLength": 1
         }
       },
       "additionalProperties": false

@@ -6,10 +6,10 @@ patch-types: [fix, build, docs]
 
 release-emoji: true
 
-# AI release notes for every release in the release request, the changelog, release notes and the GitHub release (GitHub Copilot CLI)
+# AI release notes for every release in the release request and RELEASE_NOTES.md (GitHub Copilot CLI)
 ai-release-notes:
-  enabled: true
   context: full-diff
+  language: English
   audience: developers
   prompt: |
     Summarize this software release in ${language} for ${audience}.
@@ -25,9 +25,9 @@ ai-release-notes:
     Mention notable fixes, compatibility changes, and improvements when they materially affect developers.
     Do not enumerate every changed file or low-level implementation detail unless it helps explain the change.
     Use only evidence from the provided release context, do not invent motivation or behavior, and answer with the summary only.
-  targets:
-    - file
-  file: RELEASE_NOTES.md
+  additional-files:
+    - file: RELEASE_NOTES.md
+      file-title: Release Notes
 
 assignees:
   - nioe
