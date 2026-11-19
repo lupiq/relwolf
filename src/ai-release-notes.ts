@@ -224,18 +224,28 @@ function hintFor(status: number): string | undefined {
 export type CommandRunner = (
   command: string,
   args: Array<string>,
-  options: {cwd: string; env: NodeJS.ProcessEnv; timeoutMs: number},
+  options: {
+    cwd: string;
+    env: NodeJS.ProcessEnv;
+    timeoutMs: number;
+    /** Written to stdin; keeps large prompts out of the argument list (E2BIG). */
+    stdin?: string;
+  },
 ) => Promise<string>;
 
 const runCommand: CommandRunner = async (command, args, options) => {
-  const {stdout} = await execFileAsync(command, args, {
+  const pending = execFileAsync(command, args, {
     cwd: options.cwd,
     env: options.env,
     timeout: options.timeoutMs,
     maxBuffer: 16 * 1024 * 1024,
   });
 
-  return stdout;
+  // A child that exits early closes the pipe; that surfaces through the promise.
+  pending.child.stdin?.on('error', () => undefined);
+  pending.child.stdin?.end(options.stdin ?? '');
+
+  return (await pending).stdout;
 };
 
 /** Variables that must not reach the Copilot CLI: it only gets its own token. */
@@ -276,8 +286,6 @@ async function generateWithCopilot(
   const dir = await mkdtemp(path.join(tmpdir(), 'relwolf-ai-'));
   const usageFile = path.join(dir, 'usage.json');
   const args = [
-    '--prompt',
-    prompt,
     '--silent',
     '--no-custom-instructions',
     '--no-ask-user',
@@ -311,7 +319,8 @@ async function generateWithCopilot(
       }
     }
 
-    const output = await run(command, args, runOptions);
+    // The prompt goes through stdin: a single argument is capped at 128 KiB on Linux.
+    const output = await run(command, args, {...runOptions, stdin: prompt});
     const text = sanitizeSummary(output);
     const usage = await readCopilotUsage(usageFile);
 

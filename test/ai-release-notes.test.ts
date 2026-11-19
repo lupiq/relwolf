@@ -485,14 +485,19 @@ describe('generateSummary with the Copilot CLI', () => {
   const copilot = settings('model: gpt-5');
 
   it('runs the CLI without tools in an empty directory and without other tokens', async () => {
-    const calls: Array<{command: string; args: Array<string>; env: any}> = [];
+    const calls: Array<{
+      command: string;
+      args: Array<string>;
+      env: any;
+      stdin?: string | undefined;
+    }> = [];
     const result = await generateSummary(
       copilot,
       input,
       {RELWOLF_AI_API_KEY: 'k', RELWOLF_TOKEN: 'app', PATH: '/bin'},
       {
         runner: async (command, args, options) => {
-          calls.push({command, args, env: options.env});
+          calls.push({command, args, env: options.env, stdin: options.stdin});
 
           return ' Summary <!-- x -->\n';
         },
@@ -510,7 +515,8 @@ describe('generateSummary with the Copilot CLI', () => {
       ]),
     );
     expect(calls[0]!.args).not.toContain('--allow-all-tools');
-    expect(calls[0]!.args[1]).toMatch(/Long body/);
+    expect(calls[0]!.args).not.toContain('--prompt');
+    expect(calls[0]!.stdin).toMatch(/Long body/);
     expect(calls[0]!.env.COPILOT_GITHUB_TOKEN).toBe('k');
     expect(calls[0]!.env.RELWOLF_TOKEN).toBeUndefined();
     expect(calls[0]!.env.PATH).toBe('/bin');
