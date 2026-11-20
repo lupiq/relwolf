@@ -243,6 +243,27 @@ export class GitLabSandbox implements Sandbox {
     return dir;
   }
 
+  /** GitLab sometimes answers "Failed to remove tag" (400) for a tag it has just processed; a retry succeeds. */
+  private async deleteTag(name: string): Promise<void> {
+    for (let attempt = 1; ; attempt++) {
+      try {
+        await this.http.request(
+          'DELETE',
+          `${this.project}/repository/tags/${encodeURIComponent(name)}`,
+          {allow: [404]},
+        );
+
+        return;
+      } catch (error) {
+        if ((error as {status?: number}).status !== 400 || attempt >= 5) {
+          throw error;
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 2000 * attempt));
+      }
+    }
+  }
+
   /** Removes everything the scenarios created: releases, tags, e2e branches and open or pending merge requests. */
   async cleanup(): Promise<void> {
     for (const dir of this.dirs.splice(0)) {
@@ -262,11 +283,7 @@ export class GitLabSandbox implements Sandbox {
     const tags = await this.http.requestAll(`${this.project}/repository/tags`);
 
     for (const tag of tags as Array<{name: string}>) {
-      await this.http.request(
-        'DELETE',
-        `${this.project}/repository/tags/${encodeURIComponent(tag.name)}`,
-        {allow: [404]},
-      );
+      await this.deleteTag(tag.name);
     }
 
     const open = (await this.http.requestAll(`${this.project}/merge_requests`, {
