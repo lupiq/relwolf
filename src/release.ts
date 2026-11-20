@@ -692,6 +692,7 @@ async function buildFiles(
     ),
     stored: [],
     warnings: [],
+    generated: new Map(),
     usage: {input: 0, output: 0, runs: 0},
   };
 
@@ -813,6 +814,8 @@ interface SummaryState {
   previous: Array<StoredSummary>;
   stored: Array<StoredSummary>;
   warnings: Array<string>;
+  /** Texts generated in this run by input hash, so that outputs with identical settings share one model call. */
+  generated: Map<string, string>;
   /** Tokens and cost of the model calls of this run. */
   usage: UsageTotals;
 }
@@ -939,6 +942,24 @@ async function resolveSummary(
     return old ? releaseText(old.text) || undefined : undefined;
   }
 
+  const shared = state.generated.get(current);
+
+  if (shared !== undefined) {
+    options.log?.(
+      `The ${label} has the same input as another output, reusing its text.`,
+    );
+    state.stored.push({
+      tag: plan.tag,
+      key,
+      target,
+      input: current,
+      output: outputHash(shared),
+      text: shared,
+    });
+
+    return releaseText(shared) || undefined;
+  }
+
   options.log?.(
     `Generating the ${label} with ${settings.model ?? settings.provider}.`,
   );
@@ -979,6 +1000,7 @@ async function resolveSummary(
     );
   }
 
+  state.generated.set(current, result.text);
   state.stored.push({
     tag: plan.tag,
     key,

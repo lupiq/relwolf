@@ -112,6 +112,8 @@ The release notes are rendered between hidden `relwolf:summary` markers in the r
   starts with fresh release notes.
 - If the model cannot be reached or answers with an error, the release goes on without new release notes and the request
   shows a warning with the reason. The next run tries again.
+- Outputs with identical settings (provider, model, prompt, context, ...) share one model call per release, so they
+  get the same text and cost nothing extra.
 
 ## Generating on request
 
