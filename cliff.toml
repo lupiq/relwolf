@@ -30,11 +30,26 @@ body = """
 {% endif %}\
 {% for entry in commits | commit_groups(groups=commit_parsers_groups) %}
     ### {{ entry.group | striptags | trim | upper_first }}
-    {% for commit in entry.commits %}
-        - {% if commit.scope %}**{{ commit.scope }}**: {% endif %}\
-            {% if commit.breaking %}[**breaking**] {% endif %}\
-            {{ commit.message | upper_first }} \
-            ([{{ commit.id | truncate(length=7, end="") }}](https://github.com/lupiq/relwolf/commit/{{ commit.id }}))\
+    {% set by_scope = entry.commits | group_by(attribute="scope") %}\
+    {# Commits without a scope or with a unique scope stay single bullets #}\
+    {% for commit in entry.commits %}\
+        {% if not commit.scope or by_scope[commit.scope] | length == 1 %}
+            - {% if commit.scope %}**{{ commit.scope }}**: {% endif %}\
+                {% if commit.breaking %}[**breaking**] {% endif %}\
+                {{ commit.message | upper_first }} \
+                ([{{ commit.id | truncate(length=7, end="") }}](https://github.com/lupiq/relwolf/commit/{{ commit.id }}))\
+        {% endif %}\
+    {% endfor %}\
+    {# Scopes with two or more commits are grouped as nested bullets #}\
+    {% for scope, scoped in by_scope %}\
+        {% if scoped | length > 1 %}
+            - **{{ scope }}**\
+            {% for commit in scoped %}
+                {{ "  " }}- {% if commit.breaking %}[**breaking**] {% endif %}\
+                    {{ commit.message | upper_first }} \
+                    ([{{ commit.id | truncate(length=7, end="") }}](https://github.com/lupiq/relwolf/commit/{{ commit.id }}))\
+            {% endfor %}\
+        {% endif %}\
     {% endfor %}
 {% endfor %}
 {# Maintainers (by e-mail) and bots are not thanked; GitHub usernames come from git-cliff's GitHub integration #}\
