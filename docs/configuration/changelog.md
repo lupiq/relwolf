@@ -50,6 +50,23 @@ merge requests, or the whole layout. A good starting point is [`git-cliff --init
 which writes git-cliff's default config into `cliff.toml` for you to edit. The [example below](#example-everything-except-chores)
 shows the smallest useful change.
 
+## Group commits by scope
+
+The layout is a git-cliff template, so commits with the same scope can be grouped as nested bullets. Only scopes with two or
+more commits are grouped; commits without a scope or with a unique scope stay single bullets (`**scope**: message`). See the `body` in relwolf's own
+[`cliff.toml`](https://github.com/lupiq/relwolf/blob/main/cliff.toml); the key part is Tera's `group_by`:
+
+```tera
+{% for scope, scoped in entry.commits | group_by(attribute="scope") %}
+    - **{{ scope }}**
+    {% for commit in scoped %}
+        - {{ commit.message | upper_first }}
+    {% endfor %}
+{% endfor %}
+```
+
+Grouped scopes are listed alphabetically after the single bullets; commits without a scope must be rendered in a separate loop.
+
 ## Links to component changelogs
 
 With `changelog-links: true` (monorepos), relwolf writes a list of links to the changelogs of all other packages below
