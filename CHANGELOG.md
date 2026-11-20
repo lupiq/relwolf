@@ -2,6 +2,24 @@
 
 <!-- git-cliff: end of header -->
 
+## 🧩 [0.16.0](https://github.com/lupiq/relwolf/releases/tag/v0.16.0) - 2026-11-20
+
+[See changes](https://github.com/lupiq/relwolf/compare/v0.15.0...v0.16.0)
+
+### 🚀 Features
+
+- **release-emoji**: Make sure the `release-emoji` is not repeated within at least 60 releases ([069a749](https://github.com/lupiq/relwolf/commit/069a749cd6d4ca0b9551583c55d25ffbc77fa964))
+- **ai-release-notes**
+  - Add possibility to write notes into the release separately from `changelog` ([e91b6c0](https://github.com/lupiq/relwolf/commit/e91b6c040a8e5e768f3837a6363c854ed32a5fb7))
+  - Add `include-paths` as pendant to `exclude-paths` to simplify config ([56ad000](https://github.com/lupiq/relwolf/commit/56ad000165107c33de840d0e8c08421a99143f55))
+  - Call model only once if configured outputs share exact same settings ([8686dc1](https://github.com/lupiq/relwolf/commit/8686dc180813ec29b6e7f93415d89048ba659664))
+
+### 🧪 Testing
+
+- **E2E**: Improve tag deletion retries for GitLab ([d174c4b](https://github.com/lupiq/relwolf/commit/d174c4b0ff4d09c43119dddcd07b0a169a85882d))
+
+---
+
 ## 🌈 [0.15.0](https://github.com/lupiq/relwolf/releases/tag/v0.15.0) - 2026-11-19
 
 [See changes](https://github.com/lupiq/relwolf/compare/v0.14.1...v0.15.0)
