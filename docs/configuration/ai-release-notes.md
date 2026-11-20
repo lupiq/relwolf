@@ -6,9 +6,9 @@ description: Let an AI model summarize every release in the release request, the
 # AI release notes
 
 relwolf can ask an AI model for release notes for every release. The notes are part of the release request, so you
-can read and edit them before you merge. The feature is **disabled by default**: it is on as soon as `changelog` is set
-(release notes in the changelog) or `additional-files` has at least one entry. The other options are only defaults for
-these outputs, so you do not have to repeat them; without `changelog` and `additional-files` they are an error.
+can read and edit them before you merge. The feature is **disabled by default**: it is on as soon as `changelog` (release notes
+in the changelog), `release` (release notes in the created release) is set or `additional-files` has at least one entry.
+The other options are only defaults for these outputs, so you do not have to repeat them; without any of them they are an error.
 
 ```yaml [relwolf.yaml]
 ai-release-notes:
@@ -17,7 +17,8 @@ ai-release-notes:
   audience: users # free text, e.g. users (default), developers or product managers
   exclude-paths: ['**/*.lock', 'generated/**'] # applies to full-diff
   language: English
-  changelog: true # release notes in the changelog and the release
+  changelog: true # release notes in the changelog
+  release: true # release notes in the body of the created release
   additional-files:
     - file: docs/release-summaries.md
     - file: docs/de/release-summaries.md
@@ -65,9 +66,10 @@ ai-release-notes:
 
 ## Outputs
 
-`changelog` adds the release notes to the new changelog entry above its first `###` section (at the end without one) and
-above the notes of the created release. Set it to `true` or to an object with its own options (see below) and
-`packages` / `exclude-packages`. Without it, `additional-files` alone only writes files.
+`changelog` adds the release notes to the new changelog entry above its first `###` section (at the end without one).
+`release` adds them above the notes of the created release. Set either to `true` or to an object with its own options
+(see below) and `packages` / `exclude-packages`. They are independent: `changelog` does not change the release and vice
+versa, and with both set the notes are generated separately for each. Without them, `additional-files` alone only writes files.
 
 Every entry of `additional-files` writes its own release notes to a Markdown file: a new entry with the release icon,
 linked version, date, and release notes is prepended below the `# <file-title>` heading of `file` (created if
@@ -82,8 +84,8 @@ By default every package gets release notes in every output. `file` may contain 
 the root) and `${component}` (the component name, `root` without one), which writes one file per package, e.g.
 `file: ${path}/RELEASE_NOTES.md`. Without a placeholder all packages share the file and the headings show the component.
 
-`packages` and `exclude-packages` limit an output to packages, given as component name or path. They are set in `changelog`
-and in each entry of `additional-files`.
+`packages` and `exclude-packages` limit an output to packages, given as component name or path. They are set in `changelog`,
+`release` and in each entry of `additional-files`.
 
 ```yaml [relwolf.yaml]
 ai-release-notes:
@@ -94,14 +96,15 @@ ai-release-notes:
       exclude-packages: [internal, tools]
 ```
 
-The changelog notes cannot be combined with `rewrite-changelog`, which would drop the summaries of older releases. In
+The changelog notes cannot be combined with `rewrite-changelog`, which would drop the summaries of older releases (the
+`release` notes can). In
 monorepos every package gets its own release notes. `strategy: changesets` is not supported yet.
 
 ## Release request
 
 The release notes are rendered between hidden `relwolf:summary` markers in the release request:
 
-- Every block names what it is generated for: the tag, the package, and the changelog (and release) or the file.
+- Every block names what it is generated for: the tag, the package, and the changelog, the release or the file.
 - It is generated again whenever the commits of the release (or the model, language or prompt) change, so it is always
   up to date when you merge.
 - If you edit the text, relwolf keeps your version. Clear the text to leave the release notes out. A new version (new tag)
@@ -120,6 +123,7 @@ to the variable) just before you merge the release request.
 ai-release-notes:
   generate: manual
   changelog: true
+  release: true
 ```
 
 - Without the variable, the release request shows a warning that the release notes still have to be generated before
@@ -173,7 +177,7 @@ compatibility details.
 
 ## Options
 
-Top level (defaults), `changelog` and every entry of `additional-files` (unset options are inherited from the top level):
+Top level (defaults), `changelog`, `release` and every entry of `additional-files` (unset options are inherited from the top level):
 
 | Key               | Default       | Description                                                            |
 | ----------------- | ------------- | ---------------------------------------------------------------------- |
@@ -189,14 +193,14 @@ Top level (defaults), `changelog` and every entry of `additional-files` (unset o
 | `max-input-chars` | `30000`       | Max characters of context sent to the model; `false` removes the limit |
 | `prompt`          | built in      | Instructions for the model                                             |
 
-Only in `changelog` and `additional-files` entries:
+Only in `changelog`, `release` and `additional-files` entries:
 
 | Key                | Default      | Description                                       |
 | ------------------ | ------------ | ------------------------------------------------- |
 | `packages`         | all packages | Only these packages (component name or path)      |
 | `exclude-packages` | none         | Leave out these packages (component name or path) |
 
-Only in `ai-release-notes`: `changelog` (`true` or an object, adds the notes to the changelog), `additional-files`,
+Only in `ai-release-notes`: `changelog` and `release` (`true` or an object, adds the notes to the changelog or the created release), `additional-files`,
 `generate` (`always` by default, or [`manual`](#generating-on-request)) and
 `usage-comment` (`true` adds the [token usage comment](#token-usage-and-cost); default `false`).
 

@@ -394,6 +394,7 @@ packages:
       const config = [
         'ai-release-notes:',
         '  changelog: true',
+        '  release: true',
         '  context: full-diff',
         '  audience: developers',
         '  exclude-paths: ["**/*.lock"]',
@@ -417,14 +418,17 @@ packages:
           new RegExp(
             `<!-- relwolf:summary [^>]*${target}[^>]*-->\\r?\\n([\\s\\S]*?)\\r?\\n<!-- /relwolf:summary -->`,
           ).exec(mr.body)?.[1];
-        // The changelog and the file notes are generated separately.
+        // The changelog, release and file notes are generated separately.
         const notes = block('key="root" input');
+        const releaseNotes = block('target="@release"');
         const fileNotes = block('target="RELEASE_NOTES.md"');
 
         expect(notes?.trim().length).toBeGreaterThan(20);
+        expect(releaseNotes?.trim().length).toBeGreaterThan(20);
         expect(fileNotes?.trim().length).toBeGreaterThan(20);
         expect(mr.body).toMatch(/package `root`, file `RELEASE_NOTES.md`/);
-        expect(mr.body).toMatch(/package `root`, changelog and release/);
+        expect(mr.body).toMatch(/package `root`, changelog/);
+        expect(mr.body).toMatch(/package `root`, release/);
 
         const file = await sandbox.fileContent(
           `relwolf/${branch}`,
@@ -448,7 +452,9 @@ packages:
         expect((await sandbox.runRelwolf(branch, config)).tagged).toEqual([
           'v0.1.0',
         ]);
-        expect(await sandbox.releaseBody('v0.1.0')).toContain(notes!.trim());
+        expect(await sandbox.releaseBody('v0.1.0')).toContain(
+          releaseNotes!.trim(),
+        );
       });
     },
   );

@@ -100,12 +100,15 @@ export function usageCost(
   );
 }
 
+/** `target` of the summaries for the release body (not a file path, so it cannot clash with an additional file). */
+export const RELEASE_TARGET = '@release';
+
 /** The summary as stored in the release request, with the hashes that tell whether it is outdated or was edited. */
 export interface StoredSummary {
   tag: string;
   /** Package the summary belongs to (several packages can share a tag). */
   key: string;
-  /** Additional file the summary is written to; undefined for the changelog. */
+  /** Additional file the summary is written to; undefined for the changelog, RELEASE_TARGET for the release. */
   target?: string | undefined;
   /** Hash of everything the model saw. */
   input: string;
