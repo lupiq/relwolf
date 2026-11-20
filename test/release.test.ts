@@ -1583,6 +1583,21 @@ echo 'Copilot summary'
     expect(calls).toBe(1);
   });
 
+  it('generates the notes once for outputs with identical settings', async () => {
+    const config = AI_CONFIG('  release: true\n');
+
+    repo.write('package.json', PACKAGE_JSON);
+    repo.commit('feat: a');
+    await exec(config, {env});
+
+    expect(calls).toBe(1);
+    expect(provider.requests[0]!.body).toContain('target="@release"');
+    expect(file('CHANGELOG.md')).toContain('Generated summary');
+
+    await exec(config, {env});
+    expect(calls).toBe(1);
+  });
+
   it('writes the summary only into the release with release: true', async () => {
     const config = AI_CONFIG('  release: true\n').replace(
       '  changelog: true\n',
