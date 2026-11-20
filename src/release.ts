@@ -1568,7 +1568,7 @@ async function prepareConventional(
     return undefined;
   }
 
-  const emoji = releaseEmoji(config, existing, options.random);
+  const emoji = await releaseEmoji(options, existing);
   const {files, entries, summaries} = await buildFiles(
     options,
     git,
@@ -1651,7 +1651,7 @@ async function prepareChangesets(
       files: await collectChanges(options.cwd, git, dirty, true),
       entries,
       versions: new Map(),
-      emoji: releaseEmoji(options.config, existing, options.random),
+      emoji: await releaseEmoji(options, existing),
     };
   });
 }
@@ -1839,19 +1839,41 @@ async function closeObsolete(
   }
 }
 
-/** The emoji of the release: kept from the (possibly edited) release title, otherwise random if enabled. */
-function releaseEmoji(
-  config: RunOptions['config'],
+/** Number of the latest releases whose emojis are not reused. */
+const EMOJI_HISTORY = 60;
+
+/**
+ * The emoji of the release: kept from the (possibly edited) release title, otherwise random if enabled and different
+ * from the emojis of the latest releases.
+ */
+async function releaseEmoji(
+  options: RunOptions,
   existing: ReleaseRequest | null,
-  random?: () => number,
-): string {
+): Promise<string> {
+  const {config, provider} = options;
   const title = existing ? parseDetails(existing.body).title : undefined;
 
   if (title !== undefined) {
     return leadingEmoji(title);
   }
 
-  return config.releaseEmoji ? randomEmoji(random) : '';
+  if (!config.releaseEmoji) {
+    return '';
+  }
+
+  const merged = [config.labels.tagged, config.labels.pending].map(label =>
+    provider.listMergedReleaseRequests({
+      targetBranch: options.currentBranch,
+      label,
+    }),
+  );
+  const recent = (await Promise.all(merged))
+    .flat()
+    .map(request => leadingEmoji(parseDetails(request.body).title ?? ''))
+    .filter(emoji => emoji !== '')
+    .slice(-EMOJI_HISTORY);
+
+  return randomEmoji(options.random, recent);
 }
 
 function renderRequest(

@@ -8,6 +8,10 @@ describe('randomEmoji', () => {
     expect(randomEmoji(() => 1)).toBe(randomEmoji(() => 0.999999));
   });
 
+  it('skips excluded emojis', () => {
+    expect(randomEmoji(() => 0, ['🚀'])).not.toBe('🚀');
+  });
+
   it('returns different emojis and none that is a person or an animal', () => {
     const seen = new Set<string>();
 

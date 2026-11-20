@@ -1295,6 +1295,28 @@ describe('release title and text', () => {
     await exec(yaml);
     expect(provider.releases[0]!.name).toBe('🚀 Release v0.1.0');
   });
+
+  it('does not repeat the emoji of the latest releases', async () => {
+    const yaml = 'release-emoji: true\nrelease-name: "Release ${tag}"';
+    const exec2 = () =>
+      run({
+        cwd: repo.dir,
+        config: parseConfig(yaml),
+        provider,
+        currentBranch: 'main',
+        random: () => 0,
+      });
+
+    repo.commit('feat: a');
+    await exec2();
+    mergeLastRelease(repo, provider, 1);
+    await exec2();
+    repo.commit('fix: b');
+    await exec2();
+
+    expect(provider.requests.at(-1)!.body).not.toMatch(/\n🚀 Release/);
+    expect(provider.requests.at(-1)!.body).toMatch(/\n🛸 Release/);
+  });
 });
 
 describe('explanations in the log', () => {
