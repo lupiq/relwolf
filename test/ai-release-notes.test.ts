@@ -42,6 +42,7 @@ describe('ai-release-notes config', () => {
       provider: 'copilot-cli',
       context: 'commits',
       audience: 'users',
+      includePaths: [],
       excludePaths: [],
       language: 'English',
       maxInputChars: 30_000,
@@ -159,6 +160,12 @@ ai-release-notes:
     expect(settings('exclude-paths: [docs/**, "**/*.lock"]')).toMatchObject({
       excludePaths: ['docs/**', '**/*.lock'],
     });
+    expect(settings('include-paths: [src/**]')).toMatchObject({
+      includePaths: ['src/**'],
+    });
+    expect(() => settings('include-paths: ["../secrets"]')).toThrow(
+      /ai-release-notes\.changelog\.include-paths/,
+    );
     expect(() => settings('exclude-paths: ["../secrets"]')).toThrow(
       /ai-release-notes\.changelog\.exclude-paths/,
     );

@@ -222,8 +222,19 @@ export class Git {
       });
   }
 
-  /** Unified diff of a range, optionally limited to pathspecs. */
-  async diff(range: string, pathspecs: Array<string>): Promise<string> {
+  /**
+   * Unified diff of a range, optionally limited to pathspecs and, if `include` is not empty, to the changed files
+   * matching one of its globs (relative to the repository root).
+   */
+  async diff(
+    range: string,
+    pathspecs: Array<string>,
+    include: ReadonlyArray<string> = [],
+  ): Promise<string> {
+    if (include.length > 0) {
+      return this.diffIncluding(range, pathspecs, include);
+    }
+
     const args = ['diff', '--no-ext-diff', range];
 
     if (pathspecs.length > 0) {
@@ -231,5 +242,47 @@ export class Git {
     }
 
     return this.git(...args);
+  }
+
+  private async diffIncluding(
+    range: string,
+    pathspecs: Array<string>,
+    include: ReadonlyArray<string>,
+  ): Promise<string> {
+    const base = ['diff', '--no-ext-diff', '--no-renames'];
+    const changed = await this.git(
+      ...base,
+      '--name-only',
+      '-z',
+      range,
+      '--',
+      ...pathspecs,
+    );
+    const files = changed
+      .split('\0')
+      .filter(
+        file =>
+          file &&
+          include.some(pattern => path.posix.matchesGlob(file, pattern)),
+      );
+    const outputs: Array<string> = [];
+
+    // Batches keep the command line below the limit of the operating system.
+    for (let start = 0; start < files.length;) {
+      let size = 0;
+      let end = start;
+
+      while (end < files.length && size < 100_000) {
+        size += (files[end] ?? '').length + 12;
+        end++;
+      }
+
+      const batch = files.slice(start, end).map(file => `:(literal)${file}`);
+
+      outputs.push(await this.git(...base, range, '--', ...batch));
+      start = end;
+    }
+
+    return outputs.join('');
   }
 }

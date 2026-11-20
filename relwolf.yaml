@@ -6,20 +6,26 @@ patch-types: [fix, build, docs]
 
 release-emoji: true
 
-# AI release notes for every release in the release request and RELEASE_NOTES.md (GitHub Copilot CLI)
+# AI release notes for every release in the release request, the release and RELEASE_NOTES.md (GitHub Copilot CLI)
 ai-release-notes:
   generate: manual
   model: claude-sonnet-5.5
   context: full-diff
   max-input-chars: 140000
+  # Only code and documentation are relevant for users
+  include-paths:
+    - src/**
+    - docs/**
+    - README.md
+    - action.yml
+    - Dockerfile
+    - package.json
   exclude-paths:
-    - test/**
-    - e2e/**
     - docs/public/schema.json
-    - pnpm-lock.yaml
   language: English
   audience: developers
   usage-comment: true
+  release: true
   prompt: |
     Summarize this software release in ${language} for ${audience}.
     Write a concise but substantive release summary: usually one to three short paragraphs or four to eight bullets,
@@ -32,6 +38,8 @@ ai-release-notes:
     Group related changes and describe the resulting behavior, APIs, configuration, integrations, and migration implications.
     Highlight breaking changes first, especially newly added, changed, or removed properties, options, commands, or interfaces.
     Mention notable fixes, compatibility changes, and improvements when they materially affect developers.
+    Only describe changes that are relevant for users: actual code changes and documentation. Leave out changes to
+    configuration, CI workflows, tooling and dependency updates, and do not mention that they were left out.
     Do not enumerate every changed file or low-level implementation detail unless it helps explain the change.
     Use only evidence from the provided release context, do not invent motivation or behavior, and answer with the summary only.
   additional-files:

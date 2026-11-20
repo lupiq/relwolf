@@ -15,6 +15,7 @@ ai-release-notes:
   # Defaults for the changelog and every file
   context: changelog # changelog, commits (default) or full-diff
   audience: users # free text, e.g. users (default), developers or product managers
+  include-paths: ['src/**', 'docs/**'] # applies to full-diff, default: all files
   exclude-paths: ['**/*.lock', 'generated/**'] # applies to full-diff
   language: English
   changelog: true # release notes in the changelog
@@ -74,7 +75,7 @@ versa, and with both set the notes are generated separately for each. Without th
 Every entry of `additional-files` writes its own release notes to a Markdown file: a new entry with the release icon,
 linked version, date, and release notes is prepended below the `# <file-title>` heading of `file` (created if
 missing), e.g. for a documentation page. An entry accepts `file` (required), `file-title` and all other options
-(`provider`, `base-url`, `model`, `context`, `audience`, `exclude-paths`, `language`, `input-price`, `output-price`, `max-input-chars`, `prompt`). Options that an entry
+(`provider`, `base-url`, `model`, `context`, `audience`, `include-paths`, `exclude-paths`, `language`, `input-price`, `output-price`, `max-input-chars`, `prompt`). Options that an entry
 leaves out are inherited from `ai-release-notes`, so you can create files for several audiences and languages, each with its
 own prompt. Every output is generated separately.
 
@@ -165,8 +166,9 @@ configuration, migrations, and compatibility, or to any audience of your own suc
 passed to the model as `${audience}`. All audiences get important breaking changes highlighted first, including newly
 added, changed, or removed properties.
 
-`exclude-paths` removes matching repository-relative glob paths from the `full-diff` context. It does not change
-which commits or changelog entries are used for the release itself.
+`include-paths` limits the `full-diff` context to matching repository-relative glob paths (default: all files), and
+`exclude-paths` then removes matching paths from it, e.g. `include-paths: [src/**, docs/**]` with
+`exclude-paths: [docs/public/schema.json]`. Neither changes which commits or changelog entries are used for the release itself.
 
 ## Prompt
 
@@ -186,7 +188,8 @@ Top level (defaults), `changelog`, `release` and every entry of `additional-file
 | `model`           | CLI default   | Model name; required with `openai` and `anthropic`                     |
 | `context`         | `commits`     | `changelog`, `commits` or `full-diff`                                  |
 | `audience`        | `users`       | Free text, e.g. `users`, `developers`, `product managers`              |
-| `exclude-paths`   | `[]`          | Globs excluded from the `full-diff` context                            |
+| `include-paths`   | all files     | Only these globs are part of the `full-diff` context                   |
+| `exclude-paths`   | `[]`          | Globs excluded from the `full-diff` context (after `include-paths`)    |
 | `language`        | `English`     | Language of the release notes                                          |
 | `input-price`     | none          | USD per million input tokens, for the cost estimate                    |
 | `output-price`    | none          | USD per million output tokens, for the cost estimate                   |

@@ -160,11 +160,17 @@ const AI_SETTINGS_SHAPE = {
     .describe(
       'Audience of the release notes as free text, e.g. users (default) for feature-focused notes, developers for technical notes, or your own like "product managers".',
     ),
+  'include-paths': z
+    .array(z.string().min(1))
+    .optional()
+    .describe(
+      'Globs from the repository root; only matching files are part of the full-diff context (default: all files).',
+    ),
   'exclude-paths': z
     .array(z.string().min(1))
     .optional()
     .describe(
-      'Globs from the repository root excluded from the full-diff context.',
+      'Globs from the repository root excluded from the full-diff context, applied after include-paths.',
     ),
   'language': z
     .string()
@@ -570,6 +576,8 @@ export interface AiSettings {
   model?: string;
   context: (typeof AI_CONTEXTS)[number];
   audience: string;
+  /** Globs from the repository root; if not empty, only matching files are part of the full-diff context. */
+  includePaths: Array<string>;
   /** Globs from the repository root excluded from the full-diff context. */
   excludePaths: Array<string>;
   language: string;
@@ -1086,6 +1094,10 @@ function resolveAiSettings(
     ...(model ? {model} : {}),
     context: pick('context') ?? 'commits',
     audience: pick('audience') ?? 'users',
+    includePaths: parseExcludePaths(
+      pick('include-paths') ?? [],
+      `${label}.include-paths`,
+    ),
     excludePaths: parseExcludePaths(
       pick('exclude-paths') ?? [],
       `${label}.exclude-paths`,

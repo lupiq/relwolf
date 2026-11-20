@@ -1670,6 +1670,26 @@ echo 'Copilot summary'
     expect(inputs[0]).not.toContain('generated/output.ts');
   });
 
+  it('limits the full-diff context to the included paths, minus the excluded ones', async () => {
+    repo.write('package.json', PACKAGE_JSON);
+    repo.commit('chore: initial');
+    repo.tag('v0.0.0');
+    repo.commit('feat: included', 'src/feature.ts');
+    repo.commit('feat: excluded', 'src/generated.ts');
+    repo.commit('ci: other', '.github/workflow.yml');
+
+    await exec(
+      AI_CONFIG(
+        '  context: full-diff\n  include-paths: ["src/**"]\n  exclude-paths: ["src/generated.ts"]\n',
+      ),
+      {env},
+    );
+
+    expect(inputs[0]).toContain('src/feature.ts');
+    expect(inputs[0]).not.toContain('src/generated.ts');
+    expect(inputs[0]).not.toContain('.github/workflow.yml');
+  });
+
   it('sends the whole code as the diff of the first release', async () => {
     repo.write('package.json', PACKAGE_JSON);
     repo.commit('feat: first', 'src/first.ts');
