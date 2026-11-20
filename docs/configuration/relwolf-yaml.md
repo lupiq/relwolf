@@ -174,7 +174,7 @@ of the release request to individualise the releases:
 
 - The title is a template with `${tag}`, `${version}` and `${component}` and applies to every release in the request.
   It starts as your `release-name`. With `release-emoji: true` it is prefixed with a random emoji (only objects, nature
-  and food, no people or animals), for example `🚀 ${tag}`. The emoji is chosen once when the request is created; later
+  and food, no people or animals), for example `🚀 ${tag}`. The emoji is chosen once when the request is created and differs from the last 60 releases; later
   updates keep whatever the block contains.
 - The text is Markdown and is added above the changelog notes of every release. HTML comments are ignored, so the
   initial hint adds nothing. Leave the block as it is to add no text.

@@ -90,11 +90,19 @@ const EMOJIS = [
   '🪻',
 ] as const;
 
-/** `random` returns a number in [0, 1), like `Math.random`. */
-export function randomEmoji(random: () => number = Math.random): string {
+/**
+ * `random` returns a number in [0, 1), like `Math.random`. Emojis in `exclude` are not picked (unless nothing else is
+ * left).
+ */
+export function randomEmoji(
+  random: () => number = Math.random,
+  exclude: ReadonlyArray<string> = [],
+): string {
+  const free = EMOJIS.filter(emoji => !exclude.includes(emoji));
+  const pool: ReadonlyArray<string> = free.length > 0 ? free : EMOJIS;
+
   return (
-    EMOJIS[Math.min(Math.floor(random() * EMOJIS.length), EMOJIS.length - 1)] ??
-    '🚀'
+    pool[Math.min(Math.floor(random() * pool.length), pool.length - 1)] ?? '🚀'
   );
 }
 
