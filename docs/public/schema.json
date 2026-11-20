@@ -173,8 +173,16 @@
           "type": "string",
           "minLength": 1
         },
+        "include-paths": {
+          "description": "Globs from the repository root; only matching files are part of the full-diff context (default: all files).",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
         "exclude-paths": {
-          "description": "Globs from the repository root excluded from the full-diff context.",
+          "description": "Globs from the repository root excluded from the full-diff context, applied after include-paths.",
           "type": "array",
           "items": {
             "type": "string",
@@ -269,8 +277,16 @@
                   "type": "string",
                   "minLength": 1
                 },
+                "include-paths": {
+                  "description": "Globs from the repository root; only matching files are part of the full-diff context (default: all files).",
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
                 "exclude-paths": {
-                  "description": "Globs from the repository root excluded from the full-diff context.",
+                  "description": "Globs from the repository root excluded from the full-diff context, applied after include-paths.",
                   "type": "array",
                   "items": {
                     "type": "string",
@@ -374,8 +390,16 @@
                   "type": "string",
                   "minLength": 1
                 },
+                "include-paths": {
+                  "description": "Globs from the repository root; only matching files are part of the full-diff context (default: all files).",
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
                 "exclude-paths": {
-                  "description": "Globs from the repository root excluded from the full-diff context.",
+                  "description": "Globs from the repository root excluded from the full-diff context, applied after include-paths.",
                   "type": "array",
                   "items": {
                     "type": "string",
@@ -477,8 +501,16 @@
                 "type": "string",
                 "minLength": 1
               },
+              "include-paths": {
+                "description": "Globs from the repository root; only matching files are part of the full-diff context (default: all files).",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
               "exclude-paths": {
-                "description": "Globs from the repository root excluded from the full-diff context.",
+                "description": "Globs from the repository root excluded from the full-diff context, applied after include-paths.",
                 "type": "array",
                 "items": {
                   "type": "string",

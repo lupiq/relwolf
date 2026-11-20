@@ -850,6 +850,7 @@ async function summaryInput(
               ...excludePaths,
               ...settings.excludePaths,
             ]),
+            settings.includePaths,
           ),
         }
       : {}),
