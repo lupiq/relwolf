@@ -436,7 +436,16 @@ export const configSchema = z.strictObject({
         ])
         .optional()
         .describe(
-          'Adds release notes to the changelog and the created release: true, or an object with its own options (and packages / exclude-packages).',
+          'Adds release notes to the changelog: true, or an object with its own options (and packages / exclude-packages).',
+        ),
+      'release': z
+        .union([
+          z.boolean(),
+          z.strictObject({...AI_SETTINGS_SHAPE, ...AI_SCOPE_SHAPE}),
+        ])
+        .optional()
+        .describe(
+          'Adds release notes to the body of the created release: true, or an object with its own options (and packages / exclude-packages).',
         ),
       'additional-files': z
         .array(
@@ -463,7 +472,7 @@ export const configSchema = z.strictObject({
     })
     .prefault({})
     .describe(
-      'AI generated release notes. Enabled by changelog and/or at least one entry of additional-files; the other options are only defaults for them.',
+      'AI generated release notes. Enabled by changelog, release and/or at least one entry of additional-files; the other options are only defaults for them.',
     ),
   'http-timeout': z
     .number()
@@ -586,8 +595,10 @@ export interface AiFileConfig extends AiSettings, AiScope {
 }
 
 export interface AiReleaseNotesConfig {
-  /** Release notes in the changelog; undefined if only additional files are configured. */
+  /** Release notes in the changelog; undefined if not configured. */
   changelog?: AiSettings & AiScope;
+  /** Release notes in the body of the created release; undefined if not configured. */
+  release?: AiSettings & AiScope;
   files: Array<AiFileConfig>;
   /** Whether the release request gets a comment with the token usage and estimated cost. */
   usageComment: boolean;
@@ -1144,6 +1155,7 @@ function parseAiReleaseNotes(
   const {
     'additional-files': additional,
     'changelog': changelogSetting,
+    'release': releaseSetting,
     'usage-comment': usageComment = false,
     'generate': generate = 'always',
     ...shared
@@ -1152,15 +1164,17 @@ function parseAiReleaseNotes(
     typeof changelogSetting === 'object' ? changelogSetting : {};
   const hasChangelog =
     changelogSetting !== undefined && changelogSetting !== false;
+  const releaseOwn = typeof releaseSetting === 'object' ? releaseSetting : {};
+  const hasRelease = releaseSetting !== undefined && releaseSetting !== false;
 
-  if (!hasChangelog && additional.length === 0) {
+  if (!hasChangelog && !hasRelease && additional.length === 0) {
     if (
       usageComment ||
       generate !== 'always' ||
       Object.keys(shared).length > 0
     ) {
       throw new ConfigError(
-        'ai-release-notes: the options only act as defaults, set "changelog" or at least one entry in "additional-files"',
+        'ai-release-notes: the options only act as defaults, set "changelog", "release" or at least one entry in "additional-files"',
       );
     }
 
@@ -1228,6 +1242,18 @@ function parseAiReleaseNotes(
               packages,
               'ai-release-notes.changelog',
             ),
+          },
+        }
+      : {}),
+    ...(hasRelease
+      ? {
+          release: {
+            ...resolveAiSettings(
+              releaseOwn,
+              shared,
+              'ai-release-notes.release',
+            ),
+            ...parseAiScope(releaseOwn, packages, 'ai-release-notes.release'),
           },
         }
       : {}),

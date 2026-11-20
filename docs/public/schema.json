@@ -136,7 +136,7 @@
       }
     },
     "ai-release-notes": {
-      "description": "AI generated release notes. Enabled by changelog and/or at least one entry of additional-files; the other options are only defaults for them.",
+      "description": "AI generated release notes. Enabled by changelog, release and/or at least one entry of additional-files; the other options are only defaults for them.",
       "default": {},
       "type": "object",
       "properties": {
@@ -228,7 +228,112 @@
           "type": "boolean"
         },
         "changelog": {
-          "description": "Adds release notes to the changelog and the created release: true, or an object with its own options (and packages / exclude-packages).",
+          "description": "Adds release notes to the changelog: true, or an object with its own options (and packages / exclude-packages).",
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "provider": {
+                  "description": "copilot-cli (default) runs the GitHub Copilot CLI; openai calls an OpenAI-compatible API (base-url and model required); anthropic calls the Claude API directly (model required).",
+                  "type": "string",
+                  "enum": [
+                    "copilot-cli",
+                    "openai",
+                    "anthropic"
+                  ]
+                },
+                "base-url": {
+                  "description": "Base URL of the API (`/chat/completions` is appended for openai, `/messages` for anthropic); required with provider openai, defaults to https://api.anthropic.com/v1 with anthropic.",
+                  "type": "string",
+                  "format": "uri"
+                },
+                "model": {
+                  "description": "Model name; the default of the Copilot CLI if omitted, required with provider openai and anthropic.",
+                  "type": "string",
+                  "minLength": 1
+                },
+                "context": {
+                  "description": "Release context sent to the model: generated changelog content, all commits (default), or the full code diff since the previous release.",
+                  "type": "string",
+                  "enum": [
+                    "changelog",
+                    "commits",
+                    "full-diff"
+                  ]
+                },
+                "audience": {
+                  "description": "Audience of the release notes as free text, e.g. users (default) for feature-focused notes, developers for technical notes, or your own like \"product managers\".",
+                  "type": "string",
+                  "minLength": 1
+                },
+                "exclude-paths": {
+                  "description": "Globs from the repository root excluded from the full-diff context.",
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "language": {
+                  "description": "Language of the release notes (default English).",
+                  "type": "string",
+                  "minLength": 1
+                },
+                "input-price": {
+                  "description": "Price in USD per million input tokens; with it and/or output-price, the usage comment in the release request shows the estimated cost.",
+                  "type": "number",
+                  "minimum": 0
+                },
+                "output-price": {
+                  "description": "Price in USD per million output tokens.",
+                  "type": "number",
+                  "minimum": 0
+                },
+                "max-input-chars": {
+                  "description": "Upper bound for the context sent to the model, in characters (default 30000); false removes the limit.",
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "boolean",
+                      "const": false
+                    }
+                  ]
+                },
+                "prompt": {
+                  "description": "Instructions for the model instead of the built-in ones. Placeholders: ${language}, ${tag}, ${version}, ${component}, ${audience}.",
+                  "type": "string",
+                  "minLength": 1
+                },
+                "packages": {
+                  "description": "Packages (component name or path) that get these release notes; all packages if omitted.",
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "exclude-packages": {
+                  "description": "Packages (component name or path) that do not get these release notes.",
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "release": {
+          "description": "Adds release notes to the body of the created release: true, or an object with its own options (and packages / exclude-packages).",
           "anyOf": [
             {
               "type": "boolean"

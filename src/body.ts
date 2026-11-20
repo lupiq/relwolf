@@ -1,4 +1,4 @@
-import type {StoredSummary} from './ai-release-notes.js';
+import {RELEASE_TARGET, type StoredSummary} from './ai-release-notes.js';
 
 export const LABEL_PENDING = 'relwolf: pending';
 export const LABEL_TAGGED = 'relwolf: tagged';
@@ -123,7 +123,7 @@ function summarySection(options: RenderBodyOptions): string {
   );
   const blocks = (options.summaries ?? []).map(
     summary =>
-      `**AI release notes** for \`${summary.tag}\`, package \`${summary.key}\`, ${summary.target ? `file \`${summary.target}\`` : 'changelog and release'} (editable; clear the text to leave it out)\n\n` +
+      `**AI release notes** for \`${summary.tag}\`, package \`${summary.key}\`, ${summary.target === RELEASE_TARGET ? 'release' : summary.target ? `file \`${summary.target}\`` : 'changelog'} (editable; clear the text to leave it out)\n\n` +
       `<!-- relwolf:summary tag="${summary.tag}" key="${summary.key}"${summary.target ? ` target="${summary.target}"` : ''} input="${summary.input}" output="${summary.output}" -->\n${sanitize(summary.text)}\n<!-- /relwolf:summary -->`,
   );
 

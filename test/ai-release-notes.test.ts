@@ -128,11 +128,11 @@ ai-release-notes:
 
   it('rejects options without changelog or additional files', () => {
     expect(() => parseConfig('ai-release-notes:\n  language: German')).toThrow(
-      /"changelog" or at least one entry/,
+      /"changelog", "release" or at least one entry/,
     );
     expect(() =>
       parseConfig('ai-release-notes:\n  language: German\n  changelog: false'),
-    ).toThrow(/"changelog" or at least one entry/);
+    ).toThrow(/"changelog", "release" or at least one entry/);
   });
 
   it('rejects duplicate files and invalid file settings', () => {

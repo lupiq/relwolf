@@ -135,6 +135,7 @@ token as `COPILOT_GITHUB_TOKEN` in the job environment ([GitHub](/guide/github#_
 ai-release-notes:
   audience: developers
   changelog: true
+  release: true
   additional-files:
     - file: docs/release-notes.md
       file-title: Release notes

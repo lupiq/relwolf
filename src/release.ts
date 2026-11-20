@@ -5,6 +5,7 @@ import {
   inputHash,
   outputHash,
   prependFileEntry,
+  RELEASE_TARGET,
   renderFileEntry,
   usageCost,
   type StoredSummary,
@@ -337,10 +338,10 @@ async function tagMergedRequest(
 
   const details = parseDetails(request.body);
   const intro = releaseText(details.text ?? '');
-  const summaries = config.aiReleaseNotes.changelog
+  const summaries = config.aiReleaseNotes.release
     ? parseSummaries(request.body, tag =>
         isValidReleaseTag(tag, config.packages),
-      ).filter(summary => summary.target === undefined)
+      ).filter(summary => summary.target === RELEASE_TARGET)
     : [];
   const created: Array<string> = [];
 
@@ -893,7 +894,7 @@ async function resolveSummary(
   }
 
   const key = packageKey(plan.pkg);
-  const label = `AI release notes for ${plan.tag}${plan.pkg.component ? ` (${plan.pkg.component})` : ''}${target ? ` in ${target}` : ''}`;
+  const label = `AI release notes for ${plan.tag}${plan.pkg.component ? ` (${plan.pkg.component})` : ''}${target === RELEASE_TARGET ? ' for the release' : target ? ` in ${target}` : ''}`;
   const input = await summaryInput(options, git, plan, notes, settings);
   const current = inputHash(settings, input);
   const old = state.previous.find(
@@ -1063,6 +1064,20 @@ async function applyPlan(
           summaries,
           ai.changelog,
         );
+
+  // Only stored in the release request; the release body is built from it when the request is merged.
+  if (!placeholder && ai.release && aiAppliesTo(ai.release, pkg)) {
+    await resolveSummary(
+      options,
+      git,
+      plan,
+      notes,
+      summaries,
+      ai.release,
+      RELEASE_TARGET,
+    );
+  }
+
   const sections = notesByTag.get(plan.tag) ?? [];
 
   sections.push({pkg, notes});

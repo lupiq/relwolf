@@ -1565,7 +1565,7 @@ echo 'Copilot summary'
     expect(provider.requests[0]!.body).not.toMatch(/relwolf:summary/);
   });
 
-  it('writes the summary into the changelog, the request and the release', async () => {
+  it('writes the summary into the changelog and the request, but not the release', async () => {
     repo.write('package.json', PACKAGE_JSON);
     repo.commit('feat: a');
     await exec(AI_CONFIG(), {env});
@@ -1579,6 +1579,27 @@ echo 'Copilot summary'
 
     mergeLastRelease(repo, provider, 1);
     await exec(AI_CONFIG(), {env});
+    expect(provider.releases[0]!.body).not.toContain('Generated summary');
+    expect(calls).toBe(1);
+  });
+
+  it('writes the summary only into the release with release: true', async () => {
+    const config = AI_CONFIG('  release: true\n').replace(
+      '  changelog: true\n',
+      '',
+    );
+
+    repo.write('package.json', PACKAGE_JSON);
+    repo.commit('feat: a');
+    await exec(config, {env});
+
+    expect(file('CHANGELOG.md')).not.toContain('Generated summary');
+    expect(provider.requests[0]!.body).toMatch(
+      /<!-- relwolf:summary tag="v0.1.0" key="root" target="@release" [^>]*-->\nGenerated summary\n/,
+    );
+
+    mergeLastRelease(repo, provider, 1);
+    await exec(config, {env});
     expect(provider.releases[0]!.body).toMatch(/^Generated summary\n\n/);
     expect(calls).toBe(1);
   });
