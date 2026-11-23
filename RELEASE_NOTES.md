@@ -1,5 +1,31 @@
 # Release Notes
 
+## 🧩 [0.16.0](https://github.com/lupiq/relwolf/releases/tag/v0.16.0) - 2026-11-23
+
+- **Breaking change: `changelog` and `release` are now separate outputs.** Previously `changelog: true` put AI notes in both the changelog and the created release. Now **`changelog`** only writes to the changelog entry. The new **`release`** option (`true` or an object with its own options, plus `packages` / `exclude-packages`) adds notes to the created release body.
+  - To keep the old behavior, set both `changelog: true` and `release: true`.
+  - With both set, notes are generated separately for each.
+  - `release` notes can be combined with `rewrite-changelog`, but `changelog` notes cannot.
+  - `release` alone is enough to enable the feature. The release request labels each block as changelog, release or file.
+
+- **`include-paths` for the `full-diff` context.**
+  - It limits the diff to matching globs (default: all files). `exclude-paths` is applied afterwards.
+  - It works at the top level, in `changelog`, in `release` and in `additional-files` entries.
+  - It also takes part in the input hash, so changing it regenerates the notes.
+
+- **OAuth 2.0 for the `openai` provider.**
+  - A new **`token-url`** option makes relwolf fetch an access token via the client credentials grant.
+  - Credentials come from **`RELWOLF_AI_CLIENT_ID`** and **`RELWOLF_AI_CLIENT_SECRET`** instead of `RELWOLF_AI_API_KEY`.
+  - `token-url` is a config error with any other provider.
+  - The docs add a Swisscom Swiss AI Platform example.
+  - Token and 401/403 failures give specific error hints and show up as warnings.
+
+- **Fewer model calls.** Outputs with identical settings (provider, model, prompt, context and so on) now share one model call per release. They get the same text at no extra cost.
+
+- **Release emoji.** With `release-emoji: true`, the random emoji now differs from those of the last 60 releases. relwolf finds them by looking at merged release requests.
+
+- **Changelog docs.** A new section shows how to group commits by scope as nested bullets with git-cliff's Tera `group_by`.
+
 ## 🌈 [0.15.0](https://github.com/lupiq/relwolf/releases/tag/v0.15.0) - 2026-11-19
 
 - **AI release notes (new, opt-in):** the new top-level `ai-release-notes` option in `relwolf.yaml` has relwolf ask a model to summarize each release.
