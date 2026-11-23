@@ -28,6 +28,20 @@ body = """
 {% else %}\
     ## [unreleased]
 {% endif %}\
+{# Breaking changes are listed first with the description of their BREAKING CHANGE footer (the message otherwise) #}\
+{% set breaking_commits = commits | filter(attribute="breaking", value=true) %}\
+{% if breaking_commits | length > 0 %}
+    ### ⚠️ Breaking changes
+    {% for commit in breaking_commits %}\
+        {% set_global description = commit.message %}\
+        {% for footer in commit.footers %}\
+            {% if footer.breaking %}{% set_global description = footer.value %}{% endif %}\
+        {% endfor %}
+        - {% if commit.scope %}**{{ commit.scope }}**: {% endif %}\
+            {{ description | upper_first }} \
+            ([{{ commit.id | truncate(length=7, end="") }}](https://github.com/lupiq/relwolf/commit/{{ commit.id }}))\
+    {% endfor %}
+{% endif %}\
 {% for entry in commits | commit_groups(groups=commit_parsers_groups) %}
     ### {{ entry.group | striptags | trim | upper_first }}
     {% set by_scope = entry.commits | group_by(attribute="scope") %}\
