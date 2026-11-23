@@ -16,3 +16,4 @@ secrets and CI context come from [environment variables](/reference/environment-
 - [Changesets](/configuration/changesets): let Changesets decide versions and changelogs instead of Conventional
   Commits
 - [AI release notes](/configuration/ai-release-notes): optional AI generated release notes for every release
+- [Messages](/configuration/messages): notify Slack, Microsoft Teams or a webhook about new releases

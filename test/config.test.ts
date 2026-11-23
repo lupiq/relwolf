@@ -335,6 +335,58 @@ describe('new properties', () => {
   });
 });
 
+describe('messages', () => {
+  const AI = `ai-release-notes:
+  provider: openai
+  base-url: https://llm.example.com/v1
+  model: m
+`;
+
+  it('defaults to the release source and no messages', () => {
+    expect(parseConfig(undefined).messages).toEqual([]);
+    expect(parseConfig('messages:\n  - type: slack').messages).toEqual([
+      {type: 'slack', sources: ['release'], packages: [], excludePackages: []},
+    ]);
+  });
+
+  it('parses sources, scope and template', () => {
+    const [message] = parseConfig(
+      `${AI}  release: true
+  additional-files:
+    - file: docs/de.md
+messages:
+  - type: teams
+    sources: [ai-release, ./docs/de.md-not, changelog]
+    template: "\${notes}"
+`.replace('./docs/de.md-not', 'ai-file:./docs/de.md'),
+    ).messages;
+
+    expect(message).toMatchObject({
+      type: 'teams',
+      sources: ['ai-release', 'ai-file:docs/de.md', 'changelog'],
+      template: '${notes}',
+    });
+  });
+
+  it('rejects sources that are not configured', () => {
+    expect(() =>
+      parseConfig('messages:\n  - type: slack\n    sources: [ai-release]'),
+    ).toThrow(/needs "release" in ai-release-notes/);
+    expect(() =>
+      parseConfig(
+        `${AI}  changelog: true\nmessages:\n  - type: slack\n    sources: ["ai-file:x.md"]`,
+      ),
+    ).toThrow(/not a file in ai-release-notes\.additional-files/);
+    expect(() =>
+      parseConfig('messages:\n  - type: slack\n    sources: [nope]'),
+    ).toThrow(ConfigError);
+    expect(() => parseConfig('messages:\n  - type: irc')).toThrow(ConfigError);
+    expect(() =>
+      parseConfig('messages:\n  - type: slack\n    packages: [nope]'),
+    ).toThrow(/neither a component name nor a path/);
+  });
+});
+
 describe('strategy', () => {
   it('defaults to conventional commits', () => {
     expect(parseConfig(undefined).strategy).toBe('conventional-commits');

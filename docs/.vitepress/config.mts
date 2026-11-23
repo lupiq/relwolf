@@ -173,6 +173,7 @@ export default defineConfig({
           {text: 'Changelog (git-cliff)', link: '/configuration/changelog'},
           {text: 'Changesets', link: '/configuration/changesets'},
           {text: 'AI release notes', link: '/configuration/ai-release-notes'},
+          {text: 'Messages', link: '/configuration/messages'},
         ],
       },
       {

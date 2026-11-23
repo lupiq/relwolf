@@ -61,6 +61,13 @@ import {
 import {leadingEmoji, randomEmoji} from './emoji.js';
 import {CommandError, Git, run as runCommand} from './git.js';
 import {
+  buildMessages,
+  MESSAGE_WEBHOOK_ENV,
+  sendMessage,
+  validWebhookUrl,
+  type CreatedRelease,
+} from './notify.js';
+import {
   maxLevel,
   nestedPackagePaths,
   pathspecsFor,
@@ -344,20 +351,37 @@ async function tagMergedRequest(
       ).filter(summary => summary.target === RELEASE_TARGET)
     : [];
   const created: Array<string> = [];
+  const createdReleases: Array<CreatedRelease> = [];
 
-  for (const entry of entries) {
-    await tagAndRelease(
+  try {
+    for (const entry of entries) {
+      const release = await tagAndRelease(
+        options,
+        git,
+        entry,
+        request.mergeSha,
+        details,
+        [intro, releaseSummary(summaries, entry.tag)]
+          .filter(Boolean)
+          .join('\n\n'),
+        log,
+      );
+
+      created.push(entry.tag);
+
+      if (release) {
+        createdReleases.push(release);
+      }
+    }
+  } finally {
+    await notifyReleases(
       options,
-      git,
-      entry,
-      request.mergeSha,
-      details,
-      [intro, releaseSummary(summaries, entry.tag)]
-        .filter(Boolean)
-        .join('\n\n'),
+      createdReleases,
+      parseSummaries(request.body, tag =>
+        isValidReleaseTag(tag, config.packages),
+      ),
       log,
     );
-    created.push(entry.tag);
   }
 
   await provider.setLabels(request.id, {
@@ -376,7 +400,7 @@ async function tagAndRelease(
   details: ReturnType<typeof parseDetails>,
   intro: string,
   log: (message: string) => void,
-): Promise<void> {
+): Promise<CreatedRelease | undefined> {
   const {provider, config} = options;
   const result = await provider.createTag(entry.tag, mergeSha);
 
@@ -400,22 +424,74 @@ async function tagAndRelease(
   if (await provider.releaseExists(entry.tag)) {
     log(`Release ${entry.tag} already exists.`);
 
-    return;
+    return undefined;
   }
 
   const parsed = parseReleaseTag(entry.tag, config.packages);
+  const name = renderReleaseName(details.title ?? config.releaseName, {
+    tag: entry.tag,
+    version: parsed ? formatVersion(parsed.version) : entry.tag,
+    component: parsed?.pkg.component,
+  });
+  const body = intro ? `${intro}\n\n${entry.notes}` : entry.notes;
 
   await provider.createRelease({
     tag: entry.tag,
-    name: renderReleaseName(details.title ?? config.releaseName, {
-      tag: entry.tag,
-      version: parsed ? formatVersion(parsed.version) : entry.tag,
-      component: parsed?.pkg.component,
-    }),
-    body: intro ? `${intro}\n\n${entry.notes}` : entry.notes,
+    name,
+    body,
     prerelease: entry.prerelease,
   });
   log(`Created release ${entry.tag}.`);
+
+  return parsed
+    ? {
+        tag: entry.tag,
+        name,
+        version: formatVersion(parsed.version),
+        url: releaseUrl(options.env ?? process.env, entry.tag),
+        prerelease: entry.prerelease,
+        body,
+        notes: entry.notes,
+        pkg: parsed.pkg,
+      }
+    : undefined;
+}
+
+/** Sends the configured messages for newly created releases; a failure only logs a warning. */
+async function notifyReleases(
+  options: RunOptions,
+  releases: ReadonlyArray<CreatedRelease>,
+  summaries: Parameters<typeof buildMessages>[2],
+  log: (message: string) => void,
+): Promise<void> {
+  const {config} = options;
+
+  if (config.messages.length === 0 || releases.length === 0) {
+    return;
+  }
+
+  const url = (options.env ?? process.env)[MESSAGE_WEBHOOK_ENV]?.trim();
+
+  if (!url || !validWebhookUrl(url)) {
+    log(
+      `Warning: no messages sent, ${MESSAGE_WEBHOOK_ENV} is ${url ? 'not a valid http(s) URL' : 'not set'}.`,
+    );
+
+    return;
+  }
+
+  for (const message of buildMessages(config, releases, summaries)) {
+    const tags = message.releases.map(release => release.tag).join(', ');
+
+    try {
+      await sendMessage(message, url, config.httpTimeout * 1000);
+      log(`Sent the ${message.config.type} message for ${tags}.`);
+    } catch (error) {
+      log(
+        `Warning: could not send the ${message.config.type} message for ${tags}: ${(error as Error).message}`,
+      );
+    }
+  }
 }
 
 /** The summary text for a release; one section per package if several share the tag. */

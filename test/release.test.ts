@@ -1920,3 +1920,162 @@ ai-release-notes:
     expect(calls).toBe(2);
   });
 });
+
+describe('messages', () => {
+  const URL = 'https://hooks.example.com/secret';
+  const env = {RELWOLF_MESSAGE_WEBHOOK_URL: URL, GITHUB_REPOSITORY: 'o/r'};
+  let posts: Array<{url: string; body: any}>;
+  let status: number;
+
+  beforeEach(() => {
+    posts = [];
+    status = 200;
+    vi.stubGlobal('fetch', async (url: string, init: RequestInit) => {
+      posts.push({url, body: JSON.parse(init.body as string)});
+
+      return new Response('nope', {status});
+    });
+  });
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  async function released(yaml: string, logs: Array<string> = []) {
+    repo.write('package.json', PACKAGE_JSON);
+    repo.commit('feat: initial');
+    await exec(yaml, {env});
+    mergeLastRelease(repo, provider, 1);
+
+    return exec(yaml, {env, log: message => logs.push(message)});
+  }
+
+  it('sends the release notes once for a new release', async () => {
+    const yaml = `${NODE_CONFIG}messages:\n  - type: slack\n`;
+
+    await released(yaml);
+
+    expect(posts).toHaveLength(1);
+    expect(posts[0]!.url).toBe(URL);
+    expect(posts[0]!.body.text).toMatch(
+      /^\*<https:\/\/github\.com\/o\/r\/releases\/tag\/v0\.1\.0\|v0\.1\.0>\*[\s\S]*initial/i,
+    );
+
+    await exec(yaml, {env});
+    expect(posts).toHaveLength(1);
+  });
+
+  it('does not notify about a release that already exists', async () => {
+    const yaml = `${NODE_CONFIG}messages:\n  - type: webhook\n`;
+
+    repo.write('package.json', PACKAGE_JSON);
+    repo.commit('feat: initial');
+    await exec(yaml, {env});
+    mergeLastRelease(repo, provider, 1);
+    provider.releases.push({
+      tag: 'v0.1.0',
+      name: 'v0.1.0',
+      body: 'manual',
+      prerelease: false,
+    });
+    await exec(yaml, {env});
+
+    expect(posts).toHaveLength(0);
+  });
+
+  it('only warns if the message cannot be sent', async () => {
+    const logs: Array<string> = [];
+
+    status = 500;
+    const result = await released(
+      `${NODE_CONFIG}messages:\n  - type: teams\n`,
+      logs,
+    );
+
+    expect(result.tagged).toEqual(['v0.1.0']);
+    expect(provider.requests[0]!.labels).toEqual(['relwolf: tagged']);
+    expect(logs.join('\n')).toMatch(
+      /Warning: could not send the teams message.*500/,
+    );
+    expect(logs.join('\n')).not.toContain(URL);
+  });
+
+  it('warns without a webhook URL', async () => {
+    const logs: Array<string> = [];
+
+    repo.write('package.json', PACKAGE_JSON);
+    repo.commit('feat: initial');
+    await exec(`${NODE_CONFIG}messages:\n  - type: slack\n`);
+    mergeLastRelease(repo, provider, 1);
+    await exec(`${NODE_CONFIG}messages:\n  - type: slack\n`, {
+      log: message => logs.push(message),
+    });
+
+    expect(posts).toHaveLength(0);
+    expect(logs.join('\n')).toMatch(/RELWOLF_MESSAGE_WEBHOOK_URL is not set/);
+  });
+
+  it('combines the selected sources into one message per linked group', async () => {
+    const yaml = `linked-versions:
+  - [services/api, services/web]
+ai-release-notes:
+  provider: openai
+  base-url: https://llm.example.com/v1
+  model: m
+  release: true
+messages:
+  - type: webhook
+    sources: [ai-release, changelog]
+packages:
+  services/api:
+    component: api
+    updaters: []
+  services/web:
+    component: web
+    updaters: []
+  tools:
+    component: tools
+    updaters: []
+`;
+
+    vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
+      const body = JSON.parse(init!.body as string);
+
+      if (url === URL) {
+        posts.push({url, body});
+
+        return new Response('ok');
+      }
+
+      return Response.json({
+        choices: [{message: {content: 'AI words'}}],
+        usage: {prompt_tokens: 1, completion_tokens: 1},
+      });
+    });
+    repo.write('services/api/a.txt', 'x');
+    repo.write('services/web/w.txt', 'x');
+    repo.write('tools/t.txt', 'x');
+    repo.commit('chore: scaffold');
+    repo.commit('feat: api only', 'services/api/a.txt');
+    repo.commit('fix: tools', 'tools/t.txt');
+    const withAi = {...env, RELWOLF_AI_API_KEY: 'key'};
+
+    await exec(yaml, {env: withAi});
+    mergeLastRelease(repo, provider, 1);
+    await exec(yaml, {env: withAi});
+
+    // tools is not linked and gets its own message
+    expect(posts).toHaveLength(2);
+    expect(
+      posts.map(post =>
+        (post.body.releases as Array<{tag: string}>).map(r => r.tag),
+      ),
+    ).toEqual([['api-v0.1.0', 'web-v0.1.0'], ['tools-v0.0.1']]);
+    expect(posts[0]!.body.text).toMatch(/AI words[\s\S]*api only/i);
+  });
+
+  it('sends nothing for packages outside the scope', async () => {
+    const yaml = `${NODE_CONFIG}messages:\n  - type: slack\n    exclude-packages: ["."]\n`;
+
+    await released(yaml);
+    expect(posts).toHaveLength(0);
+  });
+});

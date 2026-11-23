@@ -135,6 +135,59 @@
         "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
       }
     },
+    "messages": {
+      "default": [],
+      "description": "Messages sent to the webhook in RELWOLF_MESSAGE_WEBHOOK_URL when releases were created.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "slack",
+              "teams",
+              "webhook"
+            ],
+            "description": "slack: Slack incoming webhook; teams: Microsoft Teams Workflows webhook; webhook: generic JSON POST."
+          },
+          "sources": {
+            "description": "Release notes in the message, combined in this order: release (body of the created release), changelog (notes of the tag), ai-release, ai-changelog, ai-file:<file> (an entry of ai-release-notes.additional-files). Default: release.",
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^(?:release|changelog|ai-release|ai-changelog|ai-file:.+)$"
+            }
+          },
+          "packages": {
+            "description": "Packages (component name or path) that get these release notes; all packages if omitted.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "exclude-packages": {
+            "description": "Packages (component name or path) that do not get these release notes.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "template": {
+            "description": "Markdown template instead of the built-in one. Placeholders: ${releases}, ${tags}, ${version}, ${name}, ${url}, ${notes}.",
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "additionalProperties": false
+      }
+    },
     "ai-release-notes": {
       "description": "AI generated release notes. Enabled by changelog, release and/or at least one entry of additional-files; the other options are only defaults for them.",
       "default": {},

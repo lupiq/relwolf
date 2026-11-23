@@ -225,6 +225,41 @@ const AI_SCOPE_SHAPE = {
     ),
 };
 
+export const MESSAGE_TYPES = ['slack', 'teams', 'webhook'] as const;
+
+const MESSAGE_SOURCE_PATTERN =
+  /^(?:release|changelog|ai-release|ai-changelog|ai-file:.+)$/;
+
+const messageSchema = z.strictObject({
+  type: z
+    .enum(MESSAGE_TYPES)
+    .describe(
+      'slack: Slack incoming webhook; teams: Microsoft Teams Workflows webhook; webhook: generic JSON POST.',
+    ),
+  sources: z
+    .array(
+      z
+        .string()
+        .regex(
+          MESSAGE_SOURCE_PATTERN,
+          'must be release, changelog, ai-release, ai-changelog or ai-file:<file>',
+        ),
+    )
+    .min(1)
+    .optional()
+    .describe(
+      'Release notes in the message, combined in this order: release (body of the created release), changelog (notes of the tag), ai-release, ai-changelog, ai-file:<file> (an entry of ai-release-notes.additional-files). Default: release.',
+    ),
+  ...AI_SCOPE_SHAPE,
+  template: z
+    .string()
+    .min(1)
+    .optional()
+    .describe(
+      'Markdown template instead of the built-in one. Placeholders: ${releases}, ${tags}, ${version}, ${name}, ${url}, ${notes}.',
+    ),
+});
+
 const CHANGESETS_REJECTED_OPTIONS = [
   'patch-types',
   'minor-types',
@@ -426,6 +461,12 @@ export const configSchema = z.strictObject({
   'reviewers': userNames
     .default([])
     .describe('Usernames requested as reviewers when the request is created.'),
+  'messages': z
+    .array(messageSchema)
+    .default([])
+    .describe(
+      'Messages sent to the webhook in RELWOLF_MESSAGE_WEBHOOK_URL when releases were created.',
+    ),
   'ai-release-notes': z
     .strictObject({
       ...AI_SETTINGS_SHAPE,
@@ -622,6 +663,13 @@ export interface AiReleaseNotesConfig {
   generate: (typeof AI_GENERATE_MODES)[number];
 }
 
+export interface MessageConfig extends AiScope {
+  type: (typeof MESSAGE_TYPES)[number];
+  /** `release`, `changelog`, `ai-release`, `ai-changelog` or `ai-file:<file>` (the file as configured). */
+  sources: Array<string>;
+  template?: string;
+}
+
 export interface PackageConfig {
   /** Repository-relative POSIX path, "." for the root. */
   path: string;
@@ -671,6 +719,7 @@ export interface Config {
   assignees: Array<string>;
   reviewers: Array<string>;
   aiReleaseNotes: AiReleaseNotesConfig;
+  messages: Array<MessageConfig>;
   /** Seconds every attempt of an API request may take. */
   httpTimeout: number;
   /** Commit types (lower case) that trigger a minor or patch release; breaking changes always trigger a major one. */
@@ -1291,6 +1340,66 @@ function parseAiReleaseNotes(
   };
 }
 
+function parseMessages(
+  parsed: ParsedConfig,
+  packages: ReadonlyArray<PackageConfig>,
+  ai: AiReleaseNotesConfig,
+): Array<MessageConfig> {
+  return parsed.messages.map(
+    ({type, sources = ['release'], template, ...own}, index) => {
+      const label = `messages[${index}]`;
+      const unique = [...new Set(sources)];
+
+      for (const source of unique) {
+        const missing =
+          source === 'ai-release'
+            ? !ai.release
+            : source === 'ai-changelog'
+              ? !ai.changelog
+              : undefined;
+
+        if (missing) {
+          throw new ConfigError(
+            `${label}: the source "${source}" needs "${source.slice(3)}" in ai-release-notes`,
+          );
+        }
+      }
+
+      const files = unique.map(source =>
+        source.startsWith('ai-file:') ? source.slice('ai-file:'.length) : '',
+      );
+      const resolved = unique.map((source, position) => {
+        const file = files[position];
+
+        if (!file) {
+          return source;
+        }
+
+        const normalized = AI_FILE_PLACEHOLDERS.some(placeholder =>
+          file.includes(placeholder),
+        )
+          ? file
+          : normalizeRepoPath(file, `${label}.sources`);
+
+        if (!ai.files.some(entry => entry.file === normalized)) {
+          throw new ConfigError(
+            `${label}: the source "${source}" is not a file in ai-release-notes.additional-files`,
+          );
+        }
+
+        return `ai-file:${normalized}`;
+      });
+
+      return {
+        type,
+        sources: resolved,
+        ...(template ? {template} : {}),
+        ...parseAiScope(own, packages, label),
+      };
+    },
+  );
+}
+
 function checkStrategy(raw: unknown, parsed: ParsedConfig): void {
   if (parsed.strategy !== 'changesets' || !raw || typeof raw !== 'object') {
     return;
@@ -1329,6 +1438,7 @@ export function parseConfig(source: string | undefined): Config {
   checkComponentUpdaters(parsed, packages);
 
   const labels = parseLabels(parsed.labels);
+  const aiReleaseNotes = parseAiReleaseNotes(parsed, packages);
 
   checkReleaseEmoji(parsed);
 
@@ -1367,7 +1477,8 @@ export function parseConfig(source: string | undefined): Config {
     changelogLinksText: parsed['changelog-links-text'],
     assignees: parsed.assignees,
     reviewers: parsed.reviewers,
-    aiReleaseNotes: parseAiReleaseNotes(parsed, packages),
+    aiReleaseNotes,
+    messages: parseMessages(parsed, packages, aiReleaseNotes),
     httpTimeout: parsed['http-timeout'],
     minorTypes,
     patchTypes,
