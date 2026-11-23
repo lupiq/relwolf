@@ -154,6 +154,11 @@
           "type": "string",
           "format": "uri"
         },
+        "token-url": {
+          "description": "OAuth 2.0 token endpoint (client credentials grant) for provider openai: relwolf fetches an access token with RELWOLF_AI_CLIENT_ID and RELWOLF_AI_CLIENT_SECRET instead of using RELWOLF_AI_API_KEY.",
+          "type": "string",
+          "format": "uri"
+        },
         "model": {
           "description": "Model name; the default of the Copilot CLI if omitted, required with provider openai and anthropic.",
           "type": "string",
@@ -255,6 +260,11 @@
                 },
                 "base-url": {
                   "description": "Base URL of the API (`/chat/completions` is appended for openai, `/messages` for anthropic); required with provider openai, defaults to https://api.anthropic.com/v1 with anthropic.",
+                  "type": "string",
+                  "format": "uri"
+                },
+                "token-url": {
+                  "description": "OAuth 2.0 token endpoint (client credentials grant) for provider openai: relwolf fetches an access token with RELWOLF_AI_CLIENT_ID and RELWOLF_AI_CLIENT_SECRET instead of using RELWOLF_AI_API_KEY.",
                   "type": "string",
                   "format": "uri"
                 },
@@ -371,6 +381,11 @@
                   "type": "string",
                   "format": "uri"
                 },
+                "token-url": {
+                  "description": "OAuth 2.0 token endpoint (client credentials grant) for provider openai: relwolf fetches an access token with RELWOLF_AI_CLIENT_ID and RELWOLF_AI_CLIENT_SECRET instead of using RELWOLF_AI_API_KEY.",
+                  "type": "string",
+                  "format": "uri"
+                },
                 "model": {
                   "description": "Model name; the default of the Copilot CLI if omitted, required with provider openai and anthropic.",
                   "type": "string",
@@ -479,6 +494,11 @@
               },
               "base-url": {
                 "description": "Base URL of the API (`/chat/completions` is appended for openai, `/messages` for anthropic); required with provider openai, defaults to https://api.anthropic.com/v1 with anthropic.",
+                "type": "string",
+                "format": "uri"
+              },
+              "token-url": {
+                "description": "OAuth 2.0 token endpoint (client credentials grant) for provider openai: relwolf fetches an access token with RELWOLF_AI_CLIENT_ID and RELWOLF_AI_CLIENT_SECRET instead of using RELWOLF_AI_API_KEY.",
                 "type": "string",
                 "format": "uri"
               },

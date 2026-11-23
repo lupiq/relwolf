@@ -140,6 +140,12 @@ const AI_SETTINGS_SHAPE = {
     .describe(
       'Base URL of the API (`/chat/completions` is appended for openai, `/messages` for anthropic); required with provider openai, defaults to https://api.anthropic.com/v1 with anthropic.',
     ),
+  'token-url': z
+    .url()
+    .optional()
+    .describe(
+      'OAuth 2.0 token endpoint (client credentials grant) for provider openai: relwolf fetches an access token with RELWOLF_AI_CLIENT_ID and RELWOLF_AI_CLIENT_SECRET instead of using RELWOLF_AI_API_KEY.',
+    ),
   'model': z
     .string()
     .min(1)
@@ -573,6 +579,8 @@ export interface AiSettings {
   provider: (typeof AI_PROVIDERS)[number];
   /** API base URL, with provider openai (required) or anthropic (optional). */
   baseUrl?: string;
+  /** OAuth 2.0 token endpoint (client credentials) of provider openai; replaces the static API key. */
+  tokenUrl?: string;
   model?: string;
   context: (typeof AI_CONTEXTS)[number];
   audience: string;
@@ -1064,6 +1072,7 @@ function resolveAiSettings(
     own[key] ?? shared[key];
   const provider = pick('provider') ?? 'copilot-cli';
   const baseUrl = pick('base-url');
+  const tokenUrl = pick('token-url');
   const model = pick('model');
   const prompt = pick('prompt');
   const maxInputChars = pick('max-input-chars');
@@ -1088,9 +1097,16 @@ function resolveAiSettings(
     );
   }
 
+  if (provider !== 'openai' && tokenUrl) {
+    throw new ConfigError(
+      `${label}: "token-url" only works with the provider "openai"`,
+    );
+  }
+
   return {
     provider,
     ...(baseUrl ? {baseUrl} : {}),
+    ...(tokenUrl ? {tokenUrl} : {}),
     ...(model ? {model} : {}),
     context: pick('context') ?? 'commits',
     audience: pick('audience') ?? 'users',

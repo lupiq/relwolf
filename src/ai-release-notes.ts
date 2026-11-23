@@ -189,12 +189,14 @@ export const outputHash = (text: string): string => hash(text.trim());
 const ANTHROPIC_BASE_URL = 'https://api.anthropic.com/v1';
 const ANTHROPIC_MAX_TOKENS = 4096;
 
-export interface Endpoint {
-  baseUrl: string;
-  apiKey: string;
-}
+export type Endpoint = {baseUrl: string} & (
+  {apiKey: string} | {tokenUrl: string; clientId: string; clientSecret: string}
+);
 
-/** The configured API (the Anthropic default for provider anthropic) with `RELWOLF_AI_API_KEY`, or a message about what is missing. */
+/**
+ * The configured API (the Anthropic default for provider anthropic) with `RELWOLF_AI_API_KEY`, or with
+ * `RELWOLF_AI_CLIENT_ID` and `RELWOLF_AI_CLIENT_SECRET` when `token-url` is set; or a message about what is missing.
+ */
 export function resolveEndpoint(
   settings: AiSettings,
   env: NodeJS.ProcessEnv,
@@ -207,9 +209,70 @@ export function resolveEndpoint(
     return 'ai-release-notes.base-url is not set';
   }
 
+  if (settings.tokenUrl) {
+    const {RELWOLF_AI_CLIENT_ID: clientId, RELWOLF_AI_CLIENT_SECRET: secret} =
+      env;
+
+    return clientId && secret
+      ? {baseUrl, tokenUrl: settings.tokenUrl, clientId, clientSecret: secret}
+      : 'RELWOLF_AI_CLIENT_ID and RELWOLF_AI_CLIENT_SECRET are required with token-url';
+  }
+
   return env.RELWOLF_AI_API_KEY
     ? {baseUrl, apiKey: env.RELWOLF_AI_API_KEY}
     : 'RELWOLF_AI_API_KEY is not set';
+}
+
+/** Access token of the OAuth 2.0 client credentials grant with HTTP Basic client authentication. */
+async function fetchAccessToken(
+  endpoint: {tokenUrl: string; clientId: string; clientSecret: string},
+  fetchImpl: FetchLike,
+  timeoutMs: number,
+): Promise<string> {
+  const credentials = Buffer.from(
+    `${endpoint.clientId}:${endpoint.clientSecret}`,
+  ).toString('base64');
+  let response: Response;
+
+  try {
+    response = await fetchImpl(endpoint.tokenUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${credentials}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Accept': 'application/json',
+      },
+      body: new URLSearchParams({grant_type: 'client_credentials'}).toString(),
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+  } catch (error) {
+    throw new Error(
+      `the token request to ${new URL(endpoint.tokenUrl).origin} failed: ${error instanceof Error ? error.message : String(error)}`,
+      {cause: error},
+    );
+  }
+
+  const text = await response.text();
+
+  if (!response.ok) {
+    throw new Error(
+      `the token request failed with ${response.status}: ${text.slice(0, 500)}\nHint: check RELWOLF_AI_CLIENT_ID, RELWOLF_AI_CLIENT_SECRET and token-url`,
+    );
+  }
+
+  let token: unknown;
+
+  try {
+    token = (JSON.parse(text) as {access_token?: unknown}).access_token;
+  } catch {
+    token = undefined;
+  }
+
+  if (typeof token !== 'string' || !token) {
+    throw new Error('the token response contains no access_token');
+  }
+
+  return token;
 }
 
 function hintFor(status: number): string | undefined {
@@ -366,17 +429,40 @@ export async function generateSummary(
   }
 
   const anthropic = settings.provider === 'anthropic';
+  let apiKey: string;
+
+  try {
+    apiKey =
+      'apiKey' in endpoint
+        ? endpoint.apiKey
+        : await fetchAccessToken(
+            endpoint,
+            options.fetchImpl ?? fetch,
+            options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+          );
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+
   const client = new HttpClient(
     endpoint.baseUrl,
     {
       ...(anthropic
-        ? {'x-api-key': endpoint.apiKey, 'anthropic-version': '2023-06-01'}
-        : {Authorization: `Bearer ${endpoint.apiKey}`}),
+        ? {'x-api-key': apiKey, 'anthropic-version': '2023-06-01'}
+        : {Authorization: `Bearer ${apiKey}`}),
       Accept: 'application/json',
     },
     options.fetchImpl,
     {
-      hint: hintFor,
+      hint: status =>
+        'apiKey' in endpoint
+          ? hintFor(status)
+          : status === 401 || status === 403
+            ? 'the access token was rejected, check the credentials and the subscription of the API'
+            : hintFor(status),
       ...(options.timeoutMs ? {timeoutMs: options.timeoutMs} : {}),
     },
   );

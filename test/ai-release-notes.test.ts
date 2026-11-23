@@ -175,6 +175,10 @@ ai-release-notes:
     ['provider: openai', /requires "base-url" and "model"/],
     ['provider: anthropic', /requires "model"/],
     ['base-url: https://llm.example.com/v1', /only works with the provider/],
+    [
+      'provider: anthropic\nmodel: m\ntoken-url: https://a.example.com/t',
+      /"token-url" only works with the provider "openai"/,
+    ],
   ])('rejects %s', (extra, error) => {
     expect(() => settings(extra)).toThrow(error);
   });
@@ -204,6 +208,61 @@ describe('resolveEndpoint', () => {
     expect(resolveEndpoint(custom, {GITHUB_TOKEN: 't'})).toMatch(
       /RELWOLF_AI_API_KEY/,
     );
+  });
+});
+
+describe('OAuth client credentials', () => {
+  const oauth = settings(
+    'provider: openai\nbase-url: https://llm.example.com/v1\ntoken-url: https://auth.example.com/token\nmodel: m',
+  );
+  const env = {RELWOLF_AI_CLIENT_ID: 'id', RELWOLF_AI_CLIENT_SECRET: 's:e'};
+
+  it('needs the client id and secret instead of the API key', () => {
+    expect(resolveEndpoint(oauth, env)).toEqual({
+      baseUrl: 'https://llm.example.com/v1',
+      tokenUrl: 'https://auth.example.com/token',
+      clientId: 'id',
+      clientSecret: 's:e',
+    });
+    expect(resolveEndpoint(oauth, {RELWOLF_AI_API_KEY: 'k'})).toMatch(
+      /RELWOLF_AI_CLIENT_ID/,
+    );
+  });
+
+  it('sends the fetched access token as bearer token', async () => {
+    const calls: Array<{url: string; init: RequestInit | undefined}> = [];
+    const result = await generateSummary(oauth, input, env, {
+      fetchImpl: async (url, init) => {
+        calls.push({url, init});
+
+        return url === 'https://auth.example.com/token'
+          ? Response.json({access_token: 'tok'})
+          : Response.json({choices: [{message: {content: 'Summary'}}]});
+      },
+    });
+
+    expect(result).toMatchObject({ok: true, text: 'Summary'});
+    expect(calls[0]!.init?.body).toBe('grant_type=client_credentials');
+    expect(calls[0]!.init?.headers).toMatchObject({
+      Authorization: `Basic ${Buffer.from('id:s:e').toString('base64')}`,
+    });
+    expect(calls[1]!.url).toBe('https://llm.example.com/v1/chat/completions');
+    expect(calls[1]!.init?.headers).toMatchObject({
+      Authorization: 'Bearer tok',
+    });
+  });
+
+  it('returns token failures instead of throwing', async () => {
+    const denied = await generateSummary(oauth, input, env, {
+      fetchImpl: async () => new Response('bad', {status: 401}),
+    });
+    const empty = await generateSummary(oauth, input, env, {
+      fetchImpl: async () => Response.json({}),
+    });
+
+    expect(denied).toMatchObject({ok: false});
+    expect(JSON.stringify(denied)).toMatch(/401/);
+    expect(JSON.stringify(empty)).toMatch(/access_token/);
   });
 });
 

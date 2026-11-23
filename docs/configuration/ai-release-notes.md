@@ -47,7 +47,10 @@ Only enable this with an endpoint you trust with that content.
   permission and without custom instructions, and removes all other tokens from its environment. `model` is optional
   and defaults to the one of the CLI.
 - **`openai`**: any OpenAI-compatible `/chat/completions` API (OpenAI, Azure OpenAI, Ollama, a gateway for Claude, …)
-  over plain HTTP. `base-url` and `model` are required, the key comes from `RELWOLF_AI_API_KEY`.
+  over plain HTTP. `base-url` and `model` are required, the key comes from `RELWOLF_AI_API_KEY`. For gateways that
+  issue short-lived OAuth 2.0 tokens (e.g. the [Swisscom Swiss AI Platform](#swisscom-swiss-ai-platform)), set
+  `token-url`: relwolf then fetches an access token via the client credentials grant, using `RELWOLF_AI_CLIENT_ID` and
+  `RELWOLF_AI_CLIENT_SECRET` instead of `RELWOLF_AI_API_KEY`.
 - **`anthropic`**: the [Claude API](https://docs.anthropic.com/en/api/messages) (`/messages`) directly. `model` is
   required (e.g. `claude-sonnet-4-5`), `base-url` defaults to `https://api.anthropic.com/v1`, the key comes from
   `RELWOLF_AI_API_KEY`.
@@ -65,6 +68,22 @@ ai-release-notes:
   model: claude-sonnet-4-5
 ```
 
+### Swisscom Swiss AI Platform
+
+The [Swiss AI Platform](https://digital.swisscom.com/products/swiss-ai-platform/info) serves OpenAI-compatible models
+behind an OAuth 2.0 gateway. Use the "Production Url" of your subscription in the Digital Marketplace as `base-url`
+(`https://api.swisscom.com/products/swiss-ai-platform/<subscription>/v1`), the token endpoint of the gateway as
+`token-url`, and the OAuth credentials of the subscription as `RELWOLF_AI_CLIENT_ID` and `RELWOLF_AI_CLIENT_SECRET`
+(secrets of the job).
+
+```yaml [relwolf.yaml]
+ai-release-notes:
+  provider: openai
+  base-url: https://api.swisscom.com/products/swiss-ai-platform/all-models/v1
+  token-url: https://api.swisscom.com/products/oauth2/token
+  model: mistralai/mistral-small-4-119b-2603
+```
+
 ## Outputs
 
 `changelog` adds the release notes to the new changelog entry above its first `###` section (at the end without one).
@@ -75,7 +94,7 @@ versa, and with both set the notes are generated separately for each. Without th
 Every entry of `additional-files` writes its own release notes to a Markdown file: a new entry with the release icon,
 linked version, date, and release notes is prepended below the `# <file-title>` heading of `file` (created if
 missing), e.g. for a documentation page. An entry accepts `file` (required), `file-title` and all other options
-(`provider`, `base-url`, `model`, `context`, `audience`, `include-paths`, `exclude-paths`, `language`, `input-price`, `output-price`, `max-input-chars`, `prompt`). Options that an entry
+(`provider`, `base-url`, `token-url`, `model`, `context`, `audience`, `include-paths`, `exclude-paths`, `language`, `input-price`, `output-price`, `max-input-chars`, `prompt`). Options that an entry
 leaves out are inherited from `ai-release-notes`, so you can create files for several audiences and languages, each with its
 own prompt. Every output is generated separately.
 
@@ -187,6 +206,7 @@ Top level (defaults), `changelog`, `release` and every entry of `additional-file
 | ----------------- | ------------- | ---------------------------------------------------------------------- |
 | `provider`        | `copilot-cli` | `copilot-cli`, `openai` or `anthropic`                                 |
 | `base-url`        | none          | API URL; required with `openai`, optional with `anthropic`             |
+| `token-url`       | none          | OAuth 2.0 token URL (client credentials), `openai` only                |
 | `model`           | CLI default   | Model name; required with `openai` and `anthropic`                     |
 | `context`         | `commits`     | `changelog`, `commits` or `full-diff`                                  |
 | `audience`        | `users`       | Free text, e.g. `users`, `developers`, `product managers`              |
