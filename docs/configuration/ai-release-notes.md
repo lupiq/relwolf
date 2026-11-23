@@ -125,8 +125,10 @@ monorepos every package gets its own release notes. `strategy: changesets` is no
 The release notes are rendered between hidden `relwolf:summary` markers in the release request:
 
 - Every block names what it is generated for: the tag, the package, and the changelog, the release or the file.
-- It is generated again whenever the commits of the release (or the model, language or prompt) change, so it is always
-  up to date when you merge.
+- It is generated again whenever the input of the model changes (the commits and diff of the release, taking
+  `include-paths` and `exclude-paths` into account, the model, language or prompt), so it is always up to date when you
+  merge. With `generate: always` (default) the model is only called in that case; if nothing changed, the existing text
+  is kept and costs nothing.
 - If you edit the text, relwolf keeps your version. Clear the text to leave the release notes out. A new version (new tag)
   starts with fresh release notes.
 - If the model cannot be reached or answers with an error, the release goes on without new release notes and the request

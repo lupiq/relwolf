@@ -7,7 +7,8 @@ Only things that are not enforced by ESLint, Prettier, commitlint or the type ch
 
 - **Do not make assumptions on open design questions – ask.**
 - Do not commit; the maintainer commits himself. After every implemented change, suggest a commit message that
-  follows the commitlint rules (header at most 100 characters).
+  follows the commitlint rules (header at most 100 characters, subject starts with a capital letter, add a scope such
+  as `ai-release-notes` where it makes sense). Check the suggestion with `echo "<message>" | npx commitlint` first.
 - Everything (code, docs, commits, changelog) is in English.
 - Pin dependency versions in `package.json` manually (no `^`/`~`; `pnpm add` ignores `save-exact`).
 - Never bump the version in `package.json` or `src/app-version.ts` manually; relwolf's own release does it
