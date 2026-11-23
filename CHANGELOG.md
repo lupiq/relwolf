@@ -2,6 +2,33 @@
 
 <!-- git-cliff: end of header -->
 
+## 🧩 [0.16.0](https://github.com/lupiq/relwolf/releases/tag/v0.16.0) - 2026-11-23
+
+[See changes](https://github.com/lupiq/relwolf/compare/v0.15.0...v0.16.0)
+
+### ⚠️ Breaking changes
+
+- **ai-release-notes**: `ai-release-notes.changelog` no longer adds the release notes to the created release. Set the new `ai-release-notes.release` option to write them into the release body as well. ([be22a24](https://github.com/lupiq/relwolf/commit/be22a2423eb8356ebf97a810240cc3becbb8b5eb))
+
+### 🚀 Features
+
+- **release-emoji**: Make sure the `release-emoji` is not repeated within at least 60 releases ([94671af](https://github.com/lupiq/relwolf/commit/94671af3cf76f28b23af4fa4959352ed956697e2))
+- **ai-release-notes**
+  - [**breaking**] Add possibility to write notes into the release separately from `changelog` ([be22a24](https://github.com/lupiq/relwolf/commit/be22a2423eb8356ebf97a810240cc3becbb8b5eb))
+  - Add `include-paths` as pendant to `exclude-paths` to simplify config ([e1a1a29](https://github.com/lupiq/relwolf/commit/e1a1a293479d05b4f7dbc2886b8cb4440bc3c5e8))
+  - Call model only once if configured outputs share exact same settings ([7ab7c6e](https://github.com/lupiq/relwolf/commit/7ab7c6e772e7d8f80e5b7322587068b3e7b2aae2))
+  - Support OAuth 2.0 client credentials for `openai` provider via `token-url` ([d517c67](https://github.com/lupiq/relwolf/commit/d517c67a53bdcd81817793aff561b1fc8c3cdbdc))
+
+### 📚 Documentation
+
+- **ai-release-notes**: Clarify when AI release notes are regenerated ([52c9a7e](https://github.com/lupiq/relwolf/commit/52c9a7e99d075df9ac1f6ea6ac4edc10b229de64))
+
+### 🧪 Testing
+
+- **E2E**: Improve tag deletion retries for GitLab ([9353594](https://github.com/lupiq/relwolf/commit/9353594f12b1c2248b7dd61fb6898e7986ec60b1))
+
+---
+
 ## 🌈 [0.15.0](https://github.com/lupiq/relwolf/releases/tag/v0.15.0) - 2026-11-19
 
 [See changes](https://github.com/lupiq/relwolf/compare/v0.14.1...v0.15.0)
