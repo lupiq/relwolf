@@ -9,7 +9,12 @@ import {
   resolveEndpoint,
   usageCost,
 } from '../src/ai-release-notes.js';
-import {aiAppliesTo, parseConfig, resolveAiFile} from '../src/config.js';
+import {
+  aiAppliesTo,
+  parseConfig,
+  resolveAiFile,
+  resolveAiPlaceholders,
+} from '../src/config.js';
 
 const settings = (yaml = 'language: English') =>
   parseConfig(
@@ -124,6 +129,12 @@ ai-release-notes:
     ).toBe(false);
     expect(resolveAiFile('${path}/N.md', {path: '.'})).toBe('N.md');
     expect(resolveAiFile('${component}.md', {path: '.'})).toBe('root.md');
+    expect(
+      resolveAiPlaceholders('Notes of `${component}` (${path})', {
+        path: 'a',
+        component: 'api',
+      }),
+    ).toBe('Notes of `api` (a)');
     expect(() => parseConfig(yaml('packages: [nope]'))).toThrow(/nope/);
   });
 

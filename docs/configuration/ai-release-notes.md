@@ -233,7 +233,7 @@ Only in `ai-release-notes`: `changelog` and `release` (`true` or an object, adds
 
 Only in `additional-files` entries:
 
-| Key          | Default             | Description                                   |
-| ------------ | ------------------- | --------------------------------------------- |
-| `file`       | required            | Markdown file that gets the release notes     |
-| `file-title` | `Release summaries` | First-level heading of the release notes file |
+| Key          | Default             | Description                                                                                          |
+| ------------ | ------------------- | ---------------------------------------------------------------------------------------------------- |
+| `file`       | required            | Markdown file that gets the release notes                                                            |
+| `file-title` | `Release summaries` | First-level heading of the release notes file; `${path}` and `${component}` are replaced per package |

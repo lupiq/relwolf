@@ -647,7 +647,7 @@
               },
               "file-title": {
                 "default": "Release summaries",
-                "description": "First-level heading of the release notes file.",
+                "description": "First-level heading of the release notes file. ${path} and ${component} are replaced per package.",
                 "type": "string",
                 "minLength": 1
               }

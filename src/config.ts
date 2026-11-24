@@ -515,7 +515,9 @@ export const configSchema = z.strictObject({
               .string()
               .min(1)
               .default('Release summaries')
-              .describe('First-level heading of the release notes file.'),
+              .describe(
+                'First-level heading of the release notes file. ${path} and ${component} are replaced per package.',
+              ),
           }),
         )
         .default([])
@@ -648,6 +650,7 @@ export interface AiScope {
 export interface AiFileConfig extends AiSettings, AiScope {
   /** Repository-relative path of the release notes file; may contain `${path}` and `${component}`. */
   file: string;
+  /** First-level heading; may contain `${path}` and `${component}`. */
   fileTitle: string;
 }
 
@@ -1199,16 +1202,22 @@ function parseAiScope(
 
 const AI_FILE_PLACEHOLDERS = ['${path}', '${component}'];
 
-/** Resolves the `${path}` and `${component}` placeholders of an additional file for a package. */
+/** Replaces the `${path}` and `${component}` placeholders of an additional file or its title for a package. */
+export function resolveAiPlaceholders(
+  text: string,
+  pkg: Pick<PackageConfig, 'path' | 'component'>,
+): string {
+  return text
+    .replaceAll('${path}', () => pkg.path)
+    .replaceAll('${component}', () => pkg.component ?? ROOT_KEY);
+}
+
+/** Resolves the placeholders of an additional file for a package. */
 export function resolveAiFile(
   file: string,
   pkg: Pick<PackageConfig, 'path' | 'component'>,
 ): string {
-  return path.posix.normalize(
-    file
-      .replaceAll('${path}', () => pkg.path)
-      .replaceAll('${component}', () => pkg.component ?? ROOT_KEY),
-  );
+  return path.posix.normalize(resolveAiPlaceholders(file, pkg));
 }
 
 /** Whether an output applies to the package. */

@@ -52,6 +52,7 @@ import {
 import {
   aiAppliesTo,
   resolveAiFile,
+  resolveAiPlaceholders,
   ROOT_KEY,
   tagPackagePath,
   type AiSettings,
@@ -1235,7 +1236,7 @@ async function applyPlan(
 
     target.current = prependFileEntry(
       target.current,
-      fileTitle,
+      resolveAiPlaceholders(fileTitle, pkg),
       renderFileEntry(
         pkg.component ? `${pkg.component} ${version}` : version,
         text,
