@@ -479,6 +479,25 @@ describe('generateSummary', () => {
     expect(missingKey).toMatchObject({ok: false});
   });
 
+  it('explains an empty answer with finish reason and tokens', async () => {
+    const result = await generateSummary(custom, input, env, {
+      fetchImpl: async () =>
+        Response.json({
+          choices: [
+            {
+              finish_reason: 'length',
+              message: {content: '', reasoning_content: 'thinking'},
+            },
+          ],
+          usage: {prompt_tokens: 10, completion_tokens: 20},
+        }),
+    });
+
+    expect(JSON.stringify(result)).toMatch(/finish reason: length/);
+    expect(JSON.stringify(result)).toMatch(/only reasoning output/);
+    expect(JSON.stringify(result)).toMatch(/tokens in\/out: 10\/20/);
+  });
+
   it('changes the input hash with the commits and the model', () => {
     const same = inputHash(custom, input);
 

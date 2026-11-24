@@ -125,6 +125,66 @@ const hash = (value: string): string =>
 export const sanitizeSummary = (text: string): string =>
   text.trim().replaceAll('<!--', '&lt;!--');
 
+/** Explains an empty model answer: finish reason, token usage, refusal, reasoning-only output. */
+function describeEmptyResponse(data: unknown, anthropic: boolean): string {
+  if (typeof data !== 'object' || data === null) {
+    return `response body was ${data === null ? 'empty' : typeof data}`;
+  }
+
+  const body = data as Record<string, unknown>;
+  const choice = (
+    body.choices as Array<Record<string, unknown>> | undefined
+  )?.[0];
+  const message = choice?.message as Record<string, unknown> | undefined;
+  const usage = body.usage as Record<string, unknown> | undefined;
+  const details: Array<string> = [];
+  const show = (value: unknown): string =>
+    typeof value === 'string' || typeof value === 'number'
+      ? String(value)
+      : '?';
+
+  if (!anthropic && !choice) {
+    details.push(
+      `no choices, response keys: ${Object.keys(body).join(', ') || 'none'}`,
+    );
+  }
+
+  const finish = anthropic ? body.stop_reason : choice?.finish_reason;
+
+  if (finish !== undefined) {
+    details.push(`finish reason: ${show(finish)}`);
+  }
+
+  if (typeof message?.refusal === 'string' && message.refusal) {
+    details.push(`refusal: ${message.refusal.slice(0, 200)}`);
+  }
+
+  const reasoning = message?.reasoning_content ?? message?.reasoning;
+
+  if (typeof reasoning === 'string' && reasoning) {
+    details.push(
+      `only reasoning output (${reasoning.length} characters), the model may have run out of tokens while thinking`,
+    );
+  }
+
+  if (message?.content !== undefined && typeof message.content !== 'string') {
+    details.push(
+      `content was ${message.content === null ? 'null' : typeof message.content}`,
+    );
+  } else if (message?.content === '') {
+    details.push('content was an empty string');
+  }
+
+  const input = usage?.input_tokens ?? usage?.prompt_tokens;
+  const output = usage?.output_tokens ?? usage?.completion_tokens;
+
+  if (input !== undefined || output !== undefined) {
+    details.push(`tokens in/out: ${show(input)}/${show(output)}`);
+  }
+
+  return details.join('; ') || 'no further details in the response';
+}
+
 export function renderPrompt(
   settings: AiSettings,
   input: SummaryInput,
@@ -513,7 +573,10 @@ export async function generateSummary(
 
     return text
       ? {ok: true, text, ...usage}
-      : {ok: false, error: 'the AI endpoint returned no text'};
+      : {
+          ok: false,
+          error: `the AI endpoint returned no text (${describeEmptyResponse(data, anthropic)})`,
+        };
   } catch (error) {
     return {
       ok: false,
