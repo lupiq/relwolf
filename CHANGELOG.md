@@ -2,6 +2,22 @@
 
 <!-- git-cliff: end of header -->
 
+## 🚢 [0.17.0](https://github.com/lupiq/relwolf/releases/tag/v0.17.0) - 2026-11-24
+
+[See changes](https://github.com/lupiq/relwolf/compare/v0.16.0...v0.17.0)
+
+### 🚀 Features
+
+- **messages**: Notify Slack, Teams or a webhook about new releases ([6cb1de3](https://github.com/lupiq/relwolf/commit/6cb1de3130831728c58ccce991a1e602cf053a6c))
+
+### 🐛 Bug Fixes
+
+- **ai-release-notes**
+  - Replace placeholders in `file-title` ([11bb805](https://github.com/lupiq/relwolf/commit/11bb8053bdfe5312b1a5917176fa2f28a207c018))
+  - Explain empty AI endpoint answers ([9b9909f](https://github.com/lupiq/relwolf/commit/9b9909f61b935415561c26b3e6bccf54cf2fbf09))
+
+---
+
 ## 🧩 [0.16.0](https://github.com/lupiq/relwolf/releases/tag/v0.16.0) - 2026-11-23
 
 [See changes](https://github.com/lupiq/relwolf/compare/v0.15.0...v0.16.0)
