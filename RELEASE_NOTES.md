@@ -1,5 +1,27 @@
 # Release Notes
 
+## 🚢 [0.17.0](https://github.com/lupiq/relwolf/releases/tag/v0.17.0) - 2026-11-24
+
+- **New `messages` config**: relwolf can post a message to **Slack**, **Microsoft Teams** or a generic **webhook** when it creates releases.
+  - Each entry sets a `type` (`slack`, `teams` or `webhook`).
+  - Optional keys are `sources`, `template`, `packages` and `exclude-packages`.
+  - The webhook URL is read only from the new env var **`RELWOLF_MESSAGE_WEBHOOK_URL`**, because it is a secret. All entries post to that one URL, so you normally configure one `type` per job.
+- **When messages are sent**:
+  - Messages go out only for releases created in that run, so re-running a job doesn't send duplicates.
+  - There is one message per group of linked packages (`linked-versions`); every other package gets its own.
+  - A missing or invalid URL, a network error or an error response only logs a warning and never affects the release.
+- **Sources and templates**:
+  - `sources` can be `release` (the default), `changelog`, `ai-release`, `ai-changelog` or `ai-file:<file>`. Listed sources are combined in order.
+  - The `ai-*` sources need the matching `ai-release-notes` entry, and config validation errors out if it is missing. The `ai-file:` file must be listed in `additional-files`.
+  - `template` supports `${releases}`, `${tags}`, `${version}`, `${name}`, `${url}` and `${notes}`. The default is `**${releases}**` followed by `${notes}`.
+  - Slack text is converted to mrkdwn, and Teams gets an Adaptive Card.
+  - The generic webhook receives `{text, releases: [...]}`.
+  - Text is capped at 20,000 characters.
+  - The release URL is only known in GitHub Actions and GitLab CI.
+- **AI release notes**:
+  - The `file-title` of `additional-files` entries now supports `${path}` and `${component}` placeholders, replaced per package.
+  - When the AI endpoint returns no text, the error now explains why. It includes the finish reason, any refusal, reasoning-only output, content type and token counts, which helps diagnose truncated or empty responses.
+
 ## 🧩 [0.16.0](https://github.com/lupiq/relwolf/releases/tag/v0.16.0) - 2026-11-23
 
 - **Breaking change: `changelog` and `release` are now separate outputs.** Previously `changelog: true` put AI notes in both the changelog and the created release. Now **`changelog`** only writes to the changelog entry. The new **`release`** option (`true` or an object with its own options, plus `packages` / `exclude-packages`) adds notes to the created release body.
