@@ -1212,9 +1212,12 @@ async function applyPlan(
     );
   }
 
-  for (const {file: template, fileTitle, ...settings} of ai.files.filter(
-    entry => aiAppliesTo(entry, pkg),
-  )) {
+  for (const {
+    file: template,
+    fileTitle,
+    entryTitle,
+    ...settings
+  } of ai.files.filter(entry => aiAppliesTo(entry, pkg))) {
     const file = resolveAiFile(template, pkg);
     const text =
       placeholder ||
@@ -1240,7 +1243,14 @@ async function applyPlan(
       target.current,
       resolveAiPlaceholders(fileTitle, pkg),
       renderFileEntry(
-        pkg.component ? `${pkg.component} ${version}` : version,
+        entryTitle
+          ? entryTitle
+              .replaceAll('${version}', version)
+              .replaceAll('${tag}', plan.tag)
+              .replaceAll('${component}', pkg.component ?? '')
+          : pkg.component
+            ? `${pkg.component} ${version}`
+            : version,
         text,
         new Date(),
         {

@@ -1786,6 +1786,26 @@ echo 'Copilot summary'
     expect(calls).toBe(2);
   });
 
+  it('renders the entry title from a template', async () => {
+    repo.write('package.json', PACKAGE_JSON);
+    repo.commit('feat: a');
+    await exec(
+      `${NODE_CONFIG}ai-release-notes:
+  additional-files:
+    - file: docs/summaries.md
+      entry-title: 'Release \${version} (\${tag})'
+      provider: openai
+      base-url: https://llm.example.com/v1
+      model: m
+`,
+      {env: {...env, GITHUB_REPOSITORY: 'lupiq/relwolf'}},
+    );
+
+    expect(file('docs/summaries.md')).toMatch(
+      /## \[Release 0\.1\.0 \(v0\.1\.0\)\]\(/,
+    );
+  });
+
   it('keeps it while the commits are unchanged and regenerates it for new commits', async () => {
     repo.write('package.json', PACKAGE_JSON);
     repo.commit('feat: a');

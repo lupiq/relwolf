@@ -650,6 +650,11 @@
                 "description": "First-level heading of the release notes file. ${path} and ${component} are replaced per package.",
                 "type": "string",
                 "minLength": 1
+              },
+              "entry-title": {
+                "description": "Title of every entry (without date and link). Placeholders: ${version}, ${tag}, ${component}. Default: the version, prefixed with the component if there is one.",
+                "type": "string",
+                "minLength": 1
               }
             },
             "required": [

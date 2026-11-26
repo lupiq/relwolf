@@ -518,6 +518,13 @@ export const configSchema = z.strictObject({
               .describe(
                 'First-level heading of the release notes file. ${path} and ${component} are replaced per package.',
               ),
+            'entry-title': z
+              .string()
+              .min(1)
+              .optional()
+              .describe(
+                'Title of every entry (without date and link). Placeholders: ${version}, ${tag}, ${component}. Default: the version, prefixed with the component if there is one.',
+              ),
           }),
         )
         .default([])
@@ -652,6 +659,8 @@ export interface AiFileConfig extends AiSettings, AiScope {
   file: string;
   /** First-level heading; may contain `${path}` and `${component}`. */
   fileTitle: string;
+  /** Entry title; may contain `${version}`, `${tag}` and `${component}`. The version (with component) if unset. */
+  entryTitle?: string;
 }
 
 export interface AiReleaseNotesConfig {
@@ -1281,7 +1290,10 @@ function parseAiReleaseNotes(
 
   const seen = new Set<string>();
   const files = additional.map(
-    ({file, 'file-title': fileTitle, ...own}, index) => {
+    (
+      {file, 'file-title': fileTitle, 'entry-title': entryTitle, ...own},
+      index,
+    ) => {
       const label = `ai-release-notes.additional-files[${index}]`;
       const templated = AI_FILE_PLACEHOLDERS.some(placeholder =>
         file.includes(placeholder),
@@ -1310,6 +1322,7 @@ function parseAiReleaseNotes(
         ...parseAiScope(own, packages, label),
         file: normalized,
         fileTitle,
+        ...(entryTitle ? {entryTitle} : {}),
       };
     },
   );
