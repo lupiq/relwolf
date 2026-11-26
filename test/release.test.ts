@@ -1101,6 +1101,22 @@ packages:
     );
   });
 
+  it('writes the text into the AI release notes files without calling the AI', async () => {
+    const files = await releaseThenChangeOrders(`${yaml}
+ai-release-notes:
+  additional-files:
+    - file: docs/summaries.md
+      provider: openai
+      base-url: https://llm.example.com/v1
+      model: m
+`);
+    const core = files.find(f => f.path === 'docs/summaries.md')!;
+
+    expect(core.content).toMatch(
+      /## core 0\.1\.1[\s\S]*No changes, version bumped to stay in sync\./,
+    );
+  });
+
   it('marks modules whose commits are all left out of the changelog', async () => {
     repo.write(
       'cliff.toml',

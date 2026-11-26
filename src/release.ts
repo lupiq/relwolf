@@ -1212,19 +1212,21 @@ async function applyPlan(
     );
   }
 
-  for (const {file: template, fileTitle, ...settings} of placeholder
-    ? []
-    : ai.files.filter(entry => aiAppliesTo(entry, pkg))) {
+  for (const {file: template, fileTitle, ...settings} of ai.files.filter(
+    entry => aiAppliesTo(entry, pkg),
+  )) {
     const file = resolveAiFile(template, pkg);
-    const text = await resolveSummary(
-      options,
-      git,
-      plan,
-      notes,
-      summaries,
-      settings,
-      file,
-    );
+    const text =
+      placeholder ||
+      (await resolveSummary(
+        options,
+        git,
+        plan,
+        notes,
+        summaries,
+        settings,
+        file,
+      ));
 
     if (!text) {
       continue;

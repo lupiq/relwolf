@@ -166,7 +166,8 @@ Usernames are resolved by the provider; unknown users fail the run.
 
 `no-changes-text` is written below the changelog entry (above a horizontal rule that ends the entry) and into the
 release notes of a package that was only released to follow the version of linked packages. Set it to an empty string
-to leave such entries as git-cliff renders them.
+to leave such entries as git-cliff renders them. The AI release notes files (`ai-release-notes.additional-files`) get
+the text as well, without calling the AI.
 
 ### Release title and text
 
