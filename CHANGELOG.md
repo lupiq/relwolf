@@ -2,6 +2,27 @@
 
 <!-- git-cliff: end of header -->
 
+## 💡 [0.18.0](https://github.com/lupiq/relwolf/releases/tag/v0.18.0) - 2026-11-27
+
+[See changes](https://github.com/lupiq/relwolf/compare/v0.17.0...v0.18.0)
+
+### 🚀 Features
+
+- **messages**: Add `webhook-url-env` to post entries to different webhooks ([e3e52f1](https://github.com/lupiq/relwolf/commit/e3e52f189f2777c3f869d9ff3bf0ceae5aadb43c))
+- **ai-release-notes**
+  - Add `entry-title` option for additional files ([b939135](https://github.com/lupiq/relwolf/commit/b93913555013165cf329313aab6c74e0886f56bd))
+  - Add `max-output-tokens` and `request-body` and fail on cut-off answers ([3925390](https://github.com/lupiq/relwolf/commit/3925390f3914a192d0ded45ef9b54ecfd8a1582e))
+
+### 🐛 Bug Fixes
+
+- **ai-release-notes**: Add the no-changes-text to additional files without changes ([3761a36](https://github.com/lupiq/relwolf/commit/3761a36c6778650c268ddd7f2474de2313e59512))
+
+### 🧪 Testing
+
+- **release**: Accept linked headings in AI release notes file test ([360bf65](https://github.com/lupiq/relwolf/commit/360bf65d994220f54e5c472a24ab52eb06cd64f0))
+
+---
+
 ## 🚢 [0.17.0](https://github.com/lupiq/relwolf/releases/tag/v0.17.0) - 2026-11-24
 
 [See changes](https://github.com/lupiq/relwolf/compare/v0.16.0...v0.17.0)

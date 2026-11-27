@@ -1,5 +1,30 @@
 # Release Notes
 
+## 💡 [0.18.0](https://github.com/lupiq/relwolf/releases/tag/v0.18.0) - 2026-11-27
+
+- **New AI options `max-output-tokens` and `request-body`** (providers `openai` and `anthropic` only; `copilot-cli` rejects them with a config error)
+  - `max-output-tokens` is sent as `max_tokens`. The default is the API default, or `4096` with `anthropic`.
+  - `request-body` adds extra top-level fields to the request, for example `reasoning_effort` for OpenAI or `chat_template_kwargs` to switch thinking off. `model`, `messages`, `system` and `stream` cannot be set.
+  - For APIs that don't accept `max_tokens`, set `max_completion_tokens` through `request-body` instead.
+  - Both options can be set at the top level, in `changelog` and `release`, and per `additional-files` entry. An entry that sets `request-body` replaces the top-level object rather than merging with it.
+  - Both values are part of the input hash, so changing them changes the cached input identity.
+
+- **Truncated output is now an error**
+  - If a model hits its token limit (`finish reason: length` or `stop reason: max_tokens`), relwolf reports a warning instead of publishing the cut-off text.
+  - The message suggests raising `max-output-tokens` or disabling reasoning. This mainly affects reasoning models, whose thinking counts against the limit.
+
+- **Per-message webhooks**
+  - Each `messages` entry accepts `webhook-url-env`, the name of the environment variable holding its webhook URL. The default is still `RELWOLF_MESSAGE_WEBHOOK_URL`.
+  - This allows posting to Slack and Teams in the same job.
+  - A missing or invalid URL now skips only that message, with a warning naming the type and tags, instead of skipping all messages.
+
+- **`entry-title` for `additional-files`**
+  - It sets the title of each entry and supports `${version}`, `${tag}` and `${component}`.
+  - The default is unchanged: the version, prefixed with the component if there is one.
+
+- **`no-changes-text` in AI release notes files**
+  - Packages released only to follow linked package versions now get `no-changes-text` in their `additional-files`, without calling the AI.
+
 ## 🚢 [0.17.0](https://github.com/lupiq/relwolf/releases/tag/v0.17.0) - 2026-11-24
 
 - **New `messages` config**: relwolf can post a message to **Slack**, **Microsoft Teams** or a generic **webhook** when it creates releases.

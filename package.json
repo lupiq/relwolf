@@ -1,6 +1,6 @@
 {
   "name": "relwolf",
-  "version": "0.17.0",
+  "version": "0.18.0",
   "description": "Releases, without the release hassle. Automate your releases with Conventional Commits. Review every change before it ships.",
   "type": "module",
   "packageManager": "pnpm@12.16.1",
