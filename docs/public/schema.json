@@ -281,6 +281,20 @@
             }
           ]
         },
+        "max-output-tokens": {
+          "description": "Upper bound for the tokens the model may generate (max_tokens in the request). Models that reason count their thinking against it, so raise it if answers are cut off or empty. Defaults to 4096 with anthropic and to the default of the API with openai.",
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        },
+        "request-body": {
+          "description": "Additional top-level fields of the request body for the providers openai and anthropic, e.g. reasoning_effort: none or chat_template_kwargs to switch off thinking. Replaces the object of the top level if set; model, messages, system and stream cannot be set.",
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {}
+        },
         "prompt": {
           "description": "Instructions for the model instead of the built-in ones. Placeholders: ${language}, ${tag}, ${version}, ${component}, ${audience}.",
           "type": "string",
@@ -389,6 +403,20 @@
                       "const": false
                     }
                   ]
+                },
+                "max-output-tokens": {
+                  "description": "Upper bound for the tokens the model may generate (max_tokens in the request). Models that reason count their thinking against it, so raise it if answers are cut off or empty. Defaults to 4096 with anthropic and to the default of the API with openai.",
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "request-body": {
+                  "description": "Additional top-level fields of the request body for the providers openai and anthropic, e.g. reasoning_effort: none or chat_template_kwargs to switch off thinking. Replaces the object of the top level if set; model, messages, system and stream cannot be set.",
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {}
                 },
                 "prompt": {
                   "description": "Instructions for the model instead of the built-in ones. Placeholders: ${language}, ${tag}, ${version}, ${component}, ${audience}.",
@@ -508,6 +536,20 @@
                     }
                   ]
                 },
+                "max-output-tokens": {
+                  "description": "Upper bound for the tokens the model may generate (max_tokens in the request). Models that reason count their thinking against it, so raise it if answers are cut off or empty. Defaults to 4096 with anthropic and to the default of the API with openai.",
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "request-body": {
+                  "description": "Additional top-level fields of the request body for the providers openai and anthropic, e.g. reasoning_effort: none or chat_template_kwargs to switch off thinking. Replaces the object of the top level if set; model, messages, system and stream cannot be set.",
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {}
+                },
                 "prompt": {
                   "description": "Instructions for the model instead of the built-in ones. Placeholders: ${language}, ${tag}, ${version}, ${component}, ${audience}.",
                   "type": "string",
@@ -623,6 +665,20 @@
                     "const": false
                   }
                 ]
+              },
+              "max-output-tokens": {
+                "description": "Upper bound for the tokens the model may generate (max_tokens in the request). Models that reason count their thinking against it, so raise it if answers are cut off or empty. Defaults to 4096 with anthropic and to the default of the API with openai.",
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              },
+              "request-body": {
+                "description": "Additional top-level fields of the request body for the providers openai and anthropic, e.g. reasoning_effort: none or chat_template_kwargs to switch off thinking. Replaces the object of the top level if set; model, messages, system and stream cannot be set.",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {}
               },
               "prompt": {
                 "description": "Instructions for the model instead of the built-in ones. Placeholders: ${language}, ${tag}, ${version}, ${component}, ${audience}.",

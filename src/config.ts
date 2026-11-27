@@ -201,6 +201,20 @@ const AI_SETTINGS_SHAPE = {
     .describe(
       'Upper bound for the context sent to the model, in characters (default 30000); false removes the limit.',
     ),
+  'max-output-tokens': z
+    .number()
+    .int()
+    .positive()
+    .optional()
+    .describe(
+      'Upper bound for the tokens the model may generate (max_tokens in the request). Models that reason count their thinking against it, so raise it if answers are cut off or empty. Defaults to 4096 with anthropic and to the default of the API with openai.',
+    ),
+  'request-body': z
+    .record(z.string(), z.unknown())
+    .optional()
+    .describe(
+      'Additional top-level fields of the request body for the providers openai and anthropic, e.g. reasoning_effort: none or chat_template_kwargs to switch off thinking. Replaces the object of the top level if set; model, messages, system and stream cannot be set.',
+    ),
   'prompt': z
     .string()
     .min(1)
@@ -654,6 +668,10 @@ export interface AiSettings {
   language: string;
   /** Upper bound for the context sent to the model, in characters; Infinity when disabled. */
   maxInputChars: number;
+  /** Upper bound for the tokens the model may generate, with the providers openai and anthropic. */
+  maxOutputTokens?: number;
+  /** Additional top-level fields of the request body, with the providers openai and anthropic. */
+  requestBody?: Record<string, unknown>;
   /** USD per million tokens, for the cost estimate in the usage comment. */
   inputPrice?: number;
   outputPrice?: number;
@@ -1129,6 +1147,8 @@ function checkReleaseEmoji(parsed: ParsedConfig): void {
   }
 }
 
+const RESERVED_REQUEST_FIELDS = ['model', 'messages', 'system', 'stream'];
+
 type AiRawSettings = {
   [Key in keyof typeof AI_SETTINGS_SHAPE]?: z.output<
     (typeof AI_SETTINGS_SHAPE)[Key]
@@ -1152,6 +1172,8 @@ function resolveAiSettings(
   const model = pick('model');
   const prompt = pick('prompt');
   const maxInputChars = pick('max-input-chars');
+  const maxOutputTokens = pick('max-output-tokens');
+  const requestBody = pick('request-body');
   const inputPrice = pick('input-price');
   const outputPrice = pick('output-price');
 
@@ -1179,6 +1201,27 @@ function resolveAiSettings(
     );
   }
 
+  if (provider === 'copilot-cli') {
+    for (const [key, value] of [
+      ['max-output-tokens', maxOutputTokens],
+      ['request-body', requestBody],
+    ] as const) {
+      if (value !== undefined) {
+        throw new ConfigError(
+          `${label}: "${key}" only works with the providers "openai" and "anthropic"`,
+        );
+      }
+    }
+  }
+
+  for (const key of Object.keys(requestBody ?? {})) {
+    if (RESERVED_REQUEST_FIELDS.includes(key)) {
+      throw new ConfigError(
+        `${label}: "request-body" cannot set "${key}", relwolf sets it itself`,
+      );
+    }
+  }
+
   return {
     provider,
     ...(baseUrl ? {baseUrl} : {}),
@@ -1197,6 +1240,8 @@ function resolveAiSettings(
     language: pick('language') ?? 'English',
     maxInputChars:
       maxInputChars === false ? Infinity : (maxInputChars ?? 30_000),
+    ...(maxOutputTokens === undefined ? {} : {maxOutputTokens}),
+    ...(requestBody ? {requestBody} : {}),
     ...(inputPrice === undefined ? {} : {inputPrice}),
     ...(outputPrice === undefined ? {} : {outputPrice}),
     ...(prompt ? {prompt} : {}),

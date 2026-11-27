@@ -507,6 +507,93 @@ describe('generateSummary', () => {
   });
 });
 
+describe('token limit and request body', () => {
+  const requestOf = async (yaml: string, answer: object = {}) => {
+    let body: any;
+    const result = await generateSummary(
+      settings(yaml),
+      input,
+      {RELWOLF_AI_API_KEY: 'k'},
+      {
+        fetchImpl: async (_url, init) => {
+          body = JSON.parse(init?.body as string);
+
+          return Response.json(answer);
+        },
+      },
+    );
+
+    return {body, result};
+  };
+
+  it('sends max-output-tokens and the request body to openai', async () => {
+    const {body} = await requestOf(
+      'provider: openai\nbase-url: https://llm.example.com/v1\nmodel: m\nmax-output-tokens: 16000\nrequest-body:\n  reasoning_effort: none',
+    );
+
+    expect(body).toMatchObject({
+      model: 'm',
+      max_tokens: 16000,
+      reasoning_effort: 'none',
+    });
+  });
+
+  it('sends no token limit to openai by default and 4096 to anthropic', async () => {
+    const openai = await requestOf(
+      'provider: openai\nbase-url: https://llm.example.com/v1\nmodel: m',
+    );
+    const anthropic = await requestOf('provider: anthropic\nmodel: m');
+    const custom = await requestOf(
+      'provider: anthropic\nmodel: m\nmax-output-tokens: 9000',
+    );
+
+    expect(openai.body).not.toHaveProperty('max_tokens');
+    expect(anthropic.body.max_tokens).toBe(4096);
+    expect(custom.body.max_tokens).toBe(9000);
+  });
+
+  it('fails instead of publishing an answer that was cut off', async () => {
+    const openai = await requestOf(
+      'provider: openai\nbase-url: https://llm.example.com/v1\nmodel: m',
+      {choices: [{finish_reason: 'length', message: {content: 'Half a'}}]},
+    );
+    const anthropic = await requestOf('provider: anthropic\nmodel: m', {
+      stop_reason: 'max_tokens',
+      content: [{type: 'text', text: 'Half a'}],
+    });
+
+    for (const {result} of [openai, anthropic]) {
+      expect(result).toMatchObject({ok: false});
+      expect(JSON.stringify(result)).toMatch(/cut off.*max-output-tokens/);
+    }
+  });
+
+  it('changes the input hash with the options', () => {
+    const base = settings(
+      'provider: openai\nbase-url: https://llm.example.com/v1\nmodel: m',
+    );
+
+    expect(inputHash({...base, maxOutputTokens: 1}, input)).not.toBe(
+      inputHash(base, input),
+    );
+    expect(inputHash({...base, requestBody: {a: 1}}, input)).not.toBe(
+      inputHash(base, input),
+    );
+  });
+
+  it('rejects the options with the Copilot CLI and reserved fields', () => {
+    expect(() => settings('max-output-tokens: 100')).toThrow(
+      /only works with the providers/,
+    );
+    expect(() => settings('request-body:\n  a: 1')).toThrow(
+      /only works with the providers/,
+    );
+    expect(() =>
+      settings('provider: anthropic\nmodel: m\nrequest-body:\n  messages: []'),
+    ).toThrow(/cannot set "messages"/);
+  });
+});
+
 describe('token usage', () => {
   it('reads it from the Copilot CLI usage file', async () => {
     const result = await generateSummary(

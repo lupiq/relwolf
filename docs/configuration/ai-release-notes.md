@@ -84,6 +84,25 @@ ai-release-notes:
   model: mistralai/mistral-small-4-119b-2603
 ```
 
+### Reasoning models and token limits
+
+Models that think before they answer count their reasoning against the output limit. If it is used up, the answer is
+empty or cut off and relwolf reports a warning (`finish reason: length`) instead of publishing a truncated text. Raise
+`max-output-tokens` (sent as `max_tokens`) and/or switch the reasoning off with `request-body`, whose fields are added to
+the top level of the request. The field depends on the API, e.g. `reasoning_effort` for OpenAI or `chat_template_kwargs`
+for vLLM:
+
+```yaml [relwolf.yaml]
+ai-release-notes:
+  max-output-tokens: 16000
+  request-body:
+    chat_template_kwargs:
+      enable_thinking: false
+```
+
+`model`, `messages`, `system` and `stream` cannot be set. Use `request-body` with `max_completion_tokens` instead of
+`max-output-tokens` for APIs that do not accept `max_tokens`.
+
 ## Outputs
 
 `changelog` adds the release notes to the new changelog entry above its first `###` section (at the end without one).
@@ -94,7 +113,7 @@ versa, and with both set the notes are generated separately for each. Without th
 Every entry of `additional-files` writes its own release notes to a Markdown file: a new entry with the release icon,
 linked version, date, and release notes is prepended below the `# <file-title>` heading of `file` (created if
 missing), e.g. for a documentation page. An entry accepts `file` (required), `file-title` and all other options
-(`provider`, `base-url`, `token-url`, `model`, `context`, `audience`, `include-paths`, `exclude-paths`, `language`, `input-price`, `output-price`, `max-input-chars`, `prompt`). Options that an entry
+(`provider`, `base-url`, `token-url`, `model`, `context`, `audience`, `include-paths`, `exclude-paths`, `language`, `input-price`, `output-price`, `max-input-chars`, `max-output-tokens`, `request-body`, `prompt`). Options that an entry
 leaves out are inherited from `ai-release-notes`, so you can create files for several audiences and languages, each with its
 own prompt. Every output is generated separately.
 
@@ -204,21 +223,23 @@ compatibility details.
 
 Top level (defaults), `changelog`, `release` and every entry of `additional-files` (unset options are inherited from the top level):
 
-| Key               | Default       | Description                                                            |
-| ----------------- | ------------- | ---------------------------------------------------------------------- |
-| `provider`        | `copilot-cli` | `copilot-cli`, `openai` or `anthropic`                                 |
-| `base-url`        | none          | API URL; required with `openai`, optional with `anthropic`             |
-| `token-url`       | none          | OAuth 2.0 token URL (client credentials), `openai` only                |
-| `model`           | CLI default   | Model name; required with `openai` and `anthropic`                     |
-| `context`         | `commits`     | `changelog`, `commits` or `full-diff`                                  |
-| `audience`        | `users`       | Free text, e.g. `users`, `developers`, `product managers`              |
-| `include-paths`   | all files     | Only these globs are part of the `full-diff` context                   |
-| `exclude-paths`   | `[]`          | Globs excluded from the `full-diff` context (after `include-paths`)    |
-| `language`        | `English`     | Language of the release notes                                          |
-| `input-price`     | none          | USD per million input tokens, for the cost estimate                    |
-| `output-price`    | none          | USD per million output tokens, for the cost estimate                   |
-| `max-input-chars` | `30000`       | Max characters of context sent to the model; `false` removes the limit |
-| `prompt`          | built in      | Instructions for the model                                             |
+| Key                 | Default                               | Description                                                                     |
+| ------------------- | ------------------------------------- | ------------------------------------------------------------------------------- |
+| `provider`          | `copilot-cli`                         | `copilot-cli`, `openai` or `anthropic`                                          |
+| `base-url`          | none                                  | API URL; required with `openai`, optional with `anthropic`                      |
+| `token-url`         | none                                  | OAuth 2.0 token URL (client credentials), `openai` only                         |
+| `model`             | CLI default                           | Model name; required with `openai` and `anthropic`                              |
+| `context`           | `commits`                             | `changelog`, `commits` or `full-diff`                                           |
+| `audience`          | `users`                               | Free text, e.g. `users`, `developers`, `product managers`                       |
+| `include-paths`     | all files                             | Only these globs are part of the `full-diff` context                            |
+| `exclude-paths`     | `[]`                                  | Globs excluded from the `full-diff` context (after `include-paths`)             |
+| `language`          | `English`                             | Language of the release notes                                                   |
+| `input-price`       | none                                  | USD per million input tokens, for the cost estimate                             |
+| `output-price`      | none                                  | USD per million output tokens, for the cost estimate                            |
+| `max-input-chars`   | `30000`                               | Max characters of context sent to the model; `false` removes the limit          |
+| `max-output-tokens` | API default (`4096` with `anthropic`) | Max tokens the model may generate (`max_tokens`), `openai` and `anthropic` only |
+| `request-body`      | none                                  | Extra top-level fields of the request body, `openai` and `anthropic` only       |
+| `prompt`            | built in                              | Instructions for the model                                                      |
 
 Only in `changelog`, `release` and `additional-files` entries:
 

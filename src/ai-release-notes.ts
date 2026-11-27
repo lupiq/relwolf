@@ -182,6 +182,12 @@ function describeEmptyResponse(data: unknown, anthropic: boolean): string {
     details.push(`tokens in/out: ${show(input)}/${show(output)}`);
   }
 
+  if (finish === 'length' || finish === 'max_tokens') {
+    details.push(
+      'raise max-output-tokens or switch off thinking with request-body',
+    );
+  }
+
   return details.join('; ') || 'no further details in the response';
 }
 
@@ -240,6 +246,9 @@ export function inputHash(settings: AiSettings, input: SummaryInput): string {
       settings.model,
       renderPrompt(settings, input),
       renderInput(settings, input),
+      ...(settings.maxOutputTokens || settings.requestBody
+        ? [settings.maxOutputTokens, settings.requestBody]
+        : []),
     ]),
   );
 }
@@ -528,24 +537,30 @@ export async function generateSummary(
   );
 
   try {
-    const response = anthropic
-      ? await client.request('POST', '/messages', {
-          body: {
-            model: settings.model,
-            max_tokens: ANTHROPIC_MAX_TOKENS,
+    const body = {
+      ...(anthropic ? {max_tokens: ANTHROPIC_MAX_TOKENS} : {}),
+      ...settings.requestBody,
+      ...(settings.maxOutputTokens
+        ? {max_tokens: settings.maxOutputTokens}
+        : {}),
+      model: settings.model,
+      ...(anthropic
+        ? {
             system: renderPrompt(settings, input),
             messages: [{role: 'user', content: renderInput(settings, input)}],
-          },
-        })
-      : await client.request('POST', '/chat/completions', {
-          body: {
-            model: settings.model,
+          }
+        : {
             messages: [
               {role: 'system', content: renderPrompt(settings, input)},
               {role: 'user', content: renderInput(settings, input)},
             ],
-          },
-        });
+          }),
+    };
+    const response = await client.request(
+      'POST',
+      anthropic ? '/messages' : '/chat/completions',
+      {body},
+    );
     const data = response.data as {
       choices?: Array<{message?: {content?: unknown}}>;
       content?: Array<{type?: string; text?: unknown}>;
@@ -570,6 +585,18 @@ export async function generateSummary(
         data?.usage?.output_tokens ?? data?.usage?.completion_tokens,
       ),
     });
+
+    const choice = data?.choices?.[0] as {finish_reason?: unknown} | undefined;
+    const cutOff = anthropic
+      ? (data as {stop_reason?: unknown} | null)?.stop_reason === 'max_tokens'
+      : choice?.finish_reason === 'length';
+
+    if (text && cutOff) {
+      return {
+        ok: false,
+        error: `the answer of the AI endpoint was cut off at the token limit (${anthropic ? 'stop reason: max_tokens' : 'finish reason: length'}); raise max-output-tokens or switch off thinking with request-body`,
+      };
+    }
 
     return text
       ? {ok: true, text, ...usage}
