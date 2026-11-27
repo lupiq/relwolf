@@ -7,6 +7,10 @@ description: Set up relwolf as a GitLab CI job to open release merge requests fr
 
 Works with gitlab.com and self-managed instances.
 
+::: tip Set up with your AI agent
+The [`relwolf-setup` skill](/guide/ai-setup) can create the files of this guide for you.
+:::
+
 ## 1. Create a token
 
 Create a **personal or project access token** with the `api` scope and role Developer or higher. It must be able to push

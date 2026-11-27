@@ -151,6 +151,7 @@ export default defineConfig({
         link: '/guide/',
         items: [
           {text: 'Getting started', link: '/guide/getting-started'},
+          {text: 'Set up with AI', link: '/guide/ai-setup'},
           {text: 'GitLab', link: '/guide/gitlab'},
           {text: 'GitHub', link: '/guide/github'},
           {text: 'How it works', link: '/guide/how-it-works'},

@@ -16,6 +16,9 @@ hero:
       text: Get started
       link: /guide/getting-started
     - theme: alt
+      text: Set up with AI
+      link: /guide/ai-setup
+    - theme: alt
       text: GitLab
       link: /guide/gitlab
     - theme: alt
@@ -23,6 +26,10 @@ hero:
       link: /guide/github
 
 features:
+  - title: Set up with your AI agent
+    details: The relwolf-setup skill analyzes your repository, single project or monorepo, asks for your preferences and creates relwolf.yaml, the CI job and commit linting. Nothing is written before you confirm.
+    link: /guide/ai-setup
+    linkText: Set up with AI
   - title: Review before it ships
     details: Changelog and new version arrive as a release merge (pull) request. Nothing is tagged until a person merges it, and you can edit the release title and text first.
     link: /guide/how-it-works

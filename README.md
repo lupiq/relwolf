@@ -59,6 +59,18 @@ not want to follow Conventional Commits and do not use Changesets.
 
 relwolf needs squash merging, the full git history and an access token stored as `RELWOLF_TOKEN`.
 
+### Set up with your AI agent
+
+The `relwolf-setup` [agent skill](https://agentskills.io) (GitHub Copilot, Claude Code, Codex, Cursor, ...) analyzes
+your repository (single project or monorepo), asks for your preferences and, after your confirmation, creates
+`relwolf.yaml`, the CI job and optional commit linting:
+
+```sh
+npx skills add lupiq/relwolf
+```
+
+See [Set up with AI](https://relwolf.lupiq.io/guide/ai-setup). Or set up everything by hand:
+
 ### GitHub Actions
 
 Allow squash merging only in the repository settings, then add `.github/workflows/release.yml`:

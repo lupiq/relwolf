@@ -7,6 +7,10 @@ description: Use the relwolf GitHub Action to open release pull requests from Co
 
 relwolf is available as a Docker container action. It runs on **Linux runners** only.
 
+::: tip Set up with your AI agent
+The [`relwolf-setup` skill](/guide/ai-setup) can create the files of this guide for you.
+:::
+
 ## 1. Create a token
 
 Store a token as the repository secret **`RELWOLF_TOKEN`**.

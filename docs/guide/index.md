@@ -10,6 +10,7 @@ Everything you need to automate releases with relwolf.
 ## Set up
 
 - [Getting started](/guide/getting-started): the concepts, the requirements and the quickest way to your first release
+- [Set up with AI](/guide/ai-setup): let your AI agent analyze the repository and configure relwolf
 - [GitLab](/guide/gitlab): set up the CI job
 - [GitHub](/guide/github): set up the GitHub Action
 

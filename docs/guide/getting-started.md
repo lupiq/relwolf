@@ -22,6 +22,11 @@ Prefer to describe changes in changeset files instead of commit messages? With
 [`strategy: changesets`](/configuration/changesets), [Changesets](https://changesets.dev) decides versions and
 changelogs, and relwolf takes care of the release merge request, tags and releases.
 
+::: tip Set up with your AI agent
+The [`relwolf-setup` skill](/guide/ai-setup) analyzes your repository (single project or monorepo), asks for your
+preferences and creates `relwolf.yaml` and the CI job for you.
+:::
+
 ## Choose your platform
 
 |             | GitLab                             | GitHub                        |
