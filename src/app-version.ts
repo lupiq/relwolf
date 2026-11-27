@@ -1,2 +1,2 @@
 /** The version of relwolf itself; kept up to date by the generic updater of relwolf's own release. */
-export const RELWOLF_VERSION = '0.17.0'; // x-relwolf-version
+export const RELWOLF_VERSION = '0.18.0'; // x-relwolf-version
