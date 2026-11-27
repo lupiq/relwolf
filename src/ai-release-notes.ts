@@ -45,7 +45,8 @@ export interface TokenUsage {
 }
 
 export type SummaryResult =
-  {ok: true; text: string; usage?: TokenUsage} | {ok: false; error: string};
+  | {ok: true; text: string; usage?: TokenUsage}
+  | {ok: false; error: string; usage?: TokenUsage};
 
 const count = (value: unknown): number =>
   typeof value === 'number' && Number.isFinite(value) && value >= 0
@@ -461,7 +462,11 @@ async function generateWithCopilot(
 
     return text
       ? {ok: true, text, ...(usage ? {usage} : {})}
-      : {ok: false, error: 'the Copilot CLI returned no text'};
+      : {
+          ok: false,
+          error: 'the Copilot CLI returned no text',
+          ...(usage ? {usage} : {}),
+        };
   } catch (error) {
     const {code, stderr} = error as {code?: string; stderr?: string};
     const detail =
@@ -469,7 +474,10 @@ async function generateWithCopilot(
         ? 'the Copilot CLI is not installed (npm install -g @github/copilot, or set RELWOLF_COPILOT_CLI)'
         : `the Copilot CLI failed: ${(stderr?.trim() ? stderr : (error as Error).message).trim().slice(0, 500)}`;
 
-    return {ok: false, error: detail};
+    // A failed run may still have called (and been billed for) the model.
+    const usage = await readCopilotUsage(usageFile);
+
+    return {ok: false, error: detail, ...(usage ? {usage} : {})};
   } finally {
     await rm(dir, {recursive: true, force: true});
   }

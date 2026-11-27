@@ -627,6 +627,34 @@ describe('token usage', () => {
     });
   });
 
+  it('keeps the usage of a failed Copilot CLI run', async () => {
+    const result = await generateSummary(
+      settings('model: gpt-5'),
+      input,
+      {COPILOT_GITHUB_TOKEN: 't'},
+      {
+        runner: async (_command, args) => {
+          const file = args[args.indexOf('--usage-output-file') + 1]!;
+
+          await writeFile(
+            file,
+            JSON.stringify({
+              totalNanoAiu: 1_000_000_000,
+              modelMetrics: {a: {usage: {inputTokens: 10, outputTokens: 2}}},
+            }),
+          );
+
+          throw new Error('boom');
+        },
+      },
+    );
+
+    expect(result).toMatchObject({
+      ok: false,
+      usage: {input: 10, output: 2, credits: 1},
+    });
+  });
+
   it('reads it from openai and anthropic responses', async () => {
     const fetchWith = (data: unknown) => async () => Response.json(data);
     const openai = await generateSummary(

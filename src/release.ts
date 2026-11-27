@@ -1047,17 +1047,6 @@ async function resolveSummary(
     ...(options.log ? {log: options.log} : {}),
   });
 
-  if (!result.ok) {
-    options.log?.(`The ${label} failed: ${result.error}`);
-    state.warnings.push(`The ${label} could not be generated: ${result.error}`);
-
-    if (old) {
-      state.stored.push(old);
-    }
-
-    return old ? releaseText(old.text) || undefined : undefined;
-  }
-
   if (result.usage) {
     const cost = usageCost(result.usage, settings);
 
@@ -1076,6 +1065,17 @@ async function resolveSummary(
     options.log?.(
       `The ${label} used ${result.usage.input} input and ${result.usage.output} output tokens${result.usage.credits === undefined ? '' : `, ${result.usage.credits} AI credits`}${cost === undefined ? '' : ` (about $${cost.toFixed(4)})`}.`,
     );
+  }
+
+  if (!result.ok) {
+    options.log?.(`The ${label} failed: ${result.error}`);
+    state.warnings.push(`The ${label} could not be generated: ${result.error}`);
+
+    if (old) {
+      state.stored.push(old);
+    }
+
+    return old ? releaseText(old.text) || undefined : undefined;
   }
 
   state.generated.set(current, result.text);
@@ -1843,6 +1843,7 @@ async function prepareReleaseRequest(
 
   if (existing?.title === title && existing.body === body) {
     log(`Release request #${existing.id} is up to date: ${existing.url}`);
+    await recordUsage(options, existing.id, prepared.summaries, log);
 
     return {id: existing.id, url: existing.url, action: 'unchanged'};
   }
@@ -1854,15 +1855,24 @@ async function prepareReleaseRequest(
     ? await updateRequest(options, existing, title, body, log)
     : await createRequest(options, branch, sourceBranch, title, body, log);
 
-  if (
-    config.aiReleaseNotes.usageComment &&
-    prepared.summaries &&
-    prepared.summaries.usage.runs > 0
-  ) {
-    await saveUsageComment(options, result.id, prepared.summaries.usage, log);
-  }
+  await recordUsage(options, result.id, prepared.summaries, log);
 
   return result;
+}
+
+async function recordUsage(
+  options: RunOptions,
+  id: number,
+  summaries: SummaryState | undefined,
+  log: (message: string) => void,
+): Promise<void> {
+  if (
+    options.config.aiReleaseNotes.usageComment &&
+    summaries &&
+    summaries.usage.runs > 0
+  ) {
+    await saveUsageComment(options, id, summaries.usage, log);
+  }
 }
 
 /** Adds this run to the usage comment of the release request; a failure only gets logged. */
