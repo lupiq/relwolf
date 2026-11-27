@@ -2049,6 +2049,30 @@ describe('messages', () => {
     expect(logs.join('\n')).toMatch(/RELWOLF_MESSAGE_WEBHOOK_URL is not set/);
   });
 
+  it('posts each entry to the URL of its webhook-url-env', async () => {
+    const other = 'https://chat.example.com/other';
+    const yaml = `${NODE_CONFIG}messages:
+  - type: slack
+  - type: teams
+    webhook-url-env: TEAMS_URL
+  - type: webhook
+    webhook-url-env: MISSING_URL
+`;
+    const logs: Array<string> = [];
+
+    repo.write('package.json', PACKAGE_JSON);
+    repo.commit('feat: initial');
+    await exec(yaml, {env});
+    mergeLastRelease(repo, provider, 1);
+    await exec(yaml, {
+      env: {...env, TEAMS_URL: other},
+      log: message => logs.push(message),
+    });
+
+    expect(posts.map(post => post.url)).toEqual([URL, other]);
+    expect(logs.join('\n')).toMatch(/MISSING_URL is not set/);
+  });
+
   it('combines the selected sources into one message per linked group', async () => {
     const yaml = `linked-versions:
   - [services/api, services/web]

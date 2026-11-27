@@ -63,7 +63,6 @@ import {leadingEmoji, randomEmoji} from './emoji.js';
 import {CommandError, Git, run as runCommand} from './git.js';
 import {
   buildMessages,
-  MESSAGE_WEBHOOK_ENV,
   sendMessage,
   validWebhookUrl,
   type CreatedRelease,
@@ -471,18 +470,20 @@ async function notifyReleases(
     return;
   }
 
-  const url = (options.env ?? process.env)[MESSAGE_WEBHOOK_ENV]?.trim();
-
-  if (!url || !validWebhookUrl(url)) {
-    log(
-      `Warning: no messages sent, ${MESSAGE_WEBHOOK_ENV} is ${url ? 'not a valid http(s) URL' : 'not set'}.`,
-    );
-
-    return;
-  }
+  const env = options.env ?? process.env;
 
   for (const message of buildMessages(config, releases, summaries)) {
     const tags = message.releases.map(release => release.tag).join(', ');
+    const name = message.config.webhookUrlEnv;
+    const url = env[name]?.trim();
+
+    if (!url || !validWebhookUrl(url)) {
+      log(
+        `Warning: no ${message.config.type} message sent for ${tags}, ${name} is ${url ? 'not a valid http(s) URL' : 'not set'}.`,
+      );
+
+      continue;
+    }
 
     try {
       await sendMessage(message, url, config.httpTimeout * 1000);

@@ -345,7 +345,13 @@ describe('messages', () => {
   it('defaults to the release source and no messages', () => {
     expect(parseConfig(undefined).messages).toEqual([]);
     expect(parseConfig('messages:\n  - type: slack').messages).toEqual([
-      {type: 'slack', sources: ['release'], packages: [], excludePackages: []},
+      {
+        type: 'slack',
+        sources: ['release'],
+        webhookUrlEnv: 'RELWOLF_MESSAGE_WEBHOOK_URL',
+        packages: [],
+        excludePackages: [],
+      },
     ]);
   });
 

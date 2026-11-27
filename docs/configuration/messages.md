@@ -13,14 +13,16 @@ messages:
   - type: slack # slack, teams or webhook
     sources: [ai-release, changelog] # default: release
     packages: [api] # optional, like in ai-release-notes
+    webhook-url-env: SLACK_WEBHOOK_URL # default: RELWOLF_MESSAGE_WEBHOOK_URL
     template: |
       **${releases}**
 
       ${notes}
 ```
 
-The URL of the webhook is a secret and is therefore only read from the environment variable
-`RELWOLF_MESSAGE_WEBHOOK_URL`. All entries are posted to this URL, so you normally configure one `type` per job.
+The URL of the webhook is a secret and is therefore only read from an environment variable. By default this is
+`RELWOLF_MESSAGE_WEBHOOK_URL`; entries without `webhook-url-env` share this URL. Set `webhook-url-env` to the name of
+another variable to post an entry to a different webhook, e.g. to notify Slack and Teams in the same job.
 
 ## When messages are sent
 

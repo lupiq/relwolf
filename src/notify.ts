@@ -8,8 +8,6 @@ import {
   type PackageConfig,
 } from './config.js';
 
-export const MESSAGE_WEBHOOK_ENV = 'RELWOLF_MESSAGE_WEBHOOK_URL';
-
 export const DEFAULT_MESSAGE_TEMPLATE = '**${releases}**\n\n${notes}';
 
 /** Upper bound of the message text; the limits of Slack and Teams are at 40000 and about 28 KB. */

@@ -137,7 +137,7 @@
     },
     "messages": {
       "default": [],
-      "description": "Messages sent to the webhook in RELWOLF_MESSAGE_WEBHOOK_URL when releases were created.",
+      "description": "Messages sent to webhooks (URL from RELWOLF_MESSAGE_WEBHOOK_URL or the webhook-url-env of the entry) when releases were created.",
       "type": "array",
       "items": {
         "type": "object",
@@ -175,6 +175,11 @@
               "type": "string",
               "minLength": 1
             }
+          },
+          "webhook-url-env": {
+            "description": "Name of the environment variable holding the webhook URL of this entry (a secret). Default: RELWOLF_MESSAGE_WEBHOOK_URL.",
+            "type": "string",
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
           },
           "template": {
             "description": "Markdown template instead of the built-in one. Placeholders: ${releases}, ${tags}, ${version}, ${name}, ${url}, ${notes}.",

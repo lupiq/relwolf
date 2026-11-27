@@ -9,7 +9,13 @@ import {
 
 const message = (type: 'slack' | 'teams' | 'webhook', text: string): Message =>
   ({
-    config: {type, sources: ['release'], packages: [], excludePackages: []},
+    config: {
+      type,
+      sources: ['release'],
+      webhookUrlEnv: 'RELWOLF_MESSAGE_WEBHOOK_URL',
+      packages: [],
+      excludePackages: [],
+    },
     text,
     releases: [
       {tag: 'v1.0.0', name: 'v1.0.0', version: '1.0.0', prerelease: false},

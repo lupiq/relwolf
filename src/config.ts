@@ -230,13 +230,16 @@ export const MESSAGE_TYPES = ['slack', 'teams', 'webhook'] as const;
 const MESSAGE_SOURCE_PATTERN =
   /^(?:release|changelog|ai-release|ai-changelog|ai-file:.+)$/;
 
+/** Default environment variable with the webhook URL of a message. */
+export const MESSAGE_WEBHOOK_ENV = 'RELWOLF_MESSAGE_WEBHOOK_URL';
+
 const messageSchema = z.strictObject({
-  type: z
+  'type': z
     .enum(MESSAGE_TYPES)
     .describe(
       'slack: Slack incoming webhook; teams: Microsoft Teams Workflows webhook; webhook: generic JSON POST.',
     ),
-  sources: z
+  'sources': z
     .array(
       z
         .string()
@@ -251,7 +254,17 @@ const messageSchema = z.strictObject({
       'Release notes in the message, combined in this order: release (body of the created release), changelog (notes of the tag), ai-release, ai-changelog, ai-file:<file> (an entry of ai-release-notes.additional-files). Default: release.',
     ),
   ...AI_SCOPE_SHAPE,
-  template: z
+  'webhook-url-env': z
+    .string()
+    .regex(
+      /^[A-Za-z_][A-Za-z0-9_]*$/,
+      'must be a valid environment variable name',
+    )
+    .optional()
+    .describe(
+      'Name of the environment variable holding the webhook URL of this entry (a secret). Default: RELWOLF_MESSAGE_WEBHOOK_URL.',
+    ),
+  'template': z
     .string()
     .min(1)
     .optional()
@@ -465,7 +478,7 @@ export const configSchema = z.strictObject({
     .array(messageSchema)
     .default([])
     .describe(
-      'Messages sent to the webhook in RELWOLF_MESSAGE_WEBHOOK_URL when releases were created.',
+      'Messages sent to webhooks (URL from RELWOLF_MESSAGE_WEBHOOK_URL or the webhook-url-env of the entry) when releases were created.',
     ),
   'ai-release-notes': z
     .strictObject({
@@ -679,6 +692,8 @@ export interface MessageConfig extends AiScope {
   type: (typeof MESSAGE_TYPES)[number];
   /** `release`, `changelog`, `ai-release`, `ai-changelog` or `ai-file:<file>` (the file as configured). */
   sources: Array<string>;
+  /** Name of the environment variable with the webhook URL. */
+  webhookUrlEnv: string;
   template?: string;
 }
 
@@ -1368,7 +1383,16 @@ function parseMessages(
   ai: AiReleaseNotesConfig,
 ): Array<MessageConfig> {
   return parsed.messages.map(
-    ({type, sources = ['release'], template, ...own}, index) => {
+    (
+      {
+        'type': type,
+        'sources': sources = ['release'],
+        'template': template,
+        'webhook-url-env': webhookUrlEnv = MESSAGE_WEBHOOK_ENV,
+        ...own
+      },
+      index,
+    ) => {
       const label = `messages[${index}]`;
       const unique = [...new Set(sources)];
 
@@ -1415,6 +1439,7 @@ function parseMessages(
       return {
         type,
         sources: resolved,
+        webhookUrlEnv,
         ...(template ? {template} : {}),
         ...parseAiScope(own, packages, label),
       };
