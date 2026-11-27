@@ -57,7 +57,30 @@ and /guide/pre-releases.
 ## 5. Changelog
 
 `changelog-path` (default `CHANGELOG.md`), `changelog-title`, `cliff-config` (path to a git-cliff `cliff.toml`; offer
-to generate one only if the user wants custom groups), `rewrite-changelog`, `release-emoji`, `changelog-links`.
+to generate one only if the user wants to change which commit types appear or their group names; see below), `rewrite-changelog`, `release-emoji`, `changelog-links`.
+Without a `cliff.toml`, git-cliff's built-in default applies (grouped by type, non-conventional commits left out), which is
+fine for most projects. Ask about it only in the full setup. When the user wants to choose which commit types appear,
+write a minimal `cliff.toml` with only a `[git]` section (the layout stays git-cliff's default) and one `commit_parsers`
+entry per type; order the entries by priority, the first match wins:
+
+```toml
+[git]
+conventional_commits = true
+filter_unconventional = true
+commit_parsers = [
+  { message = "^chore", skip = true },
+  { message = "^feat", group = "Features" },
+  { message = "^fix", group = "Bug Fixes" },
+  { message = "^perf", group = "Performance" },
+  { message = "^doc", group = "Documentation" },
+]
+```
+
+Types without a parser entry still appear (git-cliff default); add `{ message = ".*", skip = true }` last to show only the
+listed types. Keep `chore` skipped: release requests are titled `chore(release): ...`. This only affects the changelog;
+which commits release a version is set by `patch-types`/`minor-types`. Start from `git-cliff --init` for more
+(templates, links). See /configuration/changelog.
+
 A formatter that checks the repository (Prettier, spotless) requires `pre-commit-script: scripts/format.sh` - a POSIX
 shell script with shebang and the executable bit (`chmod +x`) that formats the generated changelog; the pipeline must
 the script can only use tools available where relwolf runs (see the CI references). See /configuration/changelog and /configuration/relwolf-yaml.
