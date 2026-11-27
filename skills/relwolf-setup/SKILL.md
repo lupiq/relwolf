@@ -37,8 +37,19 @@ Tell the user briefly what you found.
 
 ### 2. Ask about the configuration
 
+First ask how deep the setup should go (recommended: minimal):
+
+- **Minimal**: only what is needed to get relwolf running. Ask about topics 1-3 and 9 below (strategy, packages and
+  monorepo mode, version files, CI job and token). Everything else keeps relwolf's defaults and is not written to
+  `relwolf.yaml`. Detected facts are used without asking (default branch, existing tag format as `tag-template`, existing
+  `cliff.toml`, a formatter as `pre-commit-script` only if the repository checks formatting). Mention at the end that
+  topics 4-8 and 10 can be added later and where they are documented.
+- **Full**: ask about every topic below that applies.
+
 Ask one topic at a time with the available question tool, preselecting the recommended option. Skip topics that do
 not apply. Details, defaults and the mapping to `relwolf.yaml` keys are in [references/options.md](references/options.md).
+
+Topics (the numbers are referenced above):
 
 1. Strategy (`conventional-commits` or `changesets`).
 2. Packages: which to release, components (tag prefixes), monorepo mode (independent, separate requests, linked

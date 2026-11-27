@@ -12,7 +12,8 @@ The skill
 
 1. **analyzes** your repository: GitHub or GitLab, single project or monorepo, packages, version files, existing
    release tooling, tags, commit history, CI and commit linting,
-2. **asks** you about every feature: strategy (Conventional Commits or Changesets), monorepo mode, updaters, versions,
+2. **asks** you whether you want a **minimal** setup (strategy, packages, version files, CI job and token; everything
+   else keeps the defaults) or a **full** one, and then about the features: strategy (Conventional Commits or Changesets), monorepo mode, updaters, versions,
    changelog, release request, [AI release notes](/configuration/ai-release-notes), [messages](/configuration/messages),
    the CI job and commit linting,
 3. **shows a summary** of every file it will create or change, and only writes after you confirmed it,

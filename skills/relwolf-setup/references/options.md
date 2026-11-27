@@ -1,6 +1,7 @@
 # Options and questions
 
-Ask only what applies. Preselect the recommended answer. Everything not asked keeps relwolf's default and must not
+Ask only what applies and what the chosen depth (minimal or full, see SKILL.md) includes: minimal covers sections 1-3
+and the CI job. Preselect the recommended answer. Everything not asked keeps relwolf's default and must not
 be written to `relwolf.yaml` (keep the file minimal). Full reference: https://relwolf.lupiq.io/configuration/relwolf-yaml
 
 Start the file with `# yaml-language-server: $schema=https://relwolf.lupiq.io/schema.json`.
