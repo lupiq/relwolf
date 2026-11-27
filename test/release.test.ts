@@ -1113,7 +1113,7 @@ ai-release-notes:
     const core = files.find(f => f.path === 'docs/summaries.md')!;
 
     expect(core.content).toMatch(
-      /## core 0\.1\.1[\s\S]*No changes, version bumped to stay in sync\./,
+      /## \[?core 0\.1\.1[\s\S]*No changes, version bumped to stay in sync\./,
     );
   });
 
