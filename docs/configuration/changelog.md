@@ -56,7 +56,7 @@ The layout is a git-cliff template, so commits with the same scope can be groupe
 more commits are grouped; commits without a scope or with a unique scope stay single bullets (`**scope**: message`). See the `body` in relwolf's own
 [`cliff.toml`](https://github.com/lupiq/relwolf/blob/main/cliff.toml); the key part is Tera's `group_by`:
 
-```tera
+```jinja
 {% for scope, scoped in entry.commits | group_by(attribute="scope") %}
     - **{{ scope }}**
     {% for commit in scoped %}

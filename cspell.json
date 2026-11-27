@@ -1,5 +1,13 @@
 {
   "version": "0.2",
   "language": "en",
-  "words": ["relwolf", "commitlint", "changelog", "gitlab", "renovate", "lupiq"]
+  "words": [
+    "relwolf",
+    "commitlint",
+    "changelog",
+    "gitlab",
+    "renovate",
+    "lupiq",
+    "tera"
+  ]
 }
