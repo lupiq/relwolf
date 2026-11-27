@@ -2,6 +2,27 @@
 
 <!-- git-cliff: end of header -->
 
+## 🫐 [0.19.0](https://github.com/lupiq/relwolf/releases/tag/v0.19.0) - 2026-11-27
+
+[See changes](https://github.com/lupiq/relwolf/compare/v0.18.0...v0.19.0)
+
+### 🚀 Features
+
+- **skill**
+  - Add relwolf-setup AI skill ([018ed62](https://github.com/lupiq/relwolf/commit/018ed62a134a8628d8b0c5753158a556f15a3460))
+  - Let users choose minimal or full setup ([417bce5](https://github.com/lupiq/relwolf/commit/417bce55f414ac816842d2b52ad01ccc5580f767))
+
+### 🐛 Bug Fixes
+
+- **ai-release-notes**: Count usage of unchanged and failed runs ([d43daf6](https://github.com/lupiq/relwolf/commit/d43daf64912f41bffca5e86ff1a364074c87d644))
+
+### 📚 Documentation
+
+- Use `jinja` highlighting for the Tera template example ([6440d55](https://github.com/lupiq/relwolf/commit/6440d553039af0a05d77de4c03f1a67476e40e61))
+- **skill**: Explain choosing changelog commit types ([8b8b8c2](https://github.com/lupiq/relwolf/commit/8b8b8c28d6293daa8ca14e003709cde55b7fa9c6))
+
+---
+
 ## 💡 [0.18.0](https://github.com/lupiq/relwolf/releases/tag/v0.18.0) - 2026-11-27
 
 [See changes](https://github.com/lupiq/relwolf/compare/v0.17.0...v0.18.0)
